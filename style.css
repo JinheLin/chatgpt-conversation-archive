@@ -52,6 +52,7 @@
 .pdf-role { margin: 0 0 .55em; color: #176b58; font-size: 9pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .pdf-message-body > :first-child { margin-top: 0; }
 .pdf-message-body > :last-child { margin-bottom: 0; }
+.pdf-assistant .pdf-message-body hr { display: none; }
 .pdf-message-body p, .pdf-message-body ul, .pdf-message-body ol,
 .pdf-message-body blockquote, .pdf-message-body pre, .pdf-message-body table { margin: .45em 0 .8em; }
 .pdf-message-body h1, .pdf-message-body h2, .pdf-message-body h3,

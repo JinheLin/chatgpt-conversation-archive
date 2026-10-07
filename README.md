@@ -1,123 +1,133 @@
 # ChatGPT Conversation Archive
 
+English | [简体中文](README_zh.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A Chrome extension that exports a ChatGPT conversation from its URL to PDF or offline HTML, with a question index.
+A Chrome extension that exports a ChatGPT conversation from its URL to PDF or a single offline HTML file, with a clickable index of every user question.
 
-输入一个 ChatGPT 对话链接，导出带问题目录的 PDF 或可离线打开的单文件 HTML。无需启动服务器、安装 Node.js 或配置 API Key。
+No server, API key, or dependency installation is required to use the extension. It reads the selected conversation branch using your existing ChatGPT login session, so export does not depend on scrolling through lazy-loaded messages.
 
-## 快速开始
+## Quick start
 
-### 1. 获取项目
+### 1. Get the project
 
 ```bash
 git clone https://github.com/JinheLin/chatgpt-conversation-archive.git
 ```
 
-也可以在 GitHub 点击 **Code → Download ZIP**，下载后解压。运行扩展不需要安装任何依赖。
+Alternatively, choose **Code → Download ZIP** on GitHub and extract the archive.
 
-### 2. 加载与使用
+### 2. Load the extension
 
-1. 保留完整的 `chatgpt-conversation-archive` 项目文件夹（包含 `vendor`）。
-2. 在 Chrome 中打开 `chrome://extensions/`，开启右上角「开发者模式」。
-3. 点击「加载未打包的扩展程序」，选择包含 `manifest.json` 的项目根目录。
-4. 在同一 Chrome 用户配置中登录 ChatGPT。
-5. 点击 Chrome 右上角「扩展程序」菜单中的 **ChatGPT Conversation Archive**，或刷新 ChatGPT 对话页后点击右下角的 **Export PDF / HTML**。可将扩展固定到工具栏。
-6. 输入 `https://chatgpt.com/c/…` 对话链接，点击「读取完整对话」。
-7. 等待导出页显示消息链及渲染数量校验通过，然后：
-   - **保存本地 HTML**：下载单文件 HTML，包含样式、公式字体、成功读取的图片及文件附件。开头目录和「返回问题目录」可直接跳转。
-   - **打印 / 保存 PDF**：目标打印机选「另存为 PDF」，纸张 A4，页面选「全部」，缩放保持默认。取消勾选「页眉和页脚」可隐藏浏览器网址；需要底色时勾选「背景图形」。
-   - 很宽的文本图可先选「A4 横向」，再打印或保存 HTML。
+1. Keep the entire `chatgpt-conversation-archive` folder, including `vendor`.
+2. Open `chrome://extensions/` in Chrome and enable **Developer mode**.
+3. Click **Load unpacked** and select the project root containing `manifest.json`.
+4. Sign in to ChatGPT in the same Chrome profile.
+5. Open Chrome's **Extensions** menu and click **ChatGPT Conversation Archive**. You can also refresh a ChatGPT conversation page and click **Export PDF / HTML** in the bottom-right corner. Pin the extension for easier access.
 
-读取过程中会打开临时的 ChatGPT 标签页，成功后自动关闭并回到导出页；原来的对话页不受影响。失败时保留临时页，方便检查登录或访问问题。可取消读取后重试。
+### 3. Export a conversation
 
-更新本地代码后，在扩展管理页点击扩展卡片的「重新加载」，并刷新已经打开的 ChatGPT 页和导出页。
+The export interface currently uses Chinese labels; their English meanings are provided below.
 
-## 为什么不会受页面懒加载影响
+1. Enter a conversation URL such as `https://chatgpt.com/c/…`.
+2. Click **读取完整对话** (Read full conversation).
+3. Wait for confirmation that the message chain and rendered message counts have passed validation.
+4. Choose an output:
+   - **保存本地 HTML** (Save local HTML): download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
+   - **打印 / 保存 PDF** (Print / Save PDF): select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
+   - For wide text diagrams, select **A4 横向** (A4 landscape) before printing or saving HTML.
 
-v2 不再把「目前出现在 DOM 中的消息」当作完整对话。它利用当前 Chrome 登录状态读取 ChatGPT 网页的对话数据，然后沿 `current_node → parent → 根节点` 重建当前分支，再按时间顺序生成文件。
+Reading opens a temporary ChatGPT tab. On success, the tab closes and the export page becomes active again. On failure, the tab remains available for checking login or access problems. You can cancel and retry.
 
-- 不需要滚到顶部，不需要等待旧消息渲染，也不会因为页面回收离屏消息而遗漏正文。
-- 遇到缺失父节点、循环、明确的分页标志、无法确定分支或正在生成的消息，会显示错误，不生成声称完整的文件。
-- 导出页检查消息数、问题数与实际生成的正文段落是否一致。
-- 「完整」指服务端返回的当前分支中可见的用户与助手消息，含助手阶段性回复；不包含系统指令、内部分析、工具调用，或编辑/重新生成后未选中的其他分支。
-- 消息链校验不能证明 ChatGPT 服务端从未丢失历史数据；删除的消息、无权访问的内容无法恢复。
+After updating local files, click **Reload** on the extension card in `chrome://extensions/`, then refresh any open ChatGPT and export pages.
 
-## 格式与附件
+## How it handles lazy loading
 
-- 按原始 Markdown 排版，保留标题、粗体、列表、引用、表格、链接、代码块及公式。
-- 代码和文本图使用等宽字体，保留空格、Tab 和换行，禁止强制折行。宽块按 A4 可用宽度缩小字号，短块尽量整块分页；超过一页的块仍可能分页。
-- 可识别部分未包在代码围栏中的框线文本图，并按原样放进等宽块。
-- 中英文正文优先使用系统中文字体；中文等宽字符依赖系统字体回退，源图本身的对齐问题不会自动重画。
-- A4 打印样式包含标题与后文的分页约束、孤行控制、表头重复、表格行和图片的分页约束。
-- KaTeX 在本地渲染公式，单文件 HTML 内嵌公式字体，离线不需要 CDN。
-- 原站的引用组件转成「来源」链接，并在相应消息末尾列出来源；不复制 ChatGPT 操作按钮、反馈工具栏等界面。
-- 能下载的附件内嵌在 HTML 中，非图片附件在正文提供下载链接；PDF 只显示附件说明，不把附件内容作为 PDF 内置附件。
-- 读取不到的图片、音视频或特殊组件会在正文明确标注，并在导出状态中报告。正文消息完整不等于所有特殊附件都已成功转换。
+Version 2 reads ChatGPT's conversation data using the current Chrome session. It follows `current_node → parent → root` to reconstruct the selected branch, then renders messages in chronological order.
 
-## 文件结构与维护
+- No scrolling or waiting for older messages to appear is required. Messages that the page removes from the DOM when they leave the viewport are still included in the returned branch.
+- Missing parent nodes, cycles, explicit pagination flags, an ambiguous branch, or messages still being generated cause an error instead of an export claiming completeness.
+- The export page checks that message and question counts match the rendered document.
+- **Complete** means the visible user and assistant messages in the branch returned by the server, including assistant progress updates. System instructions, internal analysis, tool calls, and unselected branches from edits or regenerated answers are excluded.
+- Validation cannot prove that ChatGPT's server has never lost historical data. Deleted messages and inaccessible content cannot be recovered.
 
-| 文件 | 职责 |
+## Formatting and attachments
+
+- Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
+- Uses monospace text for code and text diagrams, preserving spaces, tabs, and line breaks without forced wrapping. Wide blocks are scaled to the available A4 width. Short blocks are kept together where possible; blocks longer than a page may still split.
+- Detects some unfenced box-drawing diagrams and preserves them as monospace blocks.
+- Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.
+- Includes A4 print styles for keeping headings with following content, controlling orphans and widows, repeating table headers, and avoiding breaks within table rows and images where possible.
+- Renders math locally with KaTeX. Offline HTML embeds the required math fonts and needs no CDN.
+- Converts ChatGPT citation components into **来源** (Sources) links and lists sources at the end of the corresponding message. ChatGPT controls and feedback toolbars are omitted.
+- Embeds downloadable attachments in HTML. Non-image files have download links in the document. PDF shows attachment descriptions; it does not embed those files as PDF attachments.
+- Images, audio, video, or special components that cannot be retrieved or converted are explicitly marked in the document and reported in the export status. A complete message chain does not guarantee successful conversion of every attachment.
+
+## Project structure and maintenance
+
+| File | Responsibility |
 | --- | --- |
-| `manifest.json` | MV3 配置、网站权限、入口和脚本顺序 |
-| `worker.js` | 工具栏点击及网页按钮打开导出页 |
-| `content.js` | 网页按钮、状态提示、读取请求桥接；重复注入可清理旧实例 |
-| `dom-adapter.js` | 独立 DOM 适配层及语义选择器；保留 DOM 提取/清理能力供诊断，完整导出不依赖它 |
-| `conversation-source.js` | 链接校验、网页数据接口、分支重建、完整性检查、附件内嵌 |
-| `export.js` | Markdown/公式排版、问题目录、文本图保护、代码宽度适配 |
-| `print.html` / `print.js` | 输入链接、读取进度、取消、HTML 下载及 `window.print()` |
-| `style.css` | 网页入口、导出界面、A4 打印样式 |
-| `vendor/` | 本地 Markdown/公式库与字体，包含原始许可证 |
+| `manifest.json` | Manifest V3 configuration, host permissions, entry points, and script order |
+| `worker.js` | Opens the export page from the toolbar or injected button |
+| `content.js` | Injected button, status messages, and request bridge; cleans up old instances on reinjection |
+| `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |
+| `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
+| `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
+| `print.html` / `print.js` | URL input, progress, cancellation, HTML download, and `window.print()` |
+| `style.css` | Injected controls, export interface, and A4 print styles |
+| `vendor/` | Bundled Markdown and math libraries, fonts, and original licenses |
 
-DOM 适配层优先使用 `data-message-author-role`、`data-chatgpt-search-unit-key`、`data-content-search-unit-key`、`data-chatgpt-selection-message-id` 和 `data-markdown-text-style` 等语义属性，不依赖随机 class。网页 DOM 变化时修改此文件；网页数据接口变化时修改 `conversation-source.js`。不要把当前 DOM 的片段作为完整导出的静默替代品。
+The DOM adapter prefers semantic attributes such as `data-message-author-role`, `data-chatgpt-search-unit-key`, `data-content-search-unit-key`, `data-chatgpt-selection-message-id`, and `data-markdown-text-style` over generated CSS classes. Update this adapter when the page structure changes, and update `conversation-source.js` when website data endpoints change. Do not silently substitute a partial DOM snapshot for a complete export.
 
-## 权限与数据处理
+## Permissions and data handling
 
-扩展只申请 `scripting` 和 `chatgpt.com` / `chat.openai.com` 网站访问权限。它在 ChatGPT 内容脚本中使用当前登录会话，临时凭据仅留在读取函数内存中，不写入磁盘、扩展存储、HTML、PDF 或日志，也不发送给其他网站。第三方图片下载不携带该凭据。
+The extension requests only `scripting` and host access to `chatgpt.com` and `chat.openai.com`. It uses the current login session within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
 
-正文在本机排版，没有上传服务。Markdown 的原始 HTML 不执行，公式启用 `trust: false`。离线 HTML 禁止脚本，字体和图片使用内嵌数据；点击来源链接仍会打开对应网站。
+Rendering happens locally, with no upload service. Raw HTML in Markdown is not executed, and math rendering uses `trust: false`. Offline HTML disables scripts and embeds fonts and images as data URLs. Clicking a source link still opens its website.
 
-## 开发与调试
+## Development and debugging
 
-- 网页没有按钮：刷新 ChatGPT 页；确认扩展开启、允许读取此网站，且链接为 `/c/…` 或 `/share/…`。也可直接用工具栏图标。
-- 读取失败：确认同一 Chrome 用户配置已经登录，能手动打开该链接。401/403/404 也可能来自权限、过期会话或网页接口变化。
-- 扩展管理页 → 扩展卡片「错误」查看加载错误；「Service Worker」查看入口脚本错误。
-- 导出页右键「检查」查看排版/下载错误；临时 ChatGPT 页开发者工具查看读取接口状态。不要分享包含登录凭据的请求头或未脱敏网络记录。
-- 页面一直「正在加载更早的消息」不妨碍新版读取完整消息链；若完整接口也超时，会明确报错。
-- 无需编译。可以用 `node --check` 检查根目录各 `.js` 的语法；不要对 HTML 使用该命令。
-- 开发时安装 Node.js 18 或更高版本，然后在项目目录运行：
+- **No button on the page:** refresh ChatGPT, confirm the extension is enabled and allowed on the site, and use a `/c/…` or `/share/…` URL. The toolbar entry is also available.
+- **Reading fails:** confirm you are signed in using the same Chrome profile and can open the URL manually. HTTP 401, 403, or 404 can also indicate access restrictions, an expired session, or changed website endpoints.
+- **Extension loading errors:** open **Errors** on the extension card. Click **Service Worker** to inspect entry-point errors.
+- **Rendering or download errors:** right-click the export page and choose **Inspect**. Use the temporary ChatGPT tab's developer tools to inspect request status. Do not share credential-bearing headers or unredacted network logs.
+- **The page keeps loading older messages:** this does not prevent full-chain export. If the conversation data request also times out, the extension reports an error.
+- **No build step is required:** use `node --check` to check individual JavaScript files, not HTML files.
+
+For development, install Node.js 18 or later and run from the project root:
 
 ```bash
 npm test
 ```
 
-测试只使用 Node.js 内置模块，不需要 `npm install`。覆盖长消息链、替代分支、缺失父节点、循环、分页、仍在生成、非法链接、JavaScript 语法和 Manifest 资源路径。修改界面和打印样式后，还需要在 Chrome 中检查实际预览。
+Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
 
-## 已知限制
+## Known limitations
 
-1. 使用 ChatGPT **网页的未公开接口**，不是承诺稳定的官方 API。网站升级可能需要更新适配层；不需要 OpenAI API Key。
-2. 私有链接必须属于或可被当前登录账号访问。共享链接的数据结构也会变，若无法校验会拒绝导出；本次实际验证使用私有 `/c/` 链接。
-3. 当前只导出已选中的分支；不合并历史的替代回答或编辑分支，也不提取内部分析与工具日志。
-4. 格式来自原始 Markdown，尽量保持阅读结构；不是网页像素级复制。代码暂未做语法高亮，Mermaid 保留源码；Canvas、交互图表、视频播放器等不保证静态还原。
-5. 单个内嵌附件上限 20 MiB，总下载附件上限 35 MiB。超过限制会保留提示。下载权限、跨域限制、附件过期都可能导致图片或文件无法内嵌。极大对话还受 Chrome 内存及消息大小限制。
-6. 代码行极宽时会缩小字号；横向 A4 通常更合适。浏览器对超长代码、超高表格行和公式的分页仍有自身限制。
-7. PDF 使用浏览器打印功能，需由用户选择保存路径。Chrome 通常保留目录内部链接；不同 PDF 阅读器的跳转表现可能不同。
+1. Uses **undocumented ChatGPT website endpoints**, not a guaranteed stable public API. Website updates may require adapter changes. No OpenAI API key is needed.
+2. Private conversations must be accessible to the current signed-in account. Shared conversation data can also change; export is refused if completeness cannot be validated. The real conversation validation described below used a private `/c/` URL.
+3. Only the selected branch is exported. Alternative answers and edited branches are not merged, and internal analysis or tool logs are not included.
+4. Formatting is reconstructed from Markdown rather than copied pixel for pixel. Code syntax highlighting is not implemented, and Mermaid is preserved as source. Canvas content, interactive charts, and video players are not guaranteed to render as static content.
+5. Embedded attachments are limited to 20 MiB per file and 35 MiB of total downloaded attachment data. Oversized attachments remain marked in the document. Access restrictions, cross-origin rules, or expired attachments can prevent embedding. Very large conversations are also limited by Chrome's memory and message size constraints.
+6. Extremely wide code lines use smaller fonts; A4 landscape is often more suitable. Browser pagination still has limits for long code blocks, tall table rows, and math.
+7. PDF export uses the browser print dialog, where you choose the save location. Chrome generally preserves internal index links, but navigation behavior can differ between PDF readers.
 
-## 本地依赖
+## Bundled dependencies
 
-已随项目打包，不需要运行 `npm install`：
+These are included in the repository; no installation is needed:
 
-- markdown-it 15.0.2，MIT：[项目](https://github.com/markdown-it/markdown-it)、[安全说明](https://github.com/markdown-it/markdown-it/blob/master/docs/safety.md)。
-- KaTeX 0.19.0，MIT：[项目](https://github.com/KaTeX/KaTeX)、[浏览器说明](https://katex.org/docs/browser.html)。
+- markdown-it 15.0.2, MIT: [project](https://github.com/markdown-it/markdown-it), [security notes](https://github.com/markdown-it/markdown-it/blob/master/docs/safety.md).
+- KaTeX 0.19.0, MIT: [project](https://github.com/KaTeX/KaTeX), [browser documentation](https://katex.org/docs/browser.html).
 
-## 验证范围
+## Validation scope
 
-已在登录的 Chrome 中完成一次长技术对话的实际验证：40 条消息、13 个问题、228 页 A4 PDF，包含文本图、表格、两个文件附件及 PDF 目录内部跳转。为保护隐私，测试用对话和导出文件不随项目发布。
+Validated in a signed-in Chrome profile with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 
-## 贡献与反馈
+## Contributing and reporting issues
 
-欢迎提交 Issue 或 Pull Request。报告问题时，请提供 Chrome 版本、插件版本、出错步骤和已脱敏的错误信息。无需提供账号凭据或完整私人对话。
+Issues and pull requests are welcome. Include your Chrome version, extension version, reproduction steps, and redacted error details. Account credentials and full private conversations are not needed.
 
-## 许可证
+## License
 
-本项目采用 [MIT License](LICENSE)。随项目分发的 Markdown/公式库与字体保留各自的许可证，详见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+This project is licensed under the [MIT License](LICENSE). Bundled libraries and fonts retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).

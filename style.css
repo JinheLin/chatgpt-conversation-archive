@@ -53,6 +53,11 @@
 .pdf-message-body > :first-child { margin-top: 0; }
 .pdf-message-body > :last-child { margin-bottom: 0; }
 .pdf-assistant .pdf-message-body hr { display: none; }
+.pdf-user .pdf-message-body { font-size: 12pt; font-weight: 600; color: #174f40; }
+.pdf-user .pdf-message-body :is(pre, code, kbd, samp, table, .katex) { font-weight: 400; color: #202124; }
+.pdf-user .pdf-message-body .katex { font-size: 12.1pt; }
+.pdf-user .pdf-message-body :is(figure, .pdf-asset-warning, .katex-display) { font-size: 11pt; font-weight: 400; color: #202124; }
+.pdf-user .pdf-message-body .pdf-sources { font-weight: 400; }
 .pdf-message-body p, .pdf-message-body ul, .pdf-message-body ol,
 .pdf-message-body blockquote, .pdf-message-body pre, .pdf-message-body table { margin: .45em 0 .8em; }
 .pdf-message-body h1, .pdf-message-body h2, .pdf-message-body h3,

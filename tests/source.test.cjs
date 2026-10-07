@@ -34,5 +34,5 @@ assert.equal(parseUrl('https://chatgpt.com/share/test-id').kind, 'share');
 const manifest = JSON.parse(fs.readFileSync(path.join(project, 'manifest.json'), 'utf8'));
 assert.equal(manifest.manifest_version, 3);
 for (const file of fs.readdirSync(project).filter(f => f.endsWith('.js'))) new vm.Script(fs.readFileSync(path.join(project, file), 'utf8'), { filename: file });
-for (const file of [manifest.background.service_worker, ...manifest.content_scripts.flatMap(c => [...c.js, ...c.css])]) assert.ok(fs.existsSync(path.join(project, file)));
+for (const file of [manifest.background.service_worker, ...manifest.content_scripts.flatMap(c => [...c.js, ...(c.css || [])])]) assert.ok(fs.existsSync(path.join(project, file)));
 console.log('PASS: 300-message full branch, branch selection, incomplete/cyclic/paged/generating rejection, URL validation, JavaScript syntax, manifest resources.');

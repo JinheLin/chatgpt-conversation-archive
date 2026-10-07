@@ -8,7 +8,7 @@ A Chrome extension that exports a ChatGPT conversation from its URL to PDF or a 
 
 No server, API key, or dependency installation is required to use the extension. It reads the selected conversation branch using your existing ChatGPT login session, so export does not depend on scrolling through lazy-loaded messages.
 
-The interface follows Chrome's UI language: Simplified Chinese uses Chinese; all other languages, including Traditional Chinese, use English. This applies to page buttons, progress and error messages, and navigation labels in exported documents. Conversation text is preserved in its original language.
+The interface follows Chrome's UI language: Simplified Chinese uses Chinese; all other languages, including Traditional Chinese, use English. This applies to export controls, progress and error messages, and navigation labels in exported documents. Conversation text is preserved in its original language.
 
 ## Quick start
 
@@ -26,7 +26,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 2. Open `chrome://extensions/` in Chrome and enable **Developer mode**.
 3. Click **Load unpacked** and select the project root containing `manifest.json`.
 4. Sign in to ChatGPT in the same Chrome profile.
-5. Open Chrome's **Extensions** menu and click **ChatGPT Conversation Archive**. You can also refresh a ChatGPT conversation page and click **Export PDF / HTML** (or **导出 PDF / HTML** in Chinese) in the bottom-right corner. Pin the extension for easier access.
+5. Open Chrome's **Extensions** menu and click **ChatGPT Conversation Archive**, or pin it and click its toolbar icon. Open it while viewing a ChatGPT conversation to automatically read that conversation.
 
 ### 3. Export a conversation
 
@@ -40,7 +40,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 
-After updating local files, click **Reload** on the extension card in `chrome://extensions/`, then refresh any open ChatGPT and export pages.
+After updating local files, click **Reload** on the extension card in `chrome://extensions/`, then refresh any open ChatGPT and export pages. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
 
 ## How it handles lazy loading
 
@@ -70,13 +70,13 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | --- | --- |
 | `manifest.json` | Manifest V3 configuration, host permissions, entry points, and script order |
 | `i18n.js` / `_locales/` | Chrome message lookup, page localization, and English/Simplified Chinese catalogs; English is the default locale |
-| `worker.js` | Opens the export page from the toolbar or injected button |
-| `content.js` | Injected button, status messages, and request bridge; cleans up old instances on reinjection |
+| `worker.js` | Opens the export page from the Chrome toolbar |
+| `content.js` | Read request bridge; adds no page controls or banners and cleans up old instances on reinjection |
 | `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |
 | `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
 | `print.html` / `print.js` | URL input, progress, cancellation, HTML download, and `window.print()` |
-| `style.css` | Injected controls, export interface, and A4 print styles |
+| `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown and math libraries, fonts, and original licenses |
 
 The DOM adapter prefers semantic attributes such as `data-message-author-role`, `data-chatgpt-search-unit-key`, `data-content-search-unit-key`, `data-chatgpt-selection-message-id`, and `data-markdown-text-style` over generated CSS classes. Update this adapter when the page structure changes, and update `conversation-source.js` when website data endpoints change. Do not silently substitute a partial DOM snapshot for a complete export.
@@ -89,7 +89,7 @@ Rendering happens locally, with no upload service. Raw HTML in Markdown is not e
 
 ## Development and debugging
 
-- **No button on the page:** refresh ChatGPT, confirm the extension is enabled and allowed on the site, and use a `/c/…` or `/share/…` URL. The toolbar entry is also available.
+- **Cannot open the exporter:** confirm the extension is enabled, then use Chrome's **Extensions** menu or the pinned toolbar icon.
 - **Reading fails:** confirm you are signed in to ChatGPT in the same Chrome profile where the extension is installed and can open the URL manually. HTTP 401, 403, or 404 can also indicate access restrictions, an expired session, or changed website endpoints.
 - **Extension loading errors:** open **Errors** on the extension card. Click **Service Worker** to inspect entry-point errors.
 - **Rendering or download errors:** right-click the export page and choose **Inspect**. Use the temporary ChatGPT tab's developer tools to inspect request status. Do not share credential-bearing headers or unredacted network logs.
@@ -102,7 +102,7 @@ For development, install Node.js 18 or later and run from the project root:
 npm test
 ```
 
-Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, navigation without a page reload, toolbar entry links, tab reuse and cancellation, background reading without focus changes, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
+Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, toolbar entry links, reading without page controls or banners, tab reuse and cancellation, background reading without focus changes, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
 
 ## Known limitations
 

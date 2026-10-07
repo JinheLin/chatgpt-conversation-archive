@@ -11,9 +11,3 @@ function openExporter(source = "") {
 chrome.action.onClicked.addListener((tab) => {
   openExporter(tab.url || "").catch((error) => console.error("Could not open exporter:", error.message));
 });
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type !== "OPEN_EXPORT_PAGE" || sender.id !== chrome.runtime.id) return false;
-  openExporter(typeof message.source === "string" ? message.source : sender.url || "").then(() => sendResponse({ ok: true }),
-    () => sendResponse({ ok: false, error: globalThis.ChatGPTPdfI18n.t("openExporterFailed") }));
-  return true;
-});

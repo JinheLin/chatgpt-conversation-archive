@@ -47,26 +47,6 @@
   "landscape": {
     "message": "A4 横向（适合宽文本图）"
   },
-  "exportButton": {
-    "message": "导出 PDF / HTML"
-  },
-  "openExporterFailed": {
-    "message": "无法打开导出页面。"
-  },
-  "refreshPage": {
-    "message": "请刷新此页面后再点击，或使用 Chrome 工具栏的扩展图标。"
-  },
-  "readingContent": {
-    "message": "正在读取完整对话；此窗口只用于本地导出…"
-  },
-  "chainVerified": {
-    "message": "完整消息链校验通过：$count$ 条消息。",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "loadTimeout": {
     "message": "页面加载超时，请检查登录状态后重试。"
   },

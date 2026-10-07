@@ -61,8 +61,7 @@
       sourceTab = existing ? null : tab.id;
       await tabLoaded(tab.id);
       if (mine !== generation) return;
-      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["style.css"] });
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "dom-adapter.js", "conversation-source.js", "content.js"] });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "conversation-source.js", "content.js"] });
       report(t("verifyFull"));
       const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url });
       if (mine !== generation) return;

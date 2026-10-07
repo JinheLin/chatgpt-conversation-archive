@@ -56,32 +56,3 @@ test('catalogs cover every message used by scripts, the HTML page and the manife
     }
   }
 });
-
-for (const locale of ['en-US', 'zh-CN']) {
-  test(`the refresh hint survives an invalidated extension context (${locale})`, async () => {
-    const nodes = new Map();
-    const context = vm.createContext({
-      location: new URL('https://chatgpt.com/c/test-id'),
-      document: {
-        documentElement: {}, body: { appendChild: node => nodes.set(node.id, node) },
-        getElementById: id => nodes.get(id),
-        createElement: () => ({
-          dataset: {}, handlers: {}, setAttribute() {},
-          addEventListener(type, listener) { this.handlers[type] = listener; }, remove() {}
-        })
-      },
-      ChatGPTPdfDomAdapter: { isConversationPage: () => true },
-      chrome: { runtime: {
-        sendMessage: async () => { throw new Error('Extension context invalidated.'); },
-        onMessage: { addListener() {}, removeListener() {} }
-      } },
-      MutationObserver: class { observe() {} }, requestAnimationFrame: callback => callback()
-    });
-    installI18n(context, locale);
-    const expected = context.ChatGPTPdfI18n.t('refreshPage');
-    vm.runInContext(fs.readFileSync(path.join(project, 'content.js'), 'utf8'), context);
-    context.chrome.i18n.getMessage = () => { throw new Error('Extension context invalidated.'); };
-    await nodes.get('chatgpt-pdf-export-btn').handlers.click();
-    assert.equal(nodes.get('chatgpt-pdf-export-status').textContent, expected);
-  });
-}

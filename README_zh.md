@@ -6,7 +6,7 @@
 
 输入一个 ChatGPT 对话链接，导出带问题目录的 PDF 或可离线打开的单文件 HTML。无需启动服务器、安装 Node.js 或配置 API Key。
 
-插件文案跟随 Chrome 界面语言：简体中文显示中文，其他语言（包括繁体中文）显示英文。网页按钮、进度及错误提示、导出文件的目录和导航标签均遵循该规则。对话正文保留原语言。
+插件文案跟随 Chrome 界面语言：简体中文显示中文，其他语言（包括繁体中文）显示英文。导出页按钮、进度及错误提示、导出文件的目录和导航标签均遵循该规则。对话正文保留原语言。
 
 ## 快速开始
 
@@ -24,7 +24,7 @@ git clone https://github.com/JinheLin/chatgpt-conversation-archive.git
 2. 在 Chrome 中打开 `chrome://extensions/`，开启右上角「开发者模式」。
 3. 点击「加载未打包的扩展程序」，选择包含 `manifest.json` 的项目根目录。
 4. 在同一 Chrome 用户配置中登录 ChatGPT。
-5. 点击 Chrome 右上角「扩展程序」菜单中的 **ChatGPT Conversation Archive**，或刷新 ChatGPT 对话页后点击右下角的 **导出 PDF / HTML**（英文界面为 **Export PDF / HTML**）。可将扩展固定到工具栏。
+5. 点击 Chrome 右上角「扩展程序」菜单中的 **ChatGPT Conversation Archive**，也可将扩展固定到工具栏后点击图标。在 ChatGPT 对话页使用工具栏入口，会自动读取当前对话。
 6. 从对话页进入并携带链接时，导出页会自动填入链接并开始读取。未携带链接，或从 ChatGPT 首页及其他网站打开插件时，输入 `https://chatgpt.com/c/…` 对话链接，再点击「读取完整对话」。
 7. 等待导出页显示消息链及渲染数量校验通过，然后：
    - **保存本地 HTML**：下载单文件 HTML，包含样式、公式字体、成功读取的图片及文件附件。开头目录和「返回问题目录」可直接跳转。
@@ -33,7 +33,7 @@ git clone https://github.com/JinheLin/chatgpt-conversation-archive.git
 
 读取时优先复用已打开的同一个对话页，不会跳转或关闭它。没有可复用页面时，才在后台打开临时的 ChatGPT 标签页；它仍出现在标签栏，但不会打断导出页。临时页在成功或取消后自动关闭，失败时保留以便检查登录或访问问题。读取结束不会切换你正在看的标签页，可取消读取后重试。
 
-更新本地代码后，在扩展管理页点击扩展卡片的「重新加载」，并刷新已经打开的 ChatGPT 页和导出页。
+更新本地代码后，在扩展管理页点击扩展卡片的「重新加载」，并刷新已经打开的 ChatGPT 页和导出页。刷新 ChatGPT 页也会移除旧版遗留的网页按钮和状态提示。
 
 ## 为什么不会受页面懒加载影响
 
@@ -63,13 +63,13 @@ v2 不再把「目前出现在 DOM 中的消息」当作完整对话。它利用
 | --- | --- |
 | `manifest.json` | MV3 配置、网站权限、入口和脚本顺序 |
 | `i18n.js` / `_locales/` | Chrome 文案读取、页面本地化及中英语言文件；默认语言为英文 |
-| `worker.js` | 工具栏点击及网页按钮打开导出页 |
-| `content.js` | 网页按钮、状态提示、读取请求桥接；重复注入可清理旧实例 |
+| `worker.js` | Chrome 工具栏点击打开导出页 |
+| `content.js` | 读取请求桥接，不添加网页按钮或悬浮提示；重复注入可清理旧实例 |
 | `dom-adapter.js` | 独立 DOM 适配层及语义选择器；保留 DOM 提取/清理能力供诊断，完整导出不依赖它 |
 | `conversation-source.js` | 链接校验、网页数据接口、分支重建、完整性检查、附件内嵌 |
 | `export.js` | Markdown/公式排版、问题目录、文本图保护、代码宽度适配 |
 | `print.html` / `print.js` | 输入链接、读取进度、取消、HTML 下载及 `window.print()` |
-| `style.css` | 网页入口、导出界面、A4 打印样式 |
+| `style.css` | 导出界面、A4 打印样式 |
 | `vendor/` | 本地 Markdown/公式库与字体，包含原始许可证 |
 
 DOM 适配层优先使用 `data-message-author-role`、`data-chatgpt-search-unit-key`、`data-content-search-unit-key`、`data-chatgpt-selection-message-id` 和 `data-markdown-text-style` 等语义属性，不依赖随机 class。网页 DOM 变化时修改此文件；网页数据接口变化时修改 `conversation-source.js`。不要把当前 DOM 的片段作为完整导出的静默替代品。
@@ -82,7 +82,7 @@ DOM 适配层优先使用 `data-message-author-role`、`data-chatgpt-search-unit
 
 ## 开发与调试
 
-- 网页没有按钮：刷新 ChatGPT 页；确认扩展开启、允许读取此网站，且链接为 `/c/…` 或 `/share/…`。也可直接用工具栏图标。
+- 无法打开导出页：确认扩展开启，然后使用 Chrome「扩展程序」菜单或固定在工具栏上的图标。
 - 读取失败：确认在安装插件的同一 Chrome 用户配置中已登录 ChatGPT，且能手动打开该链接。401/403/404 也可能来自权限、过期会话或网页接口变化。
 - 扩展管理页 → 扩展卡片「错误」查看加载错误；「Service Worker」查看入口脚本错误。
 - 导出页右键「检查」查看排版/下载错误；临时 ChatGPT 页开发者工具查看读取接口状态。不要分享包含登录凭据的请求头或未脱敏网络记录。
@@ -94,7 +94,7 @@ DOM 适配层优先使用 `data-message-author-role`、`data-chatgpt-search-unit
 npm test
 ```
 
-测试只使用 Node.js 内置模块，不需要 `npm install`。覆盖长消息链、替代分支、缺失父节点、循环、分页、仍在生成、非法链接、不刷新页面切换对话、工具栏入口链接、标签页复用与取消、后台读取不切换焦点、JavaScript 语法和 Manifest 资源路径。修改界面和打印样式后，还需要在 Chrome 中检查实际预览。
+测试只使用 Node.js 内置模块，不需要 `npm install`。覆盖长消息链、替代分支、缺失父节点、循环、分页、仍在生成、非法链接、工具栏入口链接、读取时不添加网页按钮或提示、标签页复用与取消、后台读取不切换焦点、JavaScript 语法和 Manifest 资源路径。修改界面和打印样式后，还需要在 Chrome 中检查实际预览。
 
 ## 已知限制
 

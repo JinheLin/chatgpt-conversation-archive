@@ -43,7 +43,7 @@ function fixture(tabs, readResponse = Promise.resolve(response)) {
           return readResponse;
         }
       },
-      scripting: { insertCSS: async () => {}, executeScript: async () => {} }
+      scripting: { executeScript: async () => {} }
     },
     ChatGPTPdfExporter: { render: () => [], fitCode() {} }
   });

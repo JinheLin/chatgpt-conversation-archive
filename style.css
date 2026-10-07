@@ -1,38 +1,3 @@
-/* ChatGPT page: only the injected button is styled. */
-#chatgpt-pdf-export-btn {
-  position: fixed;
-  z-index: 2147483647;
-  right: 24px;
-  bottom: 24px;
-  padding: 10px 16px;
-  border: 1px solid #235c50;
-  border-radius: 999px;
-  background: #176b58;
-  color: #fff;
-  box-shadow: 0 5px 18px rgb(0 0 0 / 18%);
-  font: 600 13px/1.3 system-ui, sans-serif;
-  cursor: pointer;
-}
-#chatgpt-pdf-export-btn:hover { background: #115341; }
-#chatgpt-pdf-export-btn:focus-visible { outline: 3px solid #83c8b4; outline-offset: 2px; }
-#chatgpt-pdf-export-btn:disabled { opacity: .72; cursor: wait; }
-#chatgpt-pdf-export-status {
-  position: fixed;
-  z-index: 2147483647;
-  right: 24px;
-  bottom: 78px;
-  max-width: min(360px, calc(100vw - 48px));
-  padding: 12px 15px;
-  border: 1px solid #c4d8d0;
-  border-radius: 8px;
-  background: #fff;
-  color: #174f40;
-  box-shadow: 0 5px 18px rgb(0 0 0 / 15%);
-  font: 14px/1.5 system-ui, sans-serif;
-}
-#chatgpt-pdf-export-status[data-level="error"] { border-color: #f1b3ad; color: #b42318; }
-#chatgpt-pdf-export-status[hidden] { display: none; }
-
 /* Extension print page. */
 .pdf-print-page {
   margin: 0;

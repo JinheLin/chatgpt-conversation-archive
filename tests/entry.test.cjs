@@ -3,11 +3,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { test } = require('node:test');
-const { chromeI18n, installI18n } = require('./helpers/i18n.cjs');
+const { chromeI18n } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
 
 function workerFixture() {
-  let action, onMessage;
+  let action;
   const opened = [];
   const context = vm.createContext({
     URL, URLSearchParams, Date, console,
@@ -15,8 +15,7 @@ function workerFixture() {
       i18n: chromeI18n(),
       runtime: {
         id: 'extension-id',
-        getURL: path => `chrome-extension://extension-id/${path}`,
-        onMessage: { addListener: listener => { onMessage = listener; } }
+        getURL: path => `chrome-extension://extension-id/${path}`
       },
       tabs: { create: async options => { opened.push(new URL(options.url)); } },
       action: { onClicked: { addListener: listener => { action = listener; } } }
@@ -24,19 +23,8 @@ function workerFixture() {
     importScripts: (...files) => files.forEach(file => vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context))
   });
   vm.runInContext(fs.readFileSync(path.join(project, 'worker.js'), 'utf8'), context);
-  return { opened, click: tab => action(tab), message: (message, sender) => new Promise(resolve => {
-    onMessage(message, sender, resolve);
-  }) };
+  return { opened, click: tab => action(tab) };
 }
-
-test('page button uses the current conversation URL even if the document sender still points to the homepage', async () => {
-  const worker = workerFixture();
-  const source = 'https://chatgpt.com/c/current-conversation?temporary=1#message';
-  const response = await worker.message({ type: 'OPEN_EXPORT_PAGE', source },
-    { id: 'extension-id', url: 'https://chatgpt.com/' });
-  assert.equal(response.ok, true);
-  assert.equal(worker.opened[0].searchParams.get('source'), 'https://chatgpt.com/c/current-conversation');
-});
 
 test('toolbar sends conversation, project conversation and shared links; homepage and other tabs wait for input', async () => {
   const worker = workerFixture();
@@ -52,40 +40,60 @@ test('toolbar sends conversation, project conversation and shared links; homepag
   }
 });
 
-test('content script captures the URL at click time after navigation without a page reload', async () => {
+function contentFixture(read) {
   const nodes = new Map();
-  let scheduleUpdate;
-  const sent = [];
-  const location = new URL('https://chatgpt.com/');
-  const document = {
-    documentElement: {},
-    body: { appendChild: node => { nodes.set(node.id, node); } },
-    getElementById: id => nodes.get(id),
-    createElement: () => ({
-      listeners: {}, dataset: {}, setAttribute() {},
-      addEventListener(type, listener) { this.listeners[type] = listener; },
-      remove() { nodes.delete(this.id); }
-    })
-  };
+  const listeners = new Set();
+  const reads = [];
+  for (const id of ['chatgpt-pdf-export-btn', 'chatgpt-pdf-export-status']) {
+    nodes.set(id, { remove: () => nodes.delete(id) });
+  }
   const context = vm.createContext({
-    document, location,
-    ChatGPTPdfDomAdapter: { isConversationPage: () => location.pathname.includes('/c/') },
+    location: new URL('https://chatgpt.com/c/current-conversation'),
+    document: {
+      getElementById: id => nodes.get(id),
+      createElement: () => { throw new Error('The bridge must not create page UI.'); },
+      body: { appendChild: () => { throw new Error('The bridge must not inject page UI.'); } }
+    },
+    ChatGPTPdfSource: { read: async source => { reads.push(source); return read(source); } },
     chrome: { runtime: {
-      sendMessage: async message => { sent.push(message); return { ok: true }; },
-      onMessage: { addListener() {}, removeListener() {} }
-    } },
-    MutationObserver: class { constructor(callback) { scheduleUpdate = callback; } observe() {} disconnect() {} },
-    requestAnimationFrame: callback => callback()
+      id: 'extension-id',
+      onMessage: { addListener: listener => listeners.add(listener), removeListener: listener => listeners.delete(listener) }
+    } }
   });
-  installI18n(context);
-  vm.runInContext(fs.readFileSync(path.join(project, 'content.js'), 'utf8'), context);
-  assert.equal(nodes.has('chatgpt-pdf-export-btn'), false);
-  location.href = 'https://chatgpt.com/c/first-conversation';
-  scheduleUpdate();
-  const button = nodes.get('chatgpt-pdf-export-btn');
-  assert.ok(button);
-  location.href = 'https://chatgpt.com/c/second-conversation';
-  await button.listeners.click();
-  assert.equal(sent[0].source, location.href);
-  assert.equal(sent[0].type, 'OPEN_EXPORT_PAGE');
+  const inject = () => vm.runInContext(fs.readFileSync(path.join(project, 'content.js'), 'utf8'), context);
+  inject();
+  return { context, nodes, listeners, reads, inject, request: message => new Promise(resolve => {
+    assert.equal([...listeners][0](message, { id: 'extension-id' }, resolve), true);
+  }) };
+}
+
+test('the read bridge removes legacy controls and reads without adding page buttons or banners', async () => {
+  const payload = { messages: [{ role: 'user', text: 'Question' }] };
+  const page = contentFixture(() => payload);
+  assert.equal(page.nodes.size, 0);
+  page.inject();
+  assert.equal(page.listeners.size, 1);
+  const result = await page.request({ type: 'READ_FULL_CONVERSATION', source: 'https://chatgpt.com/c/target-conversation' });
+  assert.equal(result.ok, true);
+  assert.equal(result.payload, payload);
+  assert.deepEqual(page.reads, ['https://chatgpt.com/c/target-conversation']);
+  assert.equal(page.nodes.size, 0);
+});
+
+test('read errors return to the exporter without adding a page banner', async () => {
+  const page = contentFixture(() => { throw new Error('ChatGPT login required'); });
+  const result = await page.request({ type: 'READ_FULL_CONVERSATION' });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'ChatGPT login required');
+  assert.deepEqual(page.reads, ['https://chatgpt.com/c/current-conversation']);
+  assert.equal(page.nodes.size, 0);
+});
+
+test('the bridge ignores unrelated messages and requests from other extensions', () => {
+  const page = contentFixture(() => ({}));
+  const listener = [...page.listeners][0];
+  const unexpectedResponse = () => { throw new Error('Unexpected response'); };
+  assert.equal(listener({ type: 'OTHER_MESSAGE' }, { id: 'extension-id' }, unexpectedResponse), false);
+  assert.equal(listener({ type: 'READ_FULL_CONVERSATION' }, { id: 'other-extension' }, unexpectedResponse), false);
+  assert.equal(page.reads.length, 0);
 });

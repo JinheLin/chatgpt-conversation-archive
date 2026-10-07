@@ -47,26 +47,6 @@
   "landscape": {
     "message": "A4 landscape (for wide text diagrams)"
   },
-  "exportButton": {
-    "message": "Export PDF / HTML"
-  },
-  "openExporterFailed": {
-    "message": "Could not open the export page."
-  },
-  "refreshPage": {
-    "message": "Refresh this page and try again, or use the extension icon in the Chrome toolbar."
-  },
-  "readingContent": {
-    "message": "Reading the full conversation for local export…"
-  },
-  "chainVerified": {
-    "message": "Full message chain verified: $count$ messages.",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
-  },
   "loadTimeout": {
     "message": "Page loading timed out. Check your login session and try again."
   },

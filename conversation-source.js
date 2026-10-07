@@ -174,7 +174,7 @@
 
   async function read(value) {
     const target = parseUrl(value);
-    if (target.id !== parseUrl(location.href).id) throw new Error("当前页面与输入的对话链接不一致，请重试。");
+    if (target.url !== parseUrl(location.href).url) throw new Error("当前页面与输入的对话链接不一致，请重试。");
     let token = null;
     try {
       const session = await fetch("/api/auth/session", { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(20000) });

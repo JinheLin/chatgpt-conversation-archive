@@ -9,8 +9,6 @@
   let sourceTab = null;
   let generation = 0;
   let payload = null;
-  let managerTab;
-  const managerReady = chrome.tabs.getCurrent().then((tab) => { managerTab = tab.id; });
   const initial = new URLSearchParams(location.search).get("source");
   if (initial) input.value = initial;
 
@@ -41,23 +39,30 @@
     payload = null;
     try {
       const target = globalThis.ChatGPTPdfSource.parseUrl(input.value.trim());
-      await managerReady;
-      if (mine !== generation) return;
       if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
       sourceTab = null;
-      report("正在打开对话。将使用此 Chrome 账号的登录状态读取完整消息链…");
-      const tab = await chrome.tabs.create({ url: target.url, active: true });
+      // Reuse only the requested conversation; never navigate or close a user's tab.
+      const candidates = await chrome.tabs.query({ url: `${target.origin}/*` });
+      if (mine !== generation) return;
+      const existing = candidates.find((tab) => {
+        try { return globalThis.ChatGPTPdfSource.parseUrl(tab.url).url === target.url; }
+        catch (_) { return false; }
+      });
+      report(existing ? "正在读取已打开的对话。将使用此 Chrome 账号的登录状态读取完整消息链…" :
+        "正在后台打开对话。将使用此 Chrome 账号的登录状态读取完整消息链…");
+      const tab = existing || await chrome.tabs.create({ url: target.url, active: false });
       if (mine !== generation) {
-        await chrome.tabs.remove(tab.id).catch(() => {});
+        if (!existing) await chrome.tabs.remove(tab.id).catch(() => {});
         return;
       }
-      sourceTab = tab.id;
+      // sourceTab tracks only temporary tabs owned by this read operation.
+      sourceTab = existing ? null : tab.id;
       await tabLoaded(tab.id);
       if (mine !== generation) return;
       await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["style.css"] });
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["dom-adapter.js", "conversation-source.js", "content.js"] });
       report("正在读取并校验完整对话；不依赖页面是否滚动或已加载旧消息…");
-      const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION" });
+      const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url });
       if (mine !== generation) return;
       if (!response?.ok) throw new Error(response?.error || "无法读取完整对话。");
       payload = response.payload;
@@ -69,15 +74,16 @@
       globalThis.ChatGPTPdfExporter.fitCode(main, document.getElementById("page-layout").value === "landscape");
       actions.hidden = false;
       report(`完整消息链及渲染数量校验通过：${payload.messages.length} 条消息，${payload.completeness.questions} 个问题。${problems.length ? `另有 ${problems.length} 个附件无法完整显示，详见正文标注。` : "可保存 HTML 或 PDF。"}`);
-      await chrome.tabs.remove(tab.id);
-      sourceTab = null;
+      if (!existing) {
+        await chrome.tabs.remove(tab.id);
+        sourceTab = null;
+      }
     } catch (error) {
       if (mine === generation) report(error.message || "读取失败。", true);
     } finally {
       if (mine === generation) {
         startButton.disabled = false;
         cancelButton.hidden = true;
-        if (managerTab) await chrome.tabs.update(managerTab, { active: true }).catch(() => {});
       }
     }
   }

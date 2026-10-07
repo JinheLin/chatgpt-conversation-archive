@@ -38,7 +38,7 @@ The export interface currently uses Chinese labels; their English meanings are p
    - **打印 / 保存 PDF** (Print / Save PDF): select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
    - For wide text diagrams, select **A4 横向** (A4 landscape) before printing or saving HTML.
 
-Reading opens a temporary ChatGPT tab. On success, the tab closes and the export page becomes active again. On failure, the tab remains available for checking login or access problems. You can cancel and retry.
+Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 
 After updating local files, click **Reload** on the extension card in `chrome://extensions/`, then refresh any open ChatGPT and export pages.
 
@@ -101,7 +101,7 @@ For development, install Node.js 18 or later and run from the project root:
 npm test
 ```
 
-Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, navigation without a page reload, toolbar entry links, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
+Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, navigation without a page reload, toolbar entry links, tab reuse and cancellation, background reading without focus changes, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
 
 ## Known limitations
 

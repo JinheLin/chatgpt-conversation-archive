@@ -47,7 +47,7 @@
   function onMessage(message, sender, respond) {
     if (sender.id !== chrome.runtime.id || message?.type !== "READ_FULL_CONVERSATION") return false;
     status("正在读取完整对话；此窗口只用于本地导出…");
-    globalThis.ChatGPTPdfSource.read(location.href).then((payload) => {
+    globalThis.ChatGPTPdfSource.read(message.source || location.href).then((payload) => {
       status(`完整消息链校验通过：${payload.messages.length} 条消息。`);
       respond({ ok: true, payload });
     }).catch((error) => { status(error.message, true); respond({ ok: false, error: error.message }); });

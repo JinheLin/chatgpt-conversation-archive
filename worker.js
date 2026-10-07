@@ -1,5 +1,5 @@
 "use strict";
-importScripts("conversation-source.js");
+importScripts("i18n.js", "conversation-source.js");
 
 function openExporter(source = "") {
   const query = new URLSearchParams();
@@ -14,6 +14,6 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type !== "OPEN_EXPORT_PAGE" || sender.id !== chrome.runtime.id) return false;
   openExporter(typeof message.source === "string" ? message.source : sender.url || "").then(() => sendResponse({ ok: true }),
-    () => sendResponse({ ok: false, error: "无法打开导出页面。" }));
+    () => sendResponse({ ok: false, error: globalThis.ChatGPTPdfI18n.t("openExporterFailed") }));
   return true;
 });

@@ -30,8 +30,8 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 
 The export interface currently uses Chinese labels; their English meanings are provided below.
 
-1. Enter a conversation URL such as `https://chatgpt.com/c/…`.
-2. Click **读取完整对话** (Read full conversation).
+1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
+2. When opened without a URL, enter a conversation URL such as `https://chatgpt.com/c/…` and click **读取完整对话** (Read full conversation).
 3. Wait for confirmation that the message chain and rendered message counts have passed validation.
 4. Choose an output:
    - **保存本地 HTML** (Save local HTML): download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.

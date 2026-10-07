@@ -23,7 +23,7 @@ git clone https://github.com/JinheLin/chatgpt-conversation-archive.git
 3. 点击「加载未打包的扩展程序」，选择包含 `manifest.json` 的项目根目录。
 4. 在同一 Chrome 用户配置中登录 ChatGPT。
 5. 点击 Chrome 右上角「扩展程序」菜单中的 **ChatGPT Conversation Archive**，或刷新 ChatGPT 对话页后点击右下角的 **Export PDF / HTML**。可将扩展固定到工具栏。
-6. 输入 `https://chatgpt.com/c/…` 对话链接，点击「读取完整对话」。
+6. 从对话页进入并携带链接时，导出页会自动填入链接并开始读取。未携带链接时，输入 `https://chatgpt.com/c/…` 对话链接，再点击「读取完整对话」。
 7. 等待导出页显示消息链及渲染数量校验通过，然后：
    - **保存本地 HTML**：下载单文件 HTML，包含样式、公式字体、成功读取的图片及文件附件。开头目录和「返回问题目录」可直接跳转。
    - **打印 / 保存 PDF**：目标打印机选「另存为 PDF」，纸张 A4，页面选「全部」，缩放保持默认。取消勾选「页眉和页脚」可隐藏浏览器网址；需要底色时勾选「背景图形」。

@@ -32,7 +32,7 @@
     });
   }
   async function start(event) {
-    event.preventDefault();
+    event?.preventDefault();
     const mine = ++generation;
     startButton.disabled = true;
     cancelButton.hidden = false;
@@ -138,4 +138,6 @@
       report("本地 HTML 已生成，包含问题目录、样式及公式字体。请查看 Chrome 下载记录。");
     } catch (error) { report(`保存 HTML 失败：${error.message}`, true); }
   });
+
+  if (initial?.trim()) start();
 })();

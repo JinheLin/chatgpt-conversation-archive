@@ -48,7 +48,7 @@
 .pdf-document { box-sizing: border-box; width: min(210mm, 100%); min-height: 297mm; margin: 20px auto; padding: 20mm 18mm; background: #fff; box-shadow: 0 2px 12px #ccc; }
 .pdf-title { margin: 0 0 .25em; font-size: 22pt; line-height: 1.25; overflow-wrap: anywhere; }
 .pdf-meta { margin: 0 0 2em; color: #62686e; font-size: 9pt; }
-.pdf-message { margin: 0 0 1.6em; padding-top: .7em; border-top: 1px solid #d8dcdf; }
+.pdf-message { margin: 0 0 1.6em; padding-top: .7em; }
 .pdf-role { margin: 0 0 .55em; color: #176b58; font-size: 9pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .pdf-message-body > :first-child { margin-top: 0; }
 .pdf-message-body > :last-child { margin-bottom: 0; }

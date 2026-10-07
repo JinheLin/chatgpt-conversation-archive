@@ -31,7 +31,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 The export interface currently uses Chinese labels; their English meanings are provided below.
 
 1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
-2. When opened without a URL, enter a conversation URL such as `https://chatgpt.com/c/…` and click **读取完整对话** (Read full conversation).
+2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **读取完整对话** (Read full conversation).
 3. Wait for confirmation that the message chain and rendered message counts have passed validation.
 4. Choose an output:
    - **保存本地 HTML** (Save local HTML): download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
@@ -101,7 +101,7 @@ For development, install Node.js 18 or later and run from the project root:
 npm test
 ```
 
-Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
+Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, navigation without a page reload, toolbar entry links, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
 
 ## Known limitations
 

@@ -23,7 +23,8 @@
   }
   async function open() {
     try {
-      const response = await chrome.runtime.sendMessage({ type: "OPEN_EXPORT_PAGE" });
+      // ChatGPT navigates without reloading; sender.url can still be the initial homepage.
+      const response = await chrome.runtime.sendMessage({ type: "OPEN_EXPORT_PAGE", source: location.href });
       if (!response?.ok) throw new Error(response?.error || "无法打开导出页。");
     } catch (_) { status("请刷新此页面后再点击，或使用 Chrome 工具栏的扩展图标。", true); }
   }

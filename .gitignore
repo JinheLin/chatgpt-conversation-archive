@@ -1,0 +1,19 @@
+# Local development and operating-system files
+.DS_Store
+node_modules/
+work/
+tmp/
+coverage/
+*.log
+
+# Exported conversations and Chrome packaging artifacts
+exports/
+archives/
+*.pdf
+*.html
+!print.html
+*.zip
+*.crx
+*.pem
+.env
+.env.*

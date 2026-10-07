@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatGPT 完整对话导出</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="vendor/katex.min.css">
+  <script src="vendor/markdown-it.min.js" defer></script>
+  <script src="vendor/katex.min.js" defer></script>
+  <script src="conversation-source.js" defer></script>
+  <script src="export.js" defer></script>
+  <script src="print.js" defer></script>
+</head>
+<body class="pdf-print-page">
+  <div class="export-panel">
+    <h1>导出完整 ChatGPT 对话</h1>
+    <p>输入对话链接，生成带问题目录的 PDF 或单文件 HTML。</p>
+    <form id="export-form">
+      <label for="conversation-url">ChatGPT 对话链接</label>
+      <div class="input-row"><input id="conversation-url" type="url" required placeholder="https://chatgpt.com/c/…" autocomplete="off"><button id="start-export" type="submit">读取完整对话</button></div>
+    </form>
+    <p class="hint">私有对话使用此 Chrome 账号的登录状态。只读取当前分支，包含它从开始到结束的全部用户和助手消息。</p>
+    <p id="export-status" role="status" aria-live="polite">等待输入链接。</p>
+    <button id="cancel-export" type="button" hidden>取消读取</button>
+    <div id="output-actions" hidden>
+      <button id="save-html" type="button">保存本地 HTML</button>
+      <button id="print-again" type="button">打印 / 保存 PDF</button>
+      <label for="page-layout">PDF 纸张方向</label><select id="page-layout"><option value="portrait">A4 纵向</option><option value="landscape">A4 横向（适合宽文本图）</option></select>
+    </div>
+  </div>
+  <main id="pdf-document" class="pdf-document" hidden></main>
+  <style id="page-direction">@page { size: A4 portrait; }</style>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Conversation Archive",
+  "version": "2.0.0",
+  "description": "Export a complete ChatGPT conversation from its link to PDF or offline HTML, with a question index.",
+  "minimum_chrome_version": "114",
+  "permissions": ["scripting"],
+  "host_permissions": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+  "action": { "default_title": "输入 ChatGPT 链接，导出完整 PDF / HTML" },
+  "background": { "service_worker": "worker.js" },
+  "content_scripts": [{
+    "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+    "js": ["dom-adapter.js", "conversation-source.js", "content.js"],
+    "css": ["style.css"],
+    "run_at": "document_idle"
+  }]
+}

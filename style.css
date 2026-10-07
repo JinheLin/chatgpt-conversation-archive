@@ -1,0 +1,134 @@
+/* ChatGPT page: only the injected button is styled. */
+#chatgpt-pdf-export-btn {
+  position: fixed;
+  z-index: 2147483647;
+  right: 24px;
+  bottom: 24px;
+  padding: 10px 16px;
+  border: 1px solid #235c50;
+  border-radius: 999px;
+  background: #176b58;
+  color: #fff;
+  box-shadow: 0 5px 18px rgb(0 0 0 / 18%);
+  font: 600 13px/1.3 system-ui, sans-serif;
+  cursor: pointer;
+}
+#chatgpt-pdf-export-btn:hover { background: #115341; }
+#chatgpt-pdf-export-btn:focus-visible { outline: 3px solid #83c8b4; outline-offset: 2px; }
+#chatgpt-pdf-export-btn:disabled { opacity: .72; cursor: wait; }
+#chatgpt-pdf-export-status {
+  position: fixed;
+  z-index: 2147483647;
+  right: 24px;
+  bottom: 78px;
+  max-width: min(360px, calc(100vw - 48px));
+  padding: 12px 15px;
+  border: 1px solid #c4d8d0;
+  border-radius: 8px;
+  background: #fff;
+  color: #174f40;
+  box-shadow: 0 5px 18px rgb(0 0 0 / 15%);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+#chatgpt-pdf-export-status[data-level="error"] { border-color: #f1b3ad; color: #b42318; }
+#chatgpt-pdf-export-status[hidden] { display: none; }
+
+/* Extension print page. */
+.pdf-print-page {
+  margin: 0;
+  background: #eee;
+  color: #202124;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", sans-serif;
+  font-size: 11pt;
+  line-height: 1.65;
+}
+.pdf-actions { position: sticky; top: 0; z-index: 2; padding: 10px 16px; background: #fff; text-align: right; box-shadow: 0 1px 5px #ccc; }
+.pdf-actions button { padding: 7px 13px; border: 0; border-radius: 5px; background: #176b58; color: #fff; font: inherit; cursor: pointer; }
+.pdf-document { box-sizing: border-box; width: min(210mm, 100%); min-height: 297mm; margin: 20px auto; padding: 20mm 18mm; background: #fff; box-shadow: 0 2px 12px #ccc; }
+.pdf-title { margin: 0 0 .25em; font-size: 22pt; line-height: 1.25; overflow-wrap: anywhere; }
+.pdf-meta { margin: 0 0 2em; color: #62686e; font-size: 9pt; }
+.pdf-message { margin: 0 0 1.6em; padding-top: .7em; border-top: 1px solid #d8dcdf; }
+.pdf-role { margin: 0 0 .55em; color: #176b58; font-size: 9pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.pdf-message-body > :first-child { margin-top: 0; }
+.pdf-message-body > :last-child { margin-bottom: 0; }
+.pdf-message-body p, .pdf-message-body ul, .pdf-message-body ol,
+.pdf-message-body blockquote, .pdf-message-body pre, .pdf-message-body table { margin: .45em 0 .8em; }
+.pdf-message-body h1, .pdf-message-body h2, .pdf-message-body h3,
+.pdf-message-body h4, .pdf-message-body h5, .pdf-message-body h6 { margin: 1.15em 0 .4em; line-height: 1.3; }
+.pdf-message-body h1 { font-size: 17pt; }
+.pdf-message-body h2 { font-size: 14pt; }
+.pdf-message-body h3 { font-size: 12pt; }
+.pdf-message-body ul, .pdf-message-body ol { padding-left: 1.6em; }
+.pdf-message-body li { padding-left: .15em; }
+.pdf-message-body blockquote { margin-left: 0; padding-left: 1em; border-left: 3px solid #b5c9c1; color: #444; }
+.pdf-message-body pre, .pdf-message-body code, .pdf-message-body kbd,
+.pdf-message-body samp { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 9pt; }
+.pdf-message-body pre { padding: .8em 1em; border: 1px solid #e1e4e6; border-radius: 4px; background: #f6f8fa; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.pdf-message-body :not(pre) > code { padding: .05em .25em; border-radius: 3px; background: #f2f4f5; overflow-wrap: anywhere; }
+.pdf-message-body table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9pt; }
+.pdf-message-body th, .pdf-message-body td { padding: .4em .55em; border: 1px solid #ccd2d5; vertical-align: top; overflow-wrap: anywhere; }
+.pdf-message-body th { background: #f3f6f5; text-align: left; }
+.pdf-message-body img { max-width: 100%; height: auto; }
+.pdf-message-body a, .pdf-meta a { color: #185e9d; text-decoration: underline; overflow-wrap: anywhere; }
+.pdf-status { color: #596168; }
+
+@page { size: A4; margin: 16mm 17mm 18mm; }
+@media print {
+  html, .pdf-print-page { margin: 0; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .pdf-actions { display: none !important; }
+  .pdf-document { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+  .pdf-title, .pdf-role, .pdf-message-body h1, .pdf-message-body h2,
+  .pdf-message-body h3, .pdf-message-body h4, .pdf-message-body h5,
+  .pdf-message-body h6 { break-after: avoid-page; page-break-after: avoid; }
+  .pdf-message { break-inside: auto; }
+  .pdf-message-body p, .pdf-message-body li, .pdf-message-body blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+  .pdf-message-body pre { break-inside: auto; }
+  .pdf-message-body table { break-inside: auto; }
+  .pdf-message-body thead { display: table-header-group; }
+  .pdf-message-body tr, .pdf-message-body img { break-inside: avoid-page; page-break-inside: avoid; }
+}
+
+/* Full-conversation exporter */
+.export-panel { box-sizing: border-box; max-width: 900px; margin: 24px auto; padding: 24px; border-radius: 12px; background: #fff; box-shadow: 0 2px 12px #d6dadd; }
+.export-panel h1 { margin: 0; font-size: 24px; }
+.export-panel p { margin: .6em 0; }
+.export-panel label { display: inline-block; font-weight: 600; margin: 6px 0; }
+.input-row { display: flex; gap: 10px; }
+.input-row input { flex: 1; min-width: 0; border: 1px solid #bcc8c2; border-radius: 6px; padding: 10px 12px; font: inherit; }
+.export-panel button { padding: 10px 16px; border: 0; border-radius: 6px; background: #176b58; color: #fff; font: 600 14px/1.4 system-ui, sans-serif; cursor: pointer; }
+.export-panel button:disabled { opacity: .6; cursor: wait; }
+.export-panel select { padding: 7px; margin: 0 8px; font: inherit; }
+.export-panel .hint { color: #62686e; font-size: 13px; }
+#export-status { margin-top: 16px; padding: 12px; border-radius: 6px; background: #edf6f2; color: #176b58; }
+#export-status[data-level="error"] { background: #fff0ed; color: #b42318; }
+#output-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+#output-actions[hidden], .pdf-document[hidden], #cancel-export[hidden] { display: none; }
+.pdf-toc { margin: 1.5em 0 2em; padding: 1.2em 1.5em; background: #f3f7f5; border: 1px solid #d8e4de; border-radius: 5px; }
+.pdf-toc h2 { margin-top: 0; font-size: 15pt; }
+.pdf-toc ol { padding-left: 1.5em; }
+.pdf-toc li { margin-bottom: .6em; break-inside: avoid; }
+.pdf-toc a { color: #176b58; overflow-wrap: anywhere; text-decoration: none; }
+.pdf-back { display: inline-block; margin-top: 1em; color: #687b71; font-size: 9pt; text-decoration: none; }
+.pdf-message { scroll-margin-top: 20px; }
+.pdf-message-body pre { white-space: pre; overflow-wrap: normal; word-break: normal; overflow-x: auto; letter-spacing: 0; tab-size: 4; line-height: 1.35; }
+.pdf-message-body pre code { font-size: inherit; white-space: inherit; overflow-wrap: normal; word-break: normal; padding: 0; background: none; }
+.pdf-message-body figure { margin: 1em 0; }
+.pdf-message-body figcaption { font-size: 9pt; color: #687b71; }
+.pdf-asset-warning { padding: .8em; border: 1px solid #e5c48b; background: #fff8e8; }
+.pdf-sources { font-size: 9pt; color: #62686e; }
+.pdf-message-body .katex { font-size: 1.1em; }
+.pdf-document[data-landscape="true"] { width: min(297mm, 100%); }
+.pdf-offline .pdf-document { margin-top: 0; }
+@media (max-width: 700px) { .input-row { flex-direction: column; } .export-panel { margin: 10px; } }
+@media print {
+  .export-panel { display: none !important; }
+  .pdf-document[data-landscape="true"] { width: auto; }
+  .pdf-toc { break-after: page; }
+  .pdf-message-body pre { overflow: visible; break-inside: avoid-page; page-break-inside: avoid; }
+  .pdf-back { display: none; }
+  .pdf-message-body .katex-display { break-inside: avoid; }
+}

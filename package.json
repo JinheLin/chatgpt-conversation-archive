@@ -1,0 +1,17 @@
+{
+  "name": "chatgpt-conversation-archive",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Chrome extension for exporting complete ChatGPT conversation branches to PDF or offline HTML.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JinheLin/chatgpt-conversation-archive.git"
+  },
+  "scripts": {
+    "test": "node tests/source.test.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

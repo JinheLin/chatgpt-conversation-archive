@@ -24,7 +24,7 @@
     "message": "Read full conversation"
   },
   "sessionHint": {
-    "message": "Private conversations use the login session in this Chrome profile. Only the selected branch is read, including all its user and assistant messages from beginning to end."
+    "message": "Private conversations use your ChatGPT login session in this browser. Only the selected branch is read, including all its user and assistant messages from beginning to end."
   },
   "waitingInput": {
     "message": "Waiting for a conversation link."
@@ -74,10 +74,10 @@
     "message": "The reading tab was closed."
   },
   "readExisting": {
-    "message": "Reading the already-open conversation using the login session in this Chrome profile…"
+    "message": "Reading the already-open conversation using your ChatGPT login session in this browser…"
   },
   "readBackground": {
-    "message": "Opening the conversation in the background using the login session in this Chrome profile…"
+    "message": "Opening the conversation in the background using your ChatGPT login session in this browser…"
   },
   "verifyFull": {
     "message": "Reading and verifying the full conversation, regardless of scrolling or lazy-loaded messages…"
@@ -206,7 +206,7 @@
     "message": "The reading page no longer matches the requested conversation link. Try again."
   },
   "readAccessFailed": {
-    "message": "Could not read the full conversation (HTTP $status$). Sign in to this Chrome profile and confirm you can access the link.",
+    "message": "Could not read the full conversation (HTTP $status$). Sign in to ChatGPT in this browser and confirm you can access the link.",
     "placeholders": {
       "status": {
         "content": "$1"

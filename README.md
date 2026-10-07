@@ -44,7 +44,7 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ## How it handles lazy loading
 
-Version 2 reads ChatGPT's conversation data using the current Chrome session. It follows `current_node → parent → root` to reconstruct the selected branch, then renders messages in chronological order.
+Version 2 reads ChatGPT's conversation data using your ChatGPT login session in the current browser. It follows `current_node → parent → root` to reconstruct the selected branch, then renders messages in chronological order.
 
 - No scrolling or waiting for older messages to appear is required. Messages that the page removes from the DOM when they leave the viewport are still included in the returned branch.
 - Missing parent nodes, cycles, explicit pagination flags, an ambiguous branch, or messages still being generated cause an error instead of an export claiming completeness.
@@ -83,14 +83,14 @@ The DOM adapter prefers semantic attributes such as `data-message-author-role`, 
 
 ## Permissions and data handling
 
-The extension requests only `scripting` and host access to `chatgpt.com` and `chat.openai.com`. It uses the current login session within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
+The extension requests only `scripting` and host access to `chatgpt.com` and `chat.openai.com`. It uses the current ChatGPT login session within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
 
 Rendering happens locally, with no upload service. Raw HTML in Markdown is not executed, and math rendering uses `trust: false`. Offline HTML disables scripts and embeds fonts and images as data URLs. Clicking a source link still opens its website.
 
 ## Development and debugging
 
 - **No button on the page:** refresh ChatGPT, confirm the extension is enabled and allowed on the site, and use a `/c/…` or `/share/…` URL. The toolbar entry is also available.
-- **Reading fails:** confirm you are signed in using the same Chrome profile and can open the URL manually. HTTP 401, 403, or 404 can also indicate access restrictions, an expired session, or changed website endpoints.
+- **Reading fails:** confirm you are signed in to ChatGPT in the same Chrome profile where the extension is installed and can open the URL manually. HTTP 401, 403, or 404 can also indicate access restrictions, an expired session, or changed website endpoints.
 - **Extension loading errors:** open **Errors** on the extension card. Click **Service Worker** to inspect entry-point errors.
 - **Rendering or download errors:** right-click the export page and choose **Inspect**. Use the temporary ChatGPT tab's developer tools to inspect request status. Do not share credential-bearing headers or unredacted network logs.
 - **The page keeps loading older messages:** this does not prevent full-chain export. If the conversation data request also times out, the extension reports an error.
@@ -123,7 +123,7 @@ These are included in the repository; no installation is needed:
 
 ## Validation scope
 
-Validated in a signed-in Chrome profile with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
+Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 
 ## Contributing and reporting issues
 

@@ -24,7 +24,7 @@
     "message": "读取完整对话"
   },
   "sessionHint": {
-    "message": "私有对话使用此 Chrome 账号的登录状态。只读取当前分支，包含它从开始到结束的全部用户和助手消息。"
+    "message": "私有对话使用当前浏览器中的 ChatGPT 登录状态。只读取当前分支，包含它从开始到结束的全部用户和助手消息。"
   },
   "waitingInput": {
     "message": "等待输入链接。"
@@ -74,10 +74,10 @@
     "message": "读取窗口已关闭。"
   },
   "readExisting": {
-    "message": "正在读取已打开的对话。将使用此 Chrome 账号的登录状态读取完整消息链…"
+    "message": "正在读取已打开的对话。将使用当前浏览器中的 ChatGPT 登录状态读取完整消息链…"
   },
   "readBackground": {
-    "message": "正在后台打开对话。将使用此 Chrome 账号的登录状态读取完整消息链…"
+    "message": "正在后台打开对话。将使用当前浏览器中的 ChatGPT 登录状态读取完整消息链…"
   },
   "verifyFull": {
     "message": "正在读取并校验完整对话；不依赖页面是否滚动或已加载旧消息…"
@@ -206,7 +206,7 @@
     "message": "当前页面与输入的对话链接不一致，请重试。"
   },
   "readAccessFailed": {
-    "message": "无法读取完整对话（$status$）。请在此 Chrome 账号登录并确认有权访问该链接。",
+    "message": "无法读取完整对话（$status$）。请在当前浏览器中登录 ChatGPT，并确认有权访问该链接。",
     "placeholders": {
       "status": {
         "content": "$1"

@@ -1,6 +1,7 @@
 /* Deterministic, offline renderer. Message HTML never executes conversation code. */
 (() => {
   "use strict";
+  const { t, language } = globalThis.ChatGPTPdfI18n;
   const md = globalThis.markdownit({ html: false, linkify: true, breaks: false, typographer: false });
   const mathHtml = (source, displayMode) => globalThis.katex.renderToString(source, {
     displayMode, throwOnError: false, trust: false, strict: "ignore", output: "htmlAndMathml"
@@ -83,7 +84,7 @@
     const original = container.textContent.replace(/\s+/g, " ").trim();
     const withoutUrls = original.replace(/https?[:\\]+\/\/\S+/g, "").trim();
     const title = withoutUrls || original;
-    return title ? title.slice(0, 100) + (title.length > 100 ? "…" : "") : `问题 ${number}（含附件）`;
+    return title ? title.slice(0, 100) + (title.length > 100 ? "…" : "") : t("questionWithAttachments", number);
   }
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -93,22 +94,22 @@
   }
   function render(payload, main) {
     if (!payload.completeness?.verified || payload.messages.length !== payload.completeness.count) {
-      throw new Error("消息数量校验失败，未生成文件。");
+      throw new Error(t("countMismatch"));
     }
     main.replaceChildren();
     main.appendChild(el("h1", "pdf-title", payload.title));
-    main.appendChild(el("p", "pdf-meta", `完整对话 · ${payload.messages.length} 条消息 · ${payload.completeness.questions} 个问题 · ${new Date(payload.capturedAt).toLocaleString()}`));
+    main.appendChild(el("p", "pdf-meta", t("conversationMeta", payload.messages.length, payload.completeness.questions, new Date(payload.capturedAt).toLocaleString(language))));
     if (payload.sourceUrl) {
       const provenance = el("p", "pdf-meta");
-      const link = el("a", "", "原始对话链接");
+      const link = el("a", "", t("originalLink"));
       link.href = payload.sourceUrl;
       provenance.appendChild(link);
       main.appendChild(provenance);
     }
     const nav = el("nav", "pdf-toc");
     nav.id = "question-index";
-    nav.setAttribute("aria-label", "问题导航目录");
-    nav.appendChild(el("h2", "", "问题目录"));
+    nav.setAttribute("aria-label", t("questionNav"));
+    nav.appendChild(el("h2", "", t("questionIndex")));
     const list = el("ol");
     nav.appendChild(list);
     main.appendChild(nav);
@@ -126,11 +127,11 @@
         list.appendChild(item);
       } else section.id = `message-${index + 1}`;
       section.dataset.messageId = message.id;
-      section.appendChild(el("h2", "pdf-role", message.role === "user" ? `问题 ${question}` : "回答"));
+      section.appendChild(el("h2", "pdf-role", message.role === "user" ? t("questionLabel", question) : t("answerLabel")));
       const body = el("div", "pdf-message-body");
       // html:false and KaTeX trust:false; do not execute HTML from the transcript.
       const sourceId = `sources-${index + 1}`;
-      const text = message.text.replace(/[^]*/g, () => message.sources?.length ? `[来源](#${sourceId})` : "");
+      const text = message.text.replace(/[^]*/g, () => message.sources?.length ? `[${t("sourcesLabel")}](#${sourceId})` : "");
       body.innerHTML = md.render(preserveDiagrams(text));
       section.appendChild(body);
       for (const asset of message.assets || []) {
@@ -139,10 +140,10 @@
           if (asset.dataUrl.startsWith("data:image/")) {
             const img = el("img");
             img.src = asset.dataUrl;
-            img.alt = asset.label || "对话图片";
+            img.alt = asset.label || t("conversationImage");
             figure.appendChild(img);
           } else {
-            const link = el("a", "", `附件：${asset.label || "下载文件"}（本地 HTML 中可下载）`);
+            const link = el("a", "", t("downloadAttachment", asset.label || t("downloadFile")));
             link.href = asset.dataUrl;
             link.download = asset.label || "attachment";
             figure.appendChild(link);
@@ -150,22 +151,22 @@
           if (asset.label) figure.appendChild(el("figcaption", "", asset.label));
           body.appendChild(figure);
         } else {
-          const description = asset.error || "此附件无法以 HTML 显示";
-          body.appendChild(el("p", "pdf-asset-warning", `附件：${asset.label || "未命名附件"} — ${description}`));
-          problems.push(`${asset.label || "附件"}：${description}`);
+          const description = asset.error || t("assetDisplayFailed");
+          body.appendChild(el("p", "pdf-asset-warning", t("assetWarning", asset.label || t("unnamedAttachment"), description)));
+          problems.push(t("assetProblemDetail", asset.label || t("attachment"), description));
         }
       }
       for (const img of body.querySelectorAll("img")) {
         if (!img.getAttribute("src")?.startsWith("data:")) {
-          const label = img.alt || img.getAttribute("src") || "图片";
-          img.replaceWith(el("p", "pdf-asset-warning", `图片未能内嵌：${label}。`));
-          problems.push(`图片未能内嵌：${label}`);
+          const label = img.alt || img.getAttribute("src") || t("imageLabel");
+          img.replaceWith(el("p", "pdf-asset-warning", t("imageNotEmbedded", label)));
+          problems.push(t("imageNotEmbedded", label));
         }
       }
       if (message.sources?.length) {
         const details = el("div", "pdf-sources");
         details.id = sourceId;
-        details.appendChild(el("p", "", "引用来源"));
+        details.appendChild(el("p", "", t("sourceHeading")));
         const links = el("ul");
         for (const source of message.sources) {
           if (!/^https?:\/\//.test(source.url)) continue;
@@ -178,13 +179,13 @@
         details.appendChild(links);
         body.appendChild(details);
       }
-      const back = el("a", "pdf-back", "返回问题目录 ↑");
+      const back = el("a", "pdf-back", t("backIndex"));
       back.href = "#question-index";
       section.appendChild(back);
       main.appendChild(section);
     }
     if (main.querySelectorAll("section.pdf-message").length !== payload.completeness.count || question !== payload.completeness.questions) {
-      throw new Error("渲染数量与完整消息清单不一致，未生成文件。");
+      throw new Error(t("renderMismatch"));
     }
     main.hidden = false;
     return problems;

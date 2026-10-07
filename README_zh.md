@@ -6,6 +6,8 @@
 
 输入一个 ChatGPT 对话链接，导出带问题目录的 PDF 或可离线打开的单文件 HTML。无需启动服务器、安装 Node.js 或配置 API Key。
 
+插件文案跟随 Chrome 界面语言：简体中文显示中文，其他语言（包括繁体中文）显示英文。网页按钮、进度及错误提示、导出文件的目录和导航标签均遵循该规则。对话正文保留原语言。
+
 ## 快速开始
 
 ### 1. 获取项目
@@ -22,7 +24,7 @@ git clone https://github.com/JinheLin/chatgpt-conversation-archive.git
 2. 在 Chrome 中打开 `chrome://extensions/`，开启右上角「开发者模式」。
 3. 点击「加载未打包的扩展程序」，选择包含 `manifest.json` 的项目根目录。
 4. 在同一 Chrome 用户配置中登录 ChatGPT。
-5. 点击 Chrome 右上角「扩展程序」菜单中的 **ChatGPT Conversation Archive**，或刷新 ChatGPT 对话页后点击右下角的 **Export PDF / HTML**。可将扩展固定到工具栏。
+5. 点击 Chrome 右上角「扩展程序」菜单中的 **ChatGPT Conversation Archive**，或刷新 ChatGPT 对话页后点击右下角的 **导出 PDF / HTML**（英文界面为 **Export PDF / HTML**）。可将扩展固定到工具栏。
 6. 从对话页进入并携带链接时，导出页会自动填入链接并开始读取。未携带链接，或从 ChatGPT 首页及其他网站打开插件时，输入 `https://chatgpt.com/c/…` 对话链接，再点击「读取完整对话」。
 7. 等待导出页显示消息链及渲染数量校验通过，然后：
    - **保存本地 HTML**：下载单文件 HTML，包含样式、公式字体、成功读取的图片及文件附件。开头目录和「返回问题目录」可直接跳转。
@@ -60,6 +62,7 @@ v2 不再把「目前出现在 DOM 中的消息」当作完整对话。它利用
 | 文件 | 职责 |
 | --- | --- |
 | `manifest.json` | MV3 配置、网站权限、入口和脚本顺序 |
+| `i18n.js` / `_locales/` | Chrome 文案读取、页面本地化及中英语言文件；默认语言为英文 |
 | `worker.js` | 工具栏点击及网页按钮打开导出页 |
 | `content.js` | 网页按钮、状态提示、读取请求桥接；重复注入可清理旧实例 |
 | `dom-adapter.js` | 独立 DOM 适配层及语义选择器；保留 DOM 提取/清理能力供诊断，完整导出不依赖它 |

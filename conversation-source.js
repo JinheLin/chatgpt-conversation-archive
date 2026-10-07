@@ -4,15 +4,17 @@
  */
 (() => {
   "use strict";
+  const { t } = globalThis.ChatGPTPdfI18n;
 
   function parseUrl(value) {
-    const url = new URL(value);
+    let url;
+    try { url = new URL(value); } catch (_) { throw new Error(t("invalidUrl")); }
     if (url.protocol !== "https:" || url.username || url.password || url.port ||
         !["chatgpt.com", "chat.openai.com"].includes(url.hostname)) {
-      throw new Error("请输入 https://chatgpt.com 的对话链接。");
+      throw new Error(t("invalidUrl"));
     }
     const match = url.pathname.match(/(?:^|\/)(c|share)\/([a-z0-9-]+)\/?$/i);
-    if (!match) throw new Error("链接应为 ChatGPT 对话或共享对话，不能是首页链接。");
+    if (!match) throw new Error(t("homepageUrl"));
     url.hash = "";
     url.search = "";
     return { url: url.href, origin: url.origin, kind: match[1].toLowerCase(), id: match[2] };
@@ -35,22 +37,22 @@
   function normalize(data, sourceUrl) {
     const root = [data, data?.conversation, data?.data, data?.conversation_data]
       .find((candidate) => candidate?.mapping && typeof candidate.mapping === "object");
-    if (!root) throw new Error("完整对话数据结构已变化，无法校验完整性。未生成不完整文件。");
+    if (!root) throw new Error(t("dataStructureChanged"));
     if (root.has_more === true || root.has_more_messages === true) {
-      throw new Error("服务端返回的是分页片段，无法校验完整性。未生成不完整文件。");
+      throw new Error(t("pagedData"));
     }
     const mapping = root.mapping;
     let current = root.current_node;
     if (!current) {
       const leaves = Object.keys(mapping).filter((id) => !mapping[id].children?.length);
-      if (leaves.length !== 1) throw new Error("无法确定当前对话分支，未生成文件。");
+      if (leaves.length !== 1) throw new Error(t("ambiguousBranch"));
       current = leaves[0];
     }
     const path = [];
     const seen = new Set();
     while (current) {
       if (seen.has(current) || !mapping[current]) {
-        throw new Error("对话消息链不完整或存在循环，未生成文件。");
+        throw new Error(t("incompleteChain"));
       }
       seen.add(current);
       const node = mapping[current];
@@ -62,7 +64,7 @@
     for (const node of path) {
       const message = node.message;
       if (["in_progress", "message_pending"].includes(message?.status)) {
-        throw new Error("对话仍在生成，请等待回复结束后再导出。");
+        throw new Error(t("generating"));
       }
       const role = message?.author?.role;
       if (role !== "user" && role !== "assistant") continue;
@@ -86,9 +88,9 @@
         files
       });
     }
-    if (!messages.length) throw new Error("此对话没有可导出的用户或助手消息。");
+    if (!messages.length) throw new Error(t("noMessages"));
     return {
-      title: root.title || data.title || "ChatGPT 对话",
+      title: root.title || data.title || t("conversationTitle"),
       sourceUrl,
       capturedAt: new Date().toISOString(),
       messages,
@@ -102,16 +104,16 @@
     let totalBytes = 0;
     async function dataUrl(url) {
       const parsed = new URL(url, location.origin);
-      if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("不支持的附件地址");
+      if (!["https:", "http:"].includes(parsed.protocol)) throw new Error(t("unsupportedAssetUrl"));
       const response = await fetch(parsed.href, {
         headers: parsed.origin === location.origin ? headers : {},
         credentials: parsed.origin === location.origin ? "include" : "omit",
         signal: AbortSignal.timeout(30000)
       });
-      if (!response.ok) throw new Error(`附件读取失败（${response.status}）`);
+      if (!response.ok) throw new Error(t("assetReadFailed", response.status));
       const blob = await response.blob();
       if (blob.size > 20 * 1024 * 1024 || totalBytes + blob.size > 35 * 1024 * 1024) {
-        throw new Error("附件过大，无法内嵌到单文件 HTML");
+        throw new Error(t("assetTooLarge"));
       }
       totalBytes += blob.size;
       return new Promise((resolve, reject) => {
@@ -124,9 +126,9 @@
         const response = await fetch(`/backend-api/files/${encodeURIComponent(id)}/download`, {
           headers, credentials: "include", signal: AbortSignal.timeout(20000)
         });
-        if (!response.ok) throw new Error(`附件下载链接不可用（${response.status}）`);
+        if (!response.ok) throw new Error(t("assetLinkFailed", response.status));
         const info = await response.json();
-        if (!info.download_url) throw new Error("附件下载地址不可用");
+        if (!info.download_url) throw new Error(t("assetLinkMissing"));
         return dataUrl(info.download_url);
       })());
       return cache.get(id);
@@ -145,10 +147,10 @@
       for (const part of message.attachments) {
         const id = pointer(part);
         const file = message.files.find((item) => item.id === id || item.file_id === id);
-        const label = file?.name || part.content_type || "对话附件";
+        const label = file?.name || part.content_type || t("conversationAttachment");
         if (id) seen.add(id);
         try {
-          if (!id) throw new Error("此特殊组件无法完整转换为静态 HTML");
+          if (!id) throw new Error(t("unsupportedComponent"));
           message.assets.push({ label, dataUrl: await fileData(id) });
         } catch (error) { message.assets.push({ label, error: error.message }); }
       }
@@ -157,9 +159,9 @@
         if (seen.has(id)) continue;
         seen.add(id);
         try {
-          if (!id) throw new Error("附件没有下载标识");
-          message.assets.push({ label: file.name || "附件", dataUrl: await fileData(id) });
-        } catch (error) { message.assets.push({ label: file.name || "附件", error: error.message }); }
+          if (!id) throw new Error(t("missingAssetId"));
+          message.assets.push({ label: file.name || t("attachment"), dataUrl: await fileData(id) });
+        } catch (error) { message.assets.push({ label: file.name || t("attachment"), error: error.message }); }
       }
       const images = [...new Set([...message.text.matchAll(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]))];
       for (const url of images) {
@@ -174,7 +176,7 @@
 
   async function read(value) {
     const target = parseUrl(value);
-    if (target.url !== parseUrl(location.href).url) throw new Error("当前页面与输入的对话链接不一致，请重试。");
+    if (target.url !== parseUrl(location.href).url) throw new Error(t("conversationMismatch"));
     let token = null;
     try {
       const session = await fetch("/api/auth/session", { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(20000) });
@@ -189,9 +191,9 @@
       const response = await fetch(endpoint, { headers, credentials: "include", cache: "no-store", signal: AbortSignal.timeout(60000) });
       if (!response.ok) {
         if ([401, 403, 404].includes(response.status)) {
-          throw new Error(`无法读取完整对话（${response.status}）。请在此 Chrome 账号登录并确认有权访问该链接。`);
+          throw new Error(t("readAccessFailed", response.status));
         }
-        throw new Error(`读取完整对话失败（${response.status}），请稍后重试。`);
+        throw new Error(t("readHttpFailed", response.status));
       }
       return await inlineAssets(normalize(await response.json(), target.url), headers);
     } finally {

@@ -1,5 +1,7 @@
 (() => {
   "use strict";
+  const { t, language, localizeDocument } = globalThis.ChatGPTPdfI18n;
+  localizeDocument(document);
   const main = document.getElementById("pdf-document");
   const input = document.getElementById("conversation-url");
   const status = document.getElementById("export-status");
@@ -15,9 +17,9 @@
   function report(text, error = false) { status.textContent = text; status.dataset.level = error ? "error" : "info"; }
   function tabLoaded(tabId) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => done(new Error("页面加载超时，请检查登录状态后重试。")), 60000);
+      const timer = setTimeout(() => done(new Error(t("loadTimeout"))), 60000);
       function listener(id, change) { if (id === tabId && change.status === "complete") done(); }
-      function removed(id) { if (id === tabId) done(new Error("读取窗口已关闭。")); }
+      function removed(id) { if (id === tabId) done(new Error(t("readTabClosed"))); }
       function done(error) {
         clearTimeout(timer);
         chrome.tabs.onUpdated.removeListener(listener);
@@ -48,8 +50,8 @@
         try { return globalThis.ChatGPTPdfSource.parseUrl(tab.url).url === target.url; }
         catch (_) { return false; }
       });
-      report(existing ? "正在读取已打开的对话。将使用此 Chrome 账号的登录状态读取完整消息链…" :
-        "正在后台打开对话。将使用此 Chrome 账号的登录状态读取完整消息链…");
+      report(existing ? t("readExisting") :
+        t("readBackground"));
       const tab = existing || await chrome.tabs.create({ url: target.url, active: false });
       if (mine !== generation) {
         if (!existing) await chrome.tabs.remove(tab.id).catch(() => {});
@@ -60,26 +62,26 @@
       await tabLoaded(tab.id);
       if (mine !== generation) return;
       await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["style.css"] });
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["dom-adapter.js", "conversation-source.js", "content.js"] });
-      report("正在读取并校验完整对话；不依赖页面是否滚动或已加载旧消息…");
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "dom-adapter.js", "conversation-source.js", "content.js"] });
+      report(t("verifyFull"));
       const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url });
       if (mine !== generation) return;
-      if (!response?.ok) throw new Error(response?.error || "无法读取完整对话。");
+      if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
       payload = response.payload;
-      report(`已读取 ${payload.messages.length} 条消息。正在排版并创建问题目录…`);
+      report(t("layoutProgress", payload.messages.length));
       const problems = globalThis.ChatGPTPdfExporter.render(payload, main);
       document.title = `${payload.title} — PDF / HTML`;
       await document.fonts.ready;
       if (mine !== generation) return;
       globalThis.ChatGPTPdfExporter.fitCode(main, document.getElementById("page-layout").value === "landscape");
       actions.hidden = false;
-      report(`完整消息链及渲染数量校验通过：${payload.messages.length} 条消息，${payload.completeness.questions} 个问题。${problems.length ? `另有 ${problems.length} 个附件无法完整显示，详见正文标注。` : "可保存 HTML 或 PDF。"}`);
+      report(t("readVerified", payload.messages.length, payload.completeness.questions, problems.length ? t("assetProblems", problems.length) : t("readyOutput")));
       if (!existing) {
         await chrome.tabs.remove(tab.id);
         sourceTab = null;
       }
     } catch (error) {
-      if (mine === generation) report(error.message || "读取失败。", true);
+      if (mine === generation) report(error.message || t("readFailed"), true);
     } finally {
       if (mine === generation) {
         startButton.disabled = false;
@@ -94,7 +96,7 @@
     sourceTab = null;
     startButton.disabled = false;
     cancelButton.hidden = true;
-    report("已取消读取。");
+    report(t("cancelled"));
   });
   document.getElementById("page-layout").addEventListener("change", (event) => {
     document.getElementById("page-direction").textContent = `@page { size: A4 ${event.target.value}; }`;
@@ -125,10 +127,10 @@
   }
   document.getElementById("save-html").addEventListener("click", async () => {
     try {
-      if (!payload) throw new Error("请先读取完整对话。");
+      if (!payload) throw new Error(t("readFirst"));
       const css = await offlineCss();
       const exported = document.implementation.createHTMLDocument(payload.title);
-      exported.documentElement.lang = "zh-CN";
+      exported.documentElement.lang = language;
       const charset = exported.createElement("meta"); charset.setAttribute("charset", "utf-8"); exported.head.prepend(charset);
       const csp = exported.createElement("meta"); csp.httpEquiv = "Content-Security-Policy";
       csp.content = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'none'";
@@ -141,8 +143,8 @@
       const a = document.createElement("a"); a.href = url; a.download = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
-      report("本地 HTML 已生成，包含问题目录、样式及公式字体。请查看 Chrome 下载记录。");
-    } catch (error) { report(`保存 HTML 失败：${error.message}`, true); }
+      report(t("htmlSaved"));
+    } catch (error) { report(t("saveHtmlFailed", error.message), true); }
   });
 
   if (initial?.trim()) start();

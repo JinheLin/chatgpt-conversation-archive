@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { test } = require('node:test');
+const { installI18n } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
 const conversationUrl = 'https://chatgpt.com/c/test-conversation';
 const response = { ok: true, payload: {
@@ -26,7 +27,7 @@ function fixture(tabs, readResponse = Promise.resolve(response)) {
   const context = vm.createContext({
     URL, URLSearchParams, Date, setTimeout, clearTimeout,
     location: { search: '' },
-    document: { getElementById: element, fonts: { ready: Promise.resolve() } },
+    document: { getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, querySelectorAll: () => [] },
     chrome: {
       tabs: {
         query: async () => tabs,
@@ -46,6 +47,7 @@ function fixture(tabs, readResponse = Promise.resolve(response)) {
     },
     ChatGPTPdfExporter: { render: () => [], fitCode() {} }
   });
+  installI18n(context);
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
   return { created, removed, activated, requests, reading, element,
@@ -62,7 +64,7 @@ test('reading reuses the same conversation without creating, closing or activati
   assert.equal(app.activated.length, 0);
   assert.equal(app.requests[0].id, 20);
   assert.equal(app.requests[0].message.source, conversationUrl);
-  assert.match(app.element('export-status').textContent, /校验通过/);
+  assert.match(app.element('export-status').textContent, /verified/);
 });
 
 test('without a matching conversation, the temporary tab stays in the background and closes on success', async () => {
@@ -87,6 +89,6 @@ for (const reuse of [true, false]) {
     await pending;
     assert.deepEqual(app.removed, reuse ? [] : [90]);
     assert.equal(app.activated.length, 0);
-    assert.equal(app.element('export-status').textContent, '已取消读取。');
+    assert.equal(app.element('export-status').textContent, 'Reading cancelled.');
   });
 }

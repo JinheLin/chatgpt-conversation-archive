@@ -1,6 +1,7 @@
 /* The only file that knows how to locate messages in ChatGPT's page DOM. */
 (() => {
   "use strict";
+  const { t } = globalThis.ChatGPTPdfI18n;
 
   const ROLE_SELECTOR =
     '[data-message-author-role="user"], [data-message-author-role="assistant"]';
@@ -57,7 +58,7 @@
       .trim();
     return title && title.toLowerCase() !== "chatgpt"
       ? title
-      : "ChatGPT conversation";
+      : t("conversationTitle");
   }
 
   globalThis.ChatGPTPdfDomAdapter = { findMessages, getTitle, isConversationPage };

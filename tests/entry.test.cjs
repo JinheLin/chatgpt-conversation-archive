@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { test } = require('node:test');
+const { chromeI18n, installI18n } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
 
 function workerFixture() {
@@ -11,6 +12,7 @@ function workerFixture() {
   const context = vm.createContext({
     URL, URLSearchParams, Date, console,
     chrome: {
+      i18n: chromeI18n(),
       runtime: {
         id: 'extension-id',
         getURL: path => `chrome-extension://extension-id/${path}`,
@@ -19,7 +21,7 @@ function workerFixture() {
       tabs: { create: async options => { opened.push(new URL(options.url)); } },
       action: { onClicked: { addListener: listener => { action = listener; } } }
     },
-    importScripts: file => vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context)
+    importScripts: (...files) => files.forEach(file => vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context))
   });
   vm.runInContext(fs.readFileSync(path.join(project, 'worker.js'), 'utf8'), context);
   return { opened, click: tab => action(tab), message: (message, sender) => new Promise(resolve => {
@@ -75,6 +77,7 @@ test('content script captures the URL at click time after navigation without a p
     MutationObserver: class { constructor(callback) { scheduleUpdate = callback; } observe() {} disconnect() {} },
     requestAnimationFrame: callback => callback()
   });
+  installI18n(context);
   vm.runInContext(fs.readFileSync(path.join(project, 'content.js'), 'utf8'), context);
   assert.equal(nodes.has('chatgpt-pdf-export-btn'), false);
   location.href = 'https://chatgpt.com/c/first-conversation';

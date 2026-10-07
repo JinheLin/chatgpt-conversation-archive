@@ -8,6 +8,8 @@ A Chrome extension that exports a ChatGPT conversation from its URL to PDF or a 
 
 No server, API key, or dependency installation is required to use the extension. It reads the selected conversation branch using your existing ChatGPT login session, so export does not depend on scrolling through lazy-loaded messages.
 
+The interface follows Chrome's UI language: Simplified Chinese uses Chinese; all other languages, including Traditional Chinese, use English. This applies to page buttons, progress and error messages, and navigation labels in exported documents. Conversation text is preserved in its original language.
+
 ## Quick start
 
 ### 1. Get the project
@@ -24,19 +26,17 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 2. Open `chrome://extensions/` in Chrome and enable **Developer mode**.
 3. Click **Load unpacked** and select the project root containing `manifest.json`.
 4. Sign in to ChatGPT in the same Chrome profile.
-5. Open Chrome's **Extensions** menu and click **ChatGPT Conversation Archive**. You can also refresh a ChatGPT conversation page and click **Export PDF / HTML** in the bottom-right corner. Pin the extension for easier access.
+5. Open Chrome's **Extensions** menu and click **ChatGPT Conversation Archive**. You can also refresh a ChatGPT conversation page and click **Export PDF / HTML** (or **导出 PDF / HTML** in Chinese) in the bottom-right corner. Pin the extension for easier access.
 
 ### 3. Export a conversation
 
-The export interface currently uses Chinese labels; their English meanings are provided below.
-
 1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
-2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **读取完整对话** (Read full conversation).
+2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
 3. Wait for confirmation that the message chain and rendered message counts have passed validation.
 4. Choose an output:
-   - **保存本地 HTML** (Save local HTML): download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
-   - **打印 / 保存 PDF** (Print / Save PDF): select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
-   - For wide text diagrams, select **A4 横向** (A4 landscape) before printing or saving HTML.
+   - **Save offline HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
+   - **Print / Save PDF**: select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
+   - For wide text diagrams, select **A4 landscape** before printing or saving HTML.
 
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 
@@ -60,7 +60,7 @@ Version 2 reads ChatGPT's conversation data using the current Chrome session. It
 - Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.
 - Includes A4 print styles for keeping headings with following content, controlling orphans and widows, repeating table headers, and avoiding breaks within table rows and images where possible.
 - Renders math locally with KaTeX. Offline HTML embeds the required math fonts and needs no CDN.
-- Converts ChatGPT citation components into **来源** (Sources) links and lists sources at the end of the corresponding message. ChatGPT controls and feedback toolbars are omitted.
+- Converts ChatGPT citation components into **Sources** links and lists sources at the end of the corresponding message. ChatGPT controls and feedback toolbars are omitted.
 - Embeds downloadable attachments in HTML. Non-image files have download links in the document. PDF shows attachment descriptions; it does not embed those files as PDF attachments.
 - Images, audio, video, or special components that cannot be retrieved or converted are explicitly marked in the document and reported in the export status. A complete message chain does not guarantee successful conversion of every attachment.
 
@@ -69,6 +69,7 @@ Version 2 reads ChatGPT's conversation data using the current Chrome session. It
 | File | Responsibility |
 | --- | --- |
 | `manifest.json` | Manifest V3 configuration, host permissions, entry points, and script order |
+| `i18n.js` / `_locales/` | Chrome message lookup, page localization, and English/Simplified Chinese catalogs; English is the default locale |
 | `worker.js` | Opens the export page from the toolbar or injected button |
 | `content.js` | Injected button, status messages, and request bridge; cleans up old instances on reinjection |
 | `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |

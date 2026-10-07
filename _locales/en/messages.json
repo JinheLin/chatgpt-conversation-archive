@@ -1,0 +1,334 @@
+{
+  "extensionDescription": {
+    "message": "Export a complete ChatGPT conversation from its link to PDF or offline HTML, with a question index."
+  },
+  "actionTitle": {
+    "message": "Enter a ChatGPT link to export the full conversation as PDF / HTML"
+  },
+  "documentLanguage": {
+    "message": "en"
+  },
+  "exportPageTitle": {
+    "message": "ChatGPT Conversation Export"
+  },
+  "exportHeading": {
+    "message": "Export a complete ChatGPT conversation"
+  },
+  "exportDescription": {
+    "message": "Enter a conversation link to create a PDF or a single HTML file with a question index."
+  },
+  "urlLabel": {
+    "message": "ChatGPT conversation link"
+  },
+  "readFull": {
+    "message": "Read full conversation"
+  },
+  "sessionHint": {
+    "message": "Private conversations use the login session in this Chrome profile. Only the selected branch is read, including all its user and assistant messages from beginning to end."
+  },
+  "waitingInput": {
+    "message": "Waiting for a conversation link."
+  },
+  "cancelRead": {
+    "message": "Cancel reading"
+  },
+  "saveHtml": {
+    "message": "Save offline HTML"
+  },
+  "printPdf": {
+    "message": "Print / Save PDF"
+  },
+  "pageDirection": {
+    "message": "PDF orientation"
+  },
+  "portrait": {
+    "message": "A4 portrait"
+  },
+  "landscape": {
+    "message": "A4 landscape (for wide text diagrams)"
+  },
+  "exportButton": {
+    "message": "Export PDF / HTML"
+  },
+  "openExporterFailed": {
+    "message": "Could not open the export page."
+  },
+  "refreshPage": {
+    "message": "Refresh this page and try again, or use the extension icon in the Chrome toolbar."
+  },
+  "readingContent": {
+    "message": "Reading the full conversation for local export…"
+  },
+  "chainVerified": {
+    "message": "Full message chain verified: $count$ messages.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "loadTimeout": {
+    "message": "Page loading timed out. Check your login session and try again."
+  },
+  "readTabClosed": {
+    "message": "The reading tab was closed."
+  },
+  "readExisting": {
+    "message": "Reading the already-open conversation using the login session in this Chrome profile…"
+  },
+  "readBackground": {
+    "message": "Opening the conversation in the background using the login session in this Chrome profile…"
+  },
+  "verifyFull": {
+    "message": "Reading and verifying the full conversation, regardless of scrolling or lazy-loaded messages…"
+  },
+  "readFullFailed": {
+    "message": "Could not read the full conversation."
+  },
+  "layoutProgress": {
+    "message": "Read $count$ messages. Formatting and creating the question index…",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "readVerified": {
+    "message": "Full message chain and rendered counts verified: $count$ messages, $questions$ questions. $next$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "questions": {
+        "content": "$2"
+      },
+      "next": {
+        "content": "$3"
+      }
+    }
+  },
+  "assetProblems": {
+    "message": "$count$ attachments could not be fully displayed; see the notes in the document.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "readyOutput": {
+    "message": "Ready to save as HTML or PDF."
+  },
+  "readFailed": {
+    "message": "Reading failed."
+  },
+  "cancelled": {
+    "message": "Reading cancelled."
+  },
+  "readFirst": {
+    "message": "Read the full conversation first."
+  },
+  "htmlSaved": {
+    "message": "Offline HTML created with a question index, styles and math fonts. Check Chrome downloads."
+  },
+  "saveHtmlFailed": {
+    "message": "Could not save HTML: $error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "invalidUrl": {
+    "message": "Enter an HTTPS conversation link on chatgpt.com."
+  },
+  "homepageUrl": {
+    "message": "Use a ChatGPT conversation or shared conversation link, not the homepage."
+  },
+  "dataStructureChanged": {
+    "message": "The conversation data structure has changed; completeness could not be verified. No incomplete file was generated."
+  },
+  "pagedData": {
+    "message": "The server returned a paginated fragment; completeness could not be verified. No incomplete file was generated."
+  },
+  "ambiguousBranch": {
+    "message": "Could not identify the selected conversation branch. No file was generated."
+  },
+  "incompleteChain": {
+    "message": "The message chain is incomplete or contains a cycle. No file was generated."
+  },
+  "generating": {
+    "message": "The conversation is still being generated. Wait for the response to finish before exporting."
+  },
+  "noMessages": {
+    "message": "This conversation has no user or assistant messages to export."
+  },
+  "conversationTitle": {
+    "message": "ChatGPT conversation"
+  },
+  "unsupportedAssetUrl": {
+    "message": "Unsupported attachment URL"
+  },
+  "assetReadFailed": {
+    "message": "Could not read the attachment (HTTP $status$)",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "assetTooLarge": {
+    "message": "The attachment is too large to embed in a single HTML file"
+  },
+  "assetLinkFailed": {
+    "message": "Attachment download link unavailable (HTTP $status$)",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "assetLinkMissing": {
+    "message": "Attachment download URL unavailable"
+  },
+  "conversationAttachment": {
+    "message": "Conversation attachment"
+  },
+  "unsupportedComponent": {
+    "message": "This component could not be fully converted to static HTML"
+  },
+  "missingAssetId": {
+    "message": "The attachment has no download identifier"
+  },
+  "attachment": {
+    "message": "Attachment"
+  },
+  "conversationMismatch": {
+    "message": "The reading page no longer matches the requested conversation link. Try again."
+  },
+  "readAccessFailed": {
+    "message": "Could not read the full conversation (HTTP $status$). Sign in to this Chrome profile and confirm you can access the link.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "readHttpFailed": {
+    "message": "Could not read the full conversation (HTTP $status$). Try again later.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "questionWithAttachments": {
+    "message": "Question $number$ (with attachments)",
+    "placeholders": {
+      "number": {
+        "content": "$1"
+      }
+    }
+  },
+  "countMismatch": {
+    "message": "Message count verification failed. No file was generated."
+  },
+  "conversationMeta": {
+    "message": "Full conversation · $count$ messages · $questions$ questions · $date$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "questions": {
+        "content": "$2"
+      },
+      "date": {
+        "content": "$3"
+      }
+    }
+  },
+  "originalLink": {
+    "message": "Original conversation link"
+  },
+  "questionNav": {
+    "message": "Question navigation"
+  },
+  "questionIndex": {
+    "message": "Question index"
+  },
+  "questionLabel": {
+    "message": "Question $number$",
+    "placeholders": {
+      "number": {
+        "content": "$1"
+      }
+    }
+  },
+  "answerLabel": {
+    "message": "Answer"
+  },
+  "sourcesLabel": {
+    "message": "Sources"
+  },
+  "conversationImage": {
+    "message": "Conversation image"
+  },
+  "downloadFile": {
+    "message": "Download file"
+  },
+  "downloadAttachment": {
+    "message": "Attachment: $label$ (downloadable in offline HTML)",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "assetDisplayFailed": {
+    "message": "This attachment could not be displayed as HTML"
+  },
+  "unnamedAttachment": {
+    "message": "Unnamed attachment"
+  },
+  "assetWarning": {
+    "message": "Attachment: $label$ — $error$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "assetProblemDetail": {
+    "message": "$label$: $error$",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "imageLabel": {
+    "message": "Image"
+  },
+  "imageNotEmbedded": {
+    "message": "Image could not be embedded: $label$.",
+    "placeholders": {
+      "label": {
+        "content": "$1"
+      }
+    }
+  },
+  "sourceHeading": {
+    "message": "References"
+  },
+  "backIndex": {
+    "message": "Back to question index ↑"
+  },
+  "renderMismatch": {
+    "message": "Rendered counts do not match the full message list. No file was generated."
+  }
+}

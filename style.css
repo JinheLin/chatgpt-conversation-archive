@@ -100,6 +100,5 @@
   .pdf-document[data-landscape="true"] { width: auto; }
   .pdf-toc { break-after: page; }
   .pdf-message-body pre { overflow: visible; break-inside: avoid-page; page-break-inside: avoid; }
-  .pdf-back { display: none; }
   .pdf-message-body .katex-display { break-inside: avoid; }
 }

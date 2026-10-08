@@ -69,7 +69,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 - Uses monospace text for code and text diagrams, preserving spaces, tabs, and line breaks without forced wrapping. Wide blocks are scaled to the available A4 width. Short blocks are kept together where possible; blocks longer than a page may still split.
 - Detects some unfenced box-drawing diagrams and preserves them as monospace blocks.
 - Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.
-- Includes A4 print styles for keeping headings with following content, controlling orphans and widows, repeating table headers, and avoiding breaks within table rows and images where possible.
+- Includes A4 print styles for keeping headings with following content, controlling orphans and widows, and keeping tables together when they fit on one page. Tables taller than a full page can still split, with repeated headers and breaks within rows avoided where possible.
 - Renders math locally with KaTeX. Offline HTML embeds the required math fonts and needs no CDN.
 - Converts ChatGPT citation components into **Sources** links and lists sources at the end of the corresponding message. ChatGPT controls and feedback toolbars are omitted.
 - Embeds downloadable attachments in HTML. Non-image files have download links in the document. PDF shows attachment descriptions; it does not embed those files as PDF attachments.

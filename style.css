@@ -58,7 +58,7 @@
     widows: 3;
   }
   .pdf-message-body pre { break-inside: auto; }
-  .pdf-message-body table { break-inside: auto; }
+  .pdf-message-body table { break-inside: avoid-page; page-break-inside: avoid; }
   .pdf-message-body thead { display: table-header-group; }
   .pdf-message-body tr, .pdf-message-body img { break-inside: avoid-page; page-break-inside: avoid; }
 }

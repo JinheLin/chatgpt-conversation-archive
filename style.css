@@ -96,6 +96,32 @@
 .pdf-asset-warning { padding: .8em; border: 1px solid #e5c48b; background: #fff8e8; }
 .pdf-sources { font-size: 9pt; color: #62686e; }
 .pdf-message-body .katex { font-size: 1.1em; }
+/* Inert ChatGPT layout components, shared by preview, offline HTML and print. */
+.pdf-message-body .archive-layout { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
+.pdf-message-body .archive-layout-box, .pdf-message-body .archive-layout-grid-item {
+  display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
+}
+.pdf-message-body .archive-layout-grid {
+  display: grid; grid-template-columns: repeat(var(--archive-layout-columns, 2), minmax(0, 1fr));
+  gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
+}
+.pdf-message-body .archive-layout-text, .pdf-message-body .archive-layout-caption { display: block; }
+.pdf-message-body .archive-layout-row {
+  display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
+}
+.pdf-message-body .archive-layout-row > .archive-layout-box { flex: 1; }
+.pdf-message-body .archive-layout-title { display: block; font-size: 1.2em; font-weight: 600; }
+.pdf-message-body .archive-layout-badge { display: inline-block; flex: none; font-weight: 600; }
+.pdf-message-body .archive-layout-icon { display: block; text-align: center; font-size: 18pt; line-height: 1.2; }
+.pdf-message-body .archive-layout-divider { display: block; border-top: 1px solid #d8dcdf; }
+.pdf-message-body .archive-layout-svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+.pdf-message-body .archive-layout-border { border: 1px solid #d8dcdf; }
+.pdf-message-body .archive-layout-surface-secondary { background: #f6f8fa; }
+.pdf-message-body .archive-layout-secondary, .pdf-message-body .archive-layout-caption { color: #62686e; }
+.pdf-message-body .archive-layout-caption { font-size: 9pt; line-height: 1.5; }
+.pdf-message-body .archive-layout > p { margin: 0; }
+.pdf-message-body .archive-layout > :first-child { margin-top: 0; }
+.pdf-message-body .archive-layout > :last-child { margin-bottom: 0; }
 .pdf-document[data-landscape="true"] { width: min(297mm, 100%); }
 .pdf-offline .pdf-document { margin-top: 0; }
 @media (max-width: 700px) { .input-row { flex-direction: column; } .export-panel { margin: 10px; } }
@@ -105,4 +131,5 @@
   .pdf-toc { break-after: page; }
   .pdf-message-body pre { overflow: visible; break-inside: avoid-page; page-break-inside: avoid; }
   .pdf-message-body .katex-display { break-inside: avoid; }
+  .pdf-message-body .archive-layout { break-inside: avoid-page; page-break-inside: avoid; }
 }

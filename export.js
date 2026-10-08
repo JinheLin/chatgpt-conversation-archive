@@ -3,6 +3,7 @@
   "use strict";
   const { t, language } = globalThis.ChatGPTPdfI18n;
   const md = globalThis.markdownit({ html: false, linkify: true, breaks: false, typographer: false });
+  globalThis.ChatGPTArchiveLayout.install(md);
   const mathHtml = (source, displayMode) => globalThis.katex.renderToString(source, {
     displayMode, throwOnError: false, trust: false, strict: "ignore", output: "htmlAndMathml"
   });
@@ -69,7 +70,8 @@
       let j = i + 1;
       while (j < lines.length && lines[j].trim() && !/^\s*(`{3,}|~{3,})/.test(lines[j])) j++;
       const block = lines.slice(i, j).join("\n");
-      if (j - i >= 2 && (/[┌┐└┘├┤┬┴┼│─]/.test(block) || /\+[-=]{3,}\+/.test(block))) {
+      if (j - i >= 2 && !/<(?:box|grid|row|svg)\b/.test(block) &&
+          (/[┌┐└┘├┤┬┴┼│─]/.test(block) || /\+[-=]{3,}\+/.test(block))) {
         output.push("```text", block, "```");
       } else output.push(block);
       i = j;

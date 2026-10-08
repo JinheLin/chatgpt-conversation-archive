@@ -63,6 +63,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 ## Formatting and attachments
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
+- Converts ChatGPT's boxes, grids, rows, titles, captions, badges, arrows, and basic SVG diagrams into static layouts in the preview, PDF, and offline HTML. Supports bounded literal-array loops, numeric arithmetic, and conditional presentation without executing JavaScript. Only supported layout and SVG attributes are accepted; tags in code examples remain literal source.
 - Uses monospace text for code and text diagrams, preserving spaces, tabs, and line breaks without forced wrapping. Wide blocks are scaled to the available A4 width. Short blocks are kept together where possible; blocks longer than a page may still split.
 - Detects some unfenced box-drawing diagrams and preserves them as monospace blocks.
 - Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.
@@ -83,6 +84,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |
 | `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
+| `layout-markdown.js` | Restricted ChatGPT layout parsing and static rendering without enabling raw HTML |
 | `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
 | `print.html` / `print.js` | URL input, progress, cancellation, HTML download, and `window.print()` |
 | `style.css` | Export interface and A4 print styles |

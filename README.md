@@ -106,6 +106,7 @@ Rendering happens locally, with no upload service. Raw HTML in Markdown is not e
 ## Development and debugging
 
 - **Cannot open the exporter:** confirm the extension is enabled, then use Chrome's **Extensions** menu or the pinned toolbar icon.
+- **Link is present in the export page address but the input stays empty:** reload the extension and refresh the export page. The exporter now fills the entry link before localization and loads fresh bundled messages, so Chrome's older locale cache cannot interrupt automatic reading. Startup failures appear in the status area.
 - **Reading fails:** confirm you are signed in to ChatGPT in the same Chrome profile where the extension is installed and can open the URL manually. HTTP 401, 403, or 404 can also indicate access restrictions, an expired session, or changed website endpoints.
 - **Extension loading errors:** open **Errors** on the extension card. Click **Service Worker** to inspect entry-point errors.
 - **Rendering or download errors:** right-click the export page and choose **Inspect**. Use the temporary ChatGPT tab's developer tools to inspect request status. Do not share credential-bearing headers or unredacted network logs.

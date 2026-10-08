@@ -1,9 +1,13 @@
-(() => {
+(async () => {
   "use strict";
-  const { t, language, localizeDocument } = globalThis.ChatGPTPdfI18n;
+  // Preserve the entry URL even if localization or an output feature fails.
+  const input = document.getElementById("conversation-url");
+  const initial = new URLSearchParams(location.search).get("source");
+  if (initial) input.value = initial;
+  const { t, language, localizeDocument, loadCatalog } = globalThis.ChatGPTPdfI18n;
+  await loadCatalog();
   localizeDocument(document);
   const main = document.getElementById("pdf-document");
-  const input = document.getElementById("conversation-url");
   const status = document.getElementById("export-status");
   const startButton = document.getElementById("start-export");
   const cancelButton = document.getElementById("cancel-export");
@@ -22,8 +26,6 @@
   let sourceTab = null;
   let generation = 0;
   let payload = null;
-  const initial = new URLSearchParams(location.search).get("source");
-  if (initial) input.value = initial;
 
   function report(text, error = false) { status.textContent = text; status.dataset.level = error ? "error" : "info"; }
   function tabLoaded(tabId) {
@@ -212,5 +214,13 @@
     } catch (error) { report(t("saveHtmlFailed", error.message), true); }
   });
 
-  if (initial?.trim()) start();
-})();
+  if (initial?.trim()) await start();
+})().catch((error) => {
+  // This message cannot depend on the catalog that may have failed to load.
+  const status = document.getElementById("export-status");
+  if (!status) return;
+  status.dataset.level = "error";
+  status.textContent = globalThis.ChatGPTPdfI18n?.language === "zh-CN"
+    ? `导出页初始化失败，请重新加载插件并刷新此页。${error.message}`
+    : `Could not initialize the export page. Reload the extension and refresh this page. ${error.message}`;
+});

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { test } = require('node:test');
-const { installI18n } = require('./helpers/i18n.cjs');
+const { installI18n, catalogs } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
 const conversationUrl = 'https://chatgpt.com/c/test-conversation';
 const response = { ok: true, payload: {
@@ -18,7 +18,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   const reading = new Promise(resolve => { notifyReading = resolve; });
   function element(id) {
     if (!elements.has(id)) elements.set(id, {
-      value: id === 'conversation-url' ? conversationUrl : 'portrait',
+      value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : 'portrait',
       checked: id === 'show-back-links',
       dataset: {}, handlers: {}, hidden: false,
       querySelectorAll(selector) { return selector === '.pdf-toc li a' ? [{ textContent: 'Question', getAttribute: () => '#question-1' }] : []; },
@@ -31,15 +31,19 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     static createObjectURL() { return 'blob:test-pdf'; }
     static revokeObjectURL() {}
   }
+  const localized = [...fs.readFileSync(path.join(project, 'print.html'), 'utf8').matchAll(/data-i18n="([^"]+)"/g)]
+    .map((match) => ({ textContent: '', getAttribute: () => match[1] }));
   const context = vm.createContext({
     URL: DownloadURL, URLSearchParams, Date, Blob,
     setTimeout: (fn, delay) => { const timer = setTimeout(fn, delay); timer.unref(); return timer; }, clearTimeout,
-    location: { search: '' },
+    location: { search: output.initialSource ? `?${new URLSearchParams({ source: output.initialSource })}` : '' },
+    fetch: async url => ({ ok: !output.catalogFailure, status: 404, json: async () => url.includes('/zh_CN/') ? catalogs.zh_CN : catalogs.en }),
     document: {
-      getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, querySelectorAll: () => [],
+      getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, querySelectorAll: () => localized,
       createElement: () => { const link = { click() { downloads.push(link.download); } }; return link; }
     },
     chrome: {
+      runtime: { getURL: file => `chrome-extension://test-extension/${file}` },
       tabs: {
         query: async () => tabs,
         create: async options => { created.push(options); return { id: 90 }; },
@@ -60,14 +64,52 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     ChatGPTPdfCapture: { capture: output.capture || (async () => new Uint8Array([1, 2, 3])) },
     ChatGPTPdfOutline: { add: output.add || (async () => ({ bytes: new Uint8Array([1, 2, 3]), questions: 1, pages: 2 })) }
   });
-  installI18n(context);
+  installI18n(context, output.locale || 'en-US');
+  if (output.staleLocale) {
+    const original = context.chrome.i18n.getMessage;
+    context.chrome.i18n.getMessage = (key, ...args) => ['savePdf', 'directPdfHint', 'moreOptions'].includes(key) ? '' : original(key, ...args);
+  }
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
-  vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
-  return { created, removed, activated, requests, reading, element, downloads,
-    start: () => element('export-form').handlers.submit({ preventDefault() {} }),
+  const initialized = vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
+  return { created, removed, activated, requests, reading, element, downloads, initialized,
+    start: async () => { await initialized; return element('export-form').handlers.submit({ preventDefault() {} }); },
     cancel: () => element('cancel-export').handlers.click()
   };
 }
+
+for (const locale of ['en-US', 'zh-CN']) {
+  test(`a source URL fills automatically and reads even with an old Chrome locale cache (${locale})`, async () => {
+    const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
+      initialSource: conversationUrl, staleLocale: true, locale
+    });
+    await app.initialized;
+    assert.equal(app.element('conversation-url').value, conversationUrl);
+    assert.equal(app.requests.length, 1);
+    assert.equal(app.requests[0].message.source, conversationUrl);
+    assert.equal(app.created.length, 0);
+    assert.equal(app.activated.length, 0);
+    assert.match(app.element('export-status').textContent, locale === 'zh-CN' ? /校验通过/ : /verified/);
+  });
+}
+
+test('without a source URL the page waits for a manually entered link', async () => {
+  const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), { inputValue: '' });
+  await app.initialized;
+  assert.equal(app.element('conversation-url').value, '');
+  assert.equal(app.requests.length, 0);
+  app.element('conversation-url').value = conversationUrl;
+  await app.start();
+  assert.equal(app.requests.length, 1);
+});
+
+test('catalog loading failure preserves the entry link and displays an actionable startup error', async () => {
+  const app = fixture([], Promise.resolve(response), { initialSource: conversationUrl, catalogFailure: true, locale: 'zh-CN' });
+  await app.initialized;
+  assert.equal(app.element('conversation-url').value, conversationUrl);
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.element('export-status').dataset.level, 'error');
+  assert.match(app.element('export-status').textContent, /重新加载插件/);
+});
 
 test('one PDF button captures the selected orientation and adds question bookmarks before downloading', async () => {
   let app;

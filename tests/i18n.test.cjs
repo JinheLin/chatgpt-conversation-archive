@@ -56,3 +56,28 @@ test('catalogs cover every message used by scripts, the HTML page and the manife
     }
   }
 });
+
+test('fresh bundled catalogs preserve native translations and placeholder substitutions when Chrome caches older messages', async () => {
+  for (const locale of ['en-US', 'zh-CN', 'zh-TW']) {
+    const calls = [];
+    const catalog = locale === 'zh-CN' ? catalogs.zh_CN : catalogs.en;
+    const context = vm.createContext({
+      fetch: async (url, options) => {
+        calls.push({ url, options });
+        return { ok: true, json: async () => catalog };
+      }
+    });
+    installI18n(context, locale);
+    context.chrome.runtime = { getURL: file => `chrome-extension://test-extension/${file}` };
+    const api = context.ChatGPTPdfI18n;
+    const native = Object.fromEntries(Object.keys(catalog).map(key => [key, api.t(key, 40, 13, 'Ready')]));
+    // Chrome's native lookup no longer has the new catalog's keys or wording.
+    context.chrome.i18n.getMessage = () => '';
+    await api.loadCatalog();
+    await api.loadCatalog();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].options.cache, 'no-store');
+    assert.match(calls[0].url, locale === 'zh-CN' ? /\/zh_CN\/messages.json$/ : /\/en\/messages.json$/);
+    for (const [key, expected] of Object.entries(native)) assert.equal(api.t(key, 40, 13, 'Ready'), expected, key);
+  }
+});

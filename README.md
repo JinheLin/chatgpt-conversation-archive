@@ -35,20 +35,22 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 3. Wait for confirmation that the message chain and rendered message counts have passed validation.
 4. Choose an output:
    - **Save offline HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
-   - **Print / Save PDF**: select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
-   - **Add PDF sidebar index**: after saving the PDF, click this button and select the file you just saved. Downloads a new `… - with bookmarks.pdf` with native bookmarks for the question index and every question. Open the new file and select **Bookmarks** in Chrome's PDF sidebar. Processing stays local and preserves page content, layout and existing links.
-   - For wide text diagrams, select **A4 landscape** before printing or saving HTML.
+   - **Export PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
+   - For wide text diagrams, select **A4 landscape** before exporting PDF or saving HTML.
    - **Show links back to the question index** is checked by default. Uncheck it to hide return links in the preview, offline HTML and PDF. The question index at the beginning remains available.
+   - **More options** includes manual **Print / Save PDF** and **Add PDF sidebar index** for existing files. For manual printing, select **Save as PDF**, A4, **All** pages and default scale. Disable **Headers and footers** and enable **Background graphics** if needed. Manual print output needs the separate bookmark step.
 
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 
-After updating local files, click **Reload** on the extension card in `chrome://extensions/`, then refresh any open ChatGPT and export pages. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
+After updating local files, click **Reload** on the extension card in `chrome://extensions/`, accept any new permission prompt, then refresh any open ChatGPT and export pages. Version 2.2 adds the `debugger` permission for direct PDF generation. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
 
 ### PDF index versus sidebar bookmarks
 
-The index printed at the beginning is a page of clickable links. Chrome's **Save as PDF** preserves those links but the extension's `window.print()` path does not create a native PDF outline. Use **Add PDF sidebar index** for the reader's sidebar directory; this requires selecting the saved file once because the extension cannot access print output automatically.
+The index printed at the beginning is a page of clickable links. The sidebar directory is a native PDF outline. **Export PDF** includes both automatically: Chrome renders the current extension export tab to PDF, then the extension adds question bookmarks using the exact destinations in that PDF. All processing happens locally. No extra tab is created for PDF rendering.
 
-Keep the same conversation loaded when selecting the PDF. The extension checks the original conversation link, every question destination and the referenced pages before adding bookmarks. Save **all pages** with Chrome's built-in **Save as PDF**, rather than a system PDF printer that may remove destinations. Older exports also work if their conversation link and question destinations are intact. If you edited or regenerated that conversation after exporting, save a fresh PDF first. Encrypted files and PDFs over 100 MiB are not supported.
+Chrome may display a debugging notice while rendering. The extension attaches only to its own export tab and disconnects as soon as the PDF data has been read, including on errors. It does not attach to ChatGPT or unrelated tabs. If direct export fails, close DevTools on the export tab and retry; browser policy or another debugger can prevent the connection. Manual printing is available under **More options**.
+
+When adding bookmarks to an existing PDF under **More options**, keep the same conversation loaded. The extension checks the original conversation link, every question destination and the referenced pages. Save **all pages** with Chrome's built-in **Save as PDF**, rather than a system PDF printer that may remove destinations. Older exports also work if their conversation link and question destinations are intact. If you edited or regenerated that conversation after exporting, save a fresh PDF first. Encrypted files and PDFs over 100 MiB are not supported.
 
 ## How it handles lazy loading
 
@@ -86,7 +88,8 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
 | `layout-markdown.js` | Restricted ChatGPT layout parsing and static rendering without enabling raw HTML |
 | `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
-| `print.html` / `print.js` | URL input, progress, cancellation, HTML download, and `window.print()` |
+| `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
+| `print.html` / `print.js` | URL input, progress, cancellation, HTML download, one-step PDF export and manual printing |
 | `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |
 
@@ -94,7 +97,9 @@ The DOM adapter prefers semantic attributes such as `data-message-author-role`, 
 
 ## Permissions and data handling
 
-The extension requests only `scripting` and host access to `chatgpt.com` and `chat.openai.com`. It uses the current ChatGPT login session within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
+The extension requests `scripting`, `debugger` and host access to `chatgpt.com` and `chat.openai.com`. `debugger` is required for one-step Chrome PDF rendering and cannot be an optional permission ([Chrome permissions documentation](https://developer.chrome.com/docs/extensions/reference/api/permissions)). This is a powerful browser permission; the implementation limits it to this extension's own `print.html` tab, only while exporting a PDF, and always attempts to disconnect afterward. It does not connect to ChatGPT or other browsing tabs.
+
+The current ChatGPT login session is used within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
 
 Rendering happens locally, with no upload service. Raw HTML in Markdown is not executed, and math rendering uses `trust: false`. Offline HTML disables scripts and embeds fonts and images as data URLs. Clicking a source link still opens its website.
 
@@ -123,7 +128,7 @@ Tests use Node.js's built-in test runner and the bundled PDF library, so `npm in
 4. Formatting is reconstructed from Markdown rather than copied pixel for pixel. Code syntax highlighting is not implemented, and Mermaid is preserved as source. Canvas content, interactive charts, and video players are not guaranteed to render as static content.
 5. Embedded attachments are limited to 20 MiB per file and 35 MiB of total downloaded attachment data. Oversized attachments remain marked in the document. Access restrictions, cross-origin rules, or expired attachments can prevent embedding. Very large conversations are also limited by Chrome's memory and message size constraints.
 6. Extremely wide code lines use smaller fonts; A4 landscape is often more suitable. Browser pagination still has limits for long code blocks, tall table rows, and math.
-7. PDF export uses the browser print dialog, where you choose the save location. Native sidebar bookmarks require the **Add PDF sidebar index** step. Chrome generally preserves internal index links, but navigation behavior and whether the bookmark pane opens automatically can differ between PDF readers.
+7. Direct PDF export requires Chrome's debugger permission and can be blocked by enterprise policy, another debugger or DevTools attached to the export tab. Browser download settings control the save location. Manual printing remains available and requires a separate bookmark step. Whether the bookmark pane opens automatically can differ between PDF readers.
 
 ## Bundled dependencies
 
@@ -137,7 +142,7 @@ These are included in the repository; no installation is needed:
 
 Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 
-Native bookmark insertion was separately validated on a 122-page Chrome PDF with 17 questions. An independent PDF reader confirmed all bookmark pages and vertical positions; all page content streams remained unchanged, and the first two rendered pages matched the original exactly. The new file-picker UI has not been verified through automated Chrome interaction.
+Native bookmark insertion was separately validated on a 122-page Chrome PDF with 17 questions. An independent PDF reader confirmed all bookmark pages and vertical positions; all page content streams remained unchanged, and the first two rendered pages matched the original exactly. Direct PDF tests mock Chrome's debugger API to check target restrictions, A4 options, stream handling, cleanup, bookmark/download sequencing and UI restoration on failure. The direct export flow has not yet been verified through an actual Chrome debugger session.
 
 ## Contributing and reporting issues
 

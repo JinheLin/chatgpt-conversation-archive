@@ -78,6 +78,9 @@
 #export-status[data-level="error"] { background: #fff0ed; color: #b42318; }
 #output-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
 #output-actions > .hint { width: 100%; margin: 0; }
+.export-extra { width: 100%; }
+.export-extra summary { cursor: pointer; color: #62686e; }
+.export-extra button { margin: 8px 6px 0 0; }
 .export-panel .export-option { display: inline-flex; align-items: center; gap: 8px; width: 100%; font-weight: 400; }
 .export-option input { margin: 0; accent-color: #176b58; }
 #output-actions[hidden], .pdf-document[hidden], #cancel-export[hidden] { display: none; }

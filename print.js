@@ -9,6 +9,13 @@
   const cancelButton = document.getElementById("cancel-export");
   const actions = document.getElementById("output-actions");
   const showBackLinks = document.getElementById("show-back-links");
+  let outputBusy = false;
+  const outputControls = [input, startButton, showBackLinks,
+    ...["save-html", "save-pdf", "print-again", "add-pdf-outline", "page-layout"].map((id) => document.getElementById(id))];
+  function setOutputBusy(value) {
+    outputBusy = value;
+    for (const control of outputControls) control.disabled = value;
+  }
   function updateBackLinks() { main.dataset.showBackLinks = String(showBackLinks.checked); }
   showBackLinks.addEventListener("change", updateBackLinks);
   updateBackLinks();
@@ -37,6 +44,7 @@
   }
   async function start(event) {
     event?.preventDefault();
+    if (outputBusy) return;
     const mine = ++generation;
     startButton.disabled = true;
     cancelButton.hidden = false;
@@ -107,6 +115,7 @@
     globalThis.ChatGPTPdfExporter.fitCode(main, event.target.value === "landscape");
   });
   document.getElementById("print-again").addEventListener("click", async () => {
+    if (outputBusy) return;
     await document.fonts.ready;
     window.print();
   });
@@ -118,6 +127,34 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
+  function pdfMetadata() {
+    if (!payload) throw new Error(t("readFirst"));
+    return {
+      sourceUrl: payload.sourceUrl,
+      questions: [...main.querySelectorAll(".pdf-toc li a")].map((link) => ({
+        id: link.getAttribute("href").slice(1), title: link.textContent
+      }))
+    };
+  }
+  document.getElementById("save-pdf").addEventListener("click", async () => {
+    if (outputBusy) return;
+    setOutputBusy(true);
+    try {
+      const metadata = pdfMetadata();
+      report(t("directPdfProgress"));
+      await document.fonts.ready;
+      await Promise.all([...main.querySelectorAll("img")].map((image) => image.decode()));
+      const landscape = document.getElementById("page-layout").value === "landscape";
+      globalThis.ChatGPTPdfExporter.fitCode(main, landscape);
+      const bytes = await globalThis.ChatGPTPdfCapture.capture({ landscape });
+      report(t("pdfOutlineProgress"));
+      const result = await globalThis.ChatGPTPdfOutline.add(bytes, metadata);
+      const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.pdf`;
+      download(new Blob([result.bytes], { type: "application/pdf" }), filename);
+      report(t("directPdfSaved", result.questions, result.pages));
+    } catch (error) { report(t("directPdfFailed", error.message), true); }
+    finally { setOutputBusy(false); }
+  });
   const outlineButton = document.getElementById("add-pdf-outline");
   const outlineFile = document.getElementById("pdf-outline-file");
   outlineButton.addEventListener("click", () => outlineFile.click());
@@ -125,27 +162,17 @@
     const file = outlineFile.files?.[0];
     outlineFile.value = ""; // Allow retrying the same file after an error.
     if (!file) return;
-    const mine = generation;
-    outlineButton.disabled = true;
-    startButton.disabled = true;
+    if (outputBusy) return;
+    setOutputBusy(true);
     try {
-      if (!payload) throw new Error(t("readFirst"));
+      const metadata = pdfMetadata();
       if (file.size > globalThis.ChatGPTPdfOutline.MAX_BYTES) throw new Error(t("pdfTooLarge"));
-      const metadata = {
-        sourceUrl: payload.sourceUrl,
-        questions: [...main.querySelectorAll(".pdf-toc li a")].map((link) => ({
-          id: link.getAttribute("href").slice(1), title: link.textContent
-        }))
-      };
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(await file.arrayBuffer(), metadata);
       download(new Blob([result.bytes], { type: "application/pdf" }), `${file.name.replace(/\.pdf$/i, "")}${t("pdfOutlineSuffix")}.pdf`);
       report(t("pdfOutlineSaved", result.questions, result.pages));
     } catch (error) { report(t("pdfOutlineFailed", error.message), true); }
-    finally {
-      outlineButton.disabled = false;
-      if (mine === generation) startButton.disabled = false;
-    }
+    finally { setOutputBusy(false); }
   });
 
   let cachedCss;
@@ -166,6 +193,7 @@
     return cachedCss;
   }
   document.getElementById("save-html").addEventListener("click", async () => {
+    if (outputBusy) return;
     try {
       if (!payload) throw new Error(t("readFirst"));
       const css = await offlineCss();

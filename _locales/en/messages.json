@@ -318,7 +318,7 @@
     "message": "Add PDF sidebar index"
   },
   "pdfOutlineHint": {
-    "message": "For a PDF sidebar index, save all pages as PDF first, then choose that file using “Add PDF sidebar index”. A new PDF is created locally, preserving the page layout."
+    "message": "For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; direct Export PDF adds bookmarks automatically."
   },
   "pdfOutlineProgress": {
     "message": "Adding PDF sidebar bookmarks locally…"
@@ -362,5 +362,48 @@
   },
   "pdfInvalid": {
     "message": "Could not read this PDF. Choose a valid PDF saved by Chrome."
+  },
+  "savePdf": {
+    "message": "Export PDF"
+  },
+  "directPdfHint": {
+    "message": "Export PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes."
+  },
+  "moreOptions": {
+    "message": "More options"
+  },
+  "directPdfProgress": {
+    "message": "Generating a PDF locally with the selected page settings…"
+  },
+  "directPdfSaved": {
+    "message": "PDF exported with $questions$ question bookmarks and $pages$ pages. Check Chrome downloads.",
+    "placeholders": {
+      "questions": {
+        "content": "$1"
+      },
+      "pages": {
+        "content": "$2"
+      }
+    }
+  },
+  "directPdfFailed": {
+    "message": "Could not export PDF: $error$ You can use the printing options under More options.",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "pdfExportBusy": {
+    "message": "A PDF export is already in progress."
+  },
+  "pdfDebuggerRequired": {
+    "message": "Reload the updated extension and accept Chrome’s debugger permission."
+  },
+  "pdfExportWrongPage": {
+    "message": "Direct PDF export is available only from this extension’s export tab."
+  },
+  "pdfExportNoData": {
+    "message": "Chrome did not return a complete PDF. Please retry."
   }
 }

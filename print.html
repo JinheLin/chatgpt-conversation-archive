@@ -14,6 +14,7 @@
   <script src="export.js" defer></script>
   <script src="vendor/pdf-lib.min.js" defer></script>
   <script src="pdf-outline.js" defer></script>
+  <script src="pdf-capture.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
@@ -29,12 +30,17 @@
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
     <div id="output-actions" hidden>
       <button id="save-html" type="button" data-i18n="saveHtml">Save offline HTML</button>
-      <button id="print-again" type="button" data-i18n="printPdf">Print / Save PDF</button>
-      <button id="add-pdf-outline" type="button" data-i18n="addPdfOutline">Add PDF sidebar index</button>
-      <input id="pdf-outline-file" type="file" accept=".pdf,application/pdf" hidden>
+      <button id="save-pdf" type="button" data-i18n="savePdf">Export PDF</button>
       <label for="page-layout" data-i18n="pageDirection">PDF orientation</label><select id="page-layout"><option value="portrait" data-i18n="portrait">A4 portrait</option><option value="landscape" data-i18n="landscape">A4 landscape (for wide text diagrams)</option></select>
       <label class="export-option"><input id="show-back-links" type="checkbox" checked><span data-i18n="showBackLinks">Show links back to the question index</span></label>
-      <p class="hint" data-i18n="pdfOutlineHint">For a PDF sidebar index, save all pages as PDF first, then choose that file using “Add PDF sidebar index”. A new PDF is created locally, preserving the page layout.</p>
+      <p class="hint" data-i18n="directPdfHint">Export PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
+      <details class="export-extra">
+        <summary data-i18n="moreOptions">More options</summary>
+        <button id="print-again" type="button" data-i18n="printPdf">Print / Save PDF</button>
+        <button id="add-pdf-outline" type="button" data-i18n="addPdfOutline">Add PDF sidebar index</button>
+        <input id="pdf-outline-file" type="file" accept=".pdf,application/pdf" hidden>
+        <p class="hint" data-i18n="pdfOutlineHint">For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; direct Export PDF adds bookmarks automatically.</p>
+      </details>
     </div>
   </div>
   <main id="pdf-document" class="pdf-document" hidden></main>

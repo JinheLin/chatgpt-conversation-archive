@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Conversation Archive",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "__MSG_extensionDescription__",
   "minimum_chrome_version": "114",
   "permissions": [
-    "scripting"
+    "scripting",
+    "debugger"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",

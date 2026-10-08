@@ -318,7 +318,7 @@
     "message": "添加 PDF 侧栏目录"
   },
   "pdfOutlineHint": {
-    "message": "需要 PDF 侧栏目录时，先保存全部页面为 PDF，再点击「添加 PDF 侧栏目录」选择刚保存的文件。在本机生成保留原排版的新 PDF。"
+    "message": "已有 PDF 缺少侧栏目录时，先在这里读取同一个对话，再点击「添加 PDF 侧栏目录」选择文件。手动打印也需要此步骤；直接「导出 PDF」会自动添加目录。"
   },
   "pdfOutlineProgress": {
     "message": "正在本机添加 PDF 侧栏书签…"
@@ -362,5 +362,48 @@
   },
   "pdfInvalid": {
     "message": "无法读取此 PDF。请选择 Chrome 保存的有效 PDF。"
+  },
+  "savePdf": {
+    "message": "导出 PDF"
+  },
+  "directPdfHint": {
+    "message": "导出 PDF 会自动生成侧栏目录，保留所选纸张方向和返回目录链接。Chrome 在导出时可能显示调试提示，渲染完成后自动结束连接。"
+  },
+  "moreOptions": {
+    "message": "更多选项"
+  },
+  "directPdfProgress": {
+    "message": "正在本机按所选纸张设置生成 PDF…"
+  },
+  "directPdfSaved": {
+    "message": "PDF 已导出：$questions$ 个问题书签、$pages$ 页。请查看 Chrome 下载记录。",
+    "placeholders": {
+      "questions": {
+        "content": "$1"
+      },
+      "pages": {
+        "content": "$2"
+      }
+    }
+  },
+  "directPdfFailed": {
+    "message": "导出 PDF 失败：$error$ 可以使用「更多选项」中的打印功能。",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "pdfExportBusy": {
+    "message": "PDF 正在导出，请等待完成。"
+  },
+  "pdfDebuggerRequired": {
+    "message": "请重新加载新版扩展并接受 Chrome 的调试权限提示。"
+  },
+  "pdfExportWrongPage": {
+    "message": "只能从此扩展自己的导出页直接生成 PDF。"
+  },
+  "pdfExportNoData": {
+    "message": "Chrome 未返回完整的 PDF 数据，请重试。"
   }
 }

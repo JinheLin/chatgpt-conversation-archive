@@ -313,5 +313,54 @@
   },
   "renderMismatch": {
     "message": "Rendered counts do not match the full message list. No file was generated."
+  },
+  "addPdfOutline": {
+    "message": "Add PDF sidebar index"
+  },
+  "pdfOutlineHint": {
+    "message": "For a PDF sidebar index, save all pages as PDF first, then choose that file using “Add PDF sidebar index”. A new PDF is created locally, preserving the page layout."
+  },
+  "pdfOutlineProgress": {
+    "message": "Adding PDF sidebar bookmarks locally…"
+  },
+  "pdfOutlineSuffix": {
+    "message": " - with bookmarks"
+  },
+  "pdfOutlineSaved": {
+    "message": "Created a PDF with $questions$ question bookmarks and $pages$ pages. Open the new file and select Bookmarks in the PDF sidebar.",
+    "placeholders": {
+      "questions": {
+        "content": "$1"
+      },
+      "pages": {
+        "content": "$2"
+      }
+    }
+  },
+  "pdfOutlineFailed": {
+    "message": "Could not add PDF sidebar bookmarks: $error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "pdfSourceMismatch": {
+    "message": "Choose the PDF saved from the conversation currently shown here. Its original conversation link is missing or does not match."
+  },
+  "pdfQuestionMismatch": {
+    "message": "PDF question destinations do not match the current conversation. Save all pages of the current export using Chrome’s Save as PDF, then try again."
+  },
+  "pdfDestinationsInvalid": {
+    "message": "The PDF has invalid or missing page destinations. Save it again using Chrome’s Save as PDF with all pages selected."
+  },
+  "pdfTooLarge": {
+    "message": "Select a PDF no larger than 100 MiB."
+  },
+  "pdfEncrypted": {
+    "message": "Encrypted PDFs are not supported. Choose the unencrypted PDF saved by Chrome."
+  },
+  "pdfInvalid": {
+    "message": "Could not read this PDF. Choose a valid PDF saved by Chrome."
   }
 }

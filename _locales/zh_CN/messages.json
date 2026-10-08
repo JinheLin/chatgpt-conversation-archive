@@ -313,5 +313,54 @@
   },
   "renderMismatch": {
     "message": "渲染数量与完整消息清单不一致，未生成文件。"
+  },
+  "addPdfOutline": {
+    "message": "添加 PDF 侧栏目录"
+  },
+  "pdfOutlineHint": {
+    "message": "需要 PDF 侧栏目录时，先保存全部页面为 PDF，再点击「添加 PDF 侧栏目录」选择刚保存的文件。在本机生成保留原排版的新 PDF。"
+  },
+  "pdfOutlineProgress": {
+    "message": "正在本机添加 PDF 侧栏书签…"
+  },
+  "pdfOutlineSuffix": {
+    "message": " - 带书签"
+  },
+  "pdfOutlineSaved": {
+    "message": "已生成带 $questions$ 个问题书签、$pages$ 页的 PDF。打开新文件，在 PDF 侧栏选择「目录 / 书签」。",
+    "placeholders": {
+      "questions": {
+        "content": "$1"
+      },
+      "pages": {
+        "content": "$2"
+      }
+    }
+  },
+  "pdfOutlineFailed": {
+    "message": "添加 PDF 侧栏目录失败：$error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "pdfSourceMismatch": {
+    "message": "请选择当前对话导出的 PDF。所选文件缺少原始对话链接，或链接与当前对话不一致。"
+  },
+  "pdfQuestionMismatch": {
+    "message": "PDF 中的问题跳转目标与当前对话不一致。请使用 Chrome「另存为 PDF」保存当前导出的全部页面，再重试。"
+  },
+  "pdfDestinationsInvalid": {
+    "message": "PDF 页面跳转目标无效或缺失。请使用 Chrome「另存为 PDF」重新保存全部页面。"
+  },
+  "pdfTooLarge": {
+    "message": "请选择不超过 100 MiB 的 PDF。"
+  },
+  "pdfEncrypted": {
+    "message": "不支持加密 PDF。请选择 Chrome 保存的未加密 PDF。"
+  },
+  "pdfInvalid": {
+    "message": "无法读取此 PDF。请选择 Chrome 保存的有效 PDF。"
   }
 }

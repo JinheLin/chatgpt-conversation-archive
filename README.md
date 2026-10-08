@@ -36,12 +36,19 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 4. Choose an output:
    - **Save offline HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
    - **Print / Save PDF**: select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
+   - **Add PDF sidebar index**: after saving the PDF, click this button and select the file you just saved. Downloads a new `… - with bookmarks.pdf` with native bookmarks for the question index and every question. Open the new file and select **Bookmarks** in Chrome's PDF sidebar. Processing stays local and preserves page content, layout and existing links.
    - For wide text diagrams, select **A4 landscape** before printing or saving HTML.
    - **Show links back to the question index** is checked by default. Uncheck it to hide return links in the preview, offline HTML and PDF. The question index at the beginning remains available.
 
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 
 After updating local files, click **Reload** on the extension card in `chrome://extensions/`, then refresh any open ChatGPT and export pages. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
+
+### PDF index versus sidebar bookmarks
+
+The index printed at the beginning is a page of clickable links. Chrome's **Save as PDF** preserves those links but the extension's `window.print()` path does not create a native PDF outline. Use **Add PDF sidebar index** for the reader's sidebar directory; this requires selecting the saved file once because the extension cannot access print output automatically.
+
+Keep the same conversation loaded when selecting the PDF. The extension checks the original conversation link, every question destination and the referenced pages before adding bookmarks. Save **all pages** with Chrome's built-in **Save as PDF**, rather than a system PDF printer that may remove destinations. Older exports also work if their conversation link and question destinations are intact. If you edited or regenerated that conversation after exporting, save a fresh PDF first. Encrypted files and PDFs over 100 MiB are not supported.
 
 ## How it handles lazy loading
 
@@ -76,9 +83,10 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |
 | `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
+| `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
 | `print.html` / `print.js` | URL input, progress, cancellation, HTML download, and `window.print()` |
 | `style.css` | Export interface and A4 print styles |
-| `vendor/` | Bundled Markdown and math libraries, fonts, and original licenses |
+| `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |
 
 The DOM adapter prefers semantic attributes such as `data-message-author-role`, `data-chatgpt-search-unit-key`, `data-content-search-unit-key`, `data-chatgpt-selection-message-id`, and `data-markdown-text-style` over generated CSS classes. Update this adapter when the page structure changes, and update `conversation-source.js` when website data endpoints change. Do not silently substitute a partial DOM snapshot for a complete export.
 
@@ -103,7 +111,7 @@ For development, install Node.js 18 or later and run from the project root:
 npm test
 ```
 
-Tests use only Node.js built-in modules, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, toolbar entry links, reading without page controls or banners, tab reuse and cancellation, background reading without focus changes, JavaScript syntax, and Manifest resource paths. Changes to the interface or print styles also need visual checks in Chrome.
+Tests use Node.js's built-in test runner and the bundled PDF library, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, toolbar entry links, reading without page controls or banners, tab reuse and cancellation, background reading without focus changes, JavaScript syntax, and Manifest resource paths. PDF tests check precise bookmark positions, Unicode titles, unchanged content and rejection of incorrect files. Changes to the interface or print styles also need visual checks in Chrome.
 
 ## Known limitations
 
@@ -113,7 +121,7 @@ Tests use only Node.js built-in modules, so `npm install` is unnecessary. They c
 4. Formatting is reconstructed from Markdown rather than copied pixel for pixel. Code syntax highlighting is not implemented, and Mermaid is preserved as source. Canvas content, interactive charts, and video players are not guaranteed to render as static content.
 5. Embedded attachments are limited to 20 MiB per file and 35 MiB of total downloaded attachment data. Oversized attachments remain marked in the document. Access restrictions, cross-origin rules, or expired attachments can prevent embedding. Very large conversations are also limited by Chrome's memory and message size constraints.
 6. Extremely wide code lines use smaller fonts; A4 landscape is often more suitable. Browser pagination still has limits for long code blocks, tall table rows, and math.
-7. PDF export uses the browser print dialog, where you choose the save location. Chrome generally preserves internal index links, but navigation behavior can differ between PDF readers.
+7. PDF export uses the browser print dialog, where you choose the save location. Native sidebar bookmarks require the **Add PDF sidebar index** step. Chrome generally preserves internal index links, but navigation behavior and whether the bookmark pane opens automatically can differ between PDF readers.
 
 ## Bundled dependencies
 
@@ -121,10 +129,13 @@ These are included in the repository; no installation is needed:
 
 - markdown-it 15.0.2, MIT: [project](https://github.com/markdown-it/markdown-it), [security notes](https://github.com/markdown-it/markdown-it/blob/master/docs/safety.md).
 - KaTeX 0.19.0, MIT: [project](https://github.com/KaTeX/KaTeX), [browser documentation](https://katex.org/docs/browser.html).
+- pdf-lib 1.17.1, MIT: [project](https://github.com/Hopding/pdf-lib), [documentation](https://pdf-lib.js.org/). Used only for local PDF bookmark insertion.
 
 ## Validation scope
 
 Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
+
+Native bookmark insertion was separately validated on a 122-page Chrome PDF with 17 questions. An independent PDF reader confirmed all bookmark pages and vertical positions; all page content streams remained unchanged, and the first two rendered pages matched the original exactly. The new file-picker UI has not been verified through automated Chrome interaction.
 
 ## Contributing and reporting issues
 

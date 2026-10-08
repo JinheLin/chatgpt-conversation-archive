@@ -111,6 +111,43 @@
     window.print();
   });
 
+  function download(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  const outlineButton = document.getElementById("add-pdf-outline");
+  const outlineFile = document.getElementById("pdf-outline-file");
+  outlineButton.addEventListener("click", () => outlineFile.click());
+  outlineFile.addEventListener("change", async () => {
+    const file = outlineFile.files?.[0];
+    outlineFile.value = ""; // Allow retrying the same file after an error.
+    if (!file) return;
+    const mine = generation;
+    outlineButton.disabled = true;
+    startButton.disabled = true;
+    try {
+      if (!payload) throw new Error(t("readFirst"));
+      if (file.size > globalThis.ChatGPTPdfOutline.MAX_BYTES) throw new Error(t("pdfTooLarge"));
+      const metadata = {
+        sourceUrl: payload.sourceUrl,
+        questions: [...main.querySelectorAll(".pdf-toc li a")].map((link) => ({
+          id: link.getAttribute("href").slice(1), title: link.textContent
+        }))
+      };
+      report(t("pdfOutlineProgress"));
+      const result = await globalThis.ChatGPTPdfOutline.add(await file.arrayBuffer(), metadata);
+      download(new Blob([result.bytes], { type: "application/pdf" }), `${file.name.replace(/\.pdf$/i, "")}${t("pdfOutlineSuffix")}.pdf`);
+      report(t("pdfOutlineSaved", result.questions, result.pages));
+    } catch (error) { report(t("pdfOutlineFailed", error.message), true); }
+    finally {
+      outlineButton.disabled = false;
+      if (mine === generation) startButton.disabled = false;
+    }
+  });
+
   let cachedCss;
   async function offlineCss() {
     if (cachedCss) return cachedCss;
@@ -142,10 +179,7 @@
       exported.head.appendChild(style);
       exported.body.className = "pdf-print-page pdf-offline";
       exported.body.appendChild(main.cloneNode(true));
-      const url = URL.createObjectURL(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }));
-      const a = document.createElement("a"); a.href = url; a.download = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`);
       report(t("htmlSaved"));
     } catch (error) { report(t("saveHtmlFailed", error.message), true); }
   });

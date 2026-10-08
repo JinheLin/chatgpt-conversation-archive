@@ -56,25 +56,26 @@
   "readTabClosed": {
     "message": "The reading tab was closed."
   },
-  "readExisting": {
-    "message": "Reading the already-open conversation using your ChatGPT login session in this browser…"
+  "progressConnect": {
+    "message": "Connecting to ChatGPT…"
   },
-  "readBackground": {
-    "message": "Opening the conversation in the background using your ChatGPT login session in this browser…"
+  "progressSession": {
+    "message": "Checking your ChatGPT login session…"
   },
-  "verifyFull": {
-    "message": "Reading and verifying the full conversation, regardless of scrolling or lazy-loaded messages…"
+  "progressConversation": {
+    "message": "Reading the full conversation…"
+  },
+  "progressVerify": {
+    "message": "Verifying the complete message chain…"
+  },
+  "progressAssets": {
+    "message": "Processing attachments…"
+  },
+  "progressLayout": {
+    "message": "Formatting and creating the question index…"
   },
   "readFullFailed": {
     "message": "Could not read the full conversation."
-  },
-  "layoutProgress": {
-    "message": "Read $count$ messages. Formatting and creating the question index…",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "readVerified": {
     "message": "Full message chain and rendered counts verified: $count$ messages, $questions$ questions. $next$",

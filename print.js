@@ -9,6 +9,10 @@
   localizeDocument(document);
   const main = document.getElementById("pdf-document");
   const status = document.getElementById("export-status");
+  const readProgress = document.getElementById("read-progress");
+  const progressLabel = document.getElementById("read-progress-label");
+  const progressCount = document.getElementById("read-progress-count");
+  const progressBar = document.getElementById("read-progress-bar");
   const startButton = document.getElementById("start-export");
   const cancelButton = document.getElementById("cancel-export");
   const actions = document.getElementById("output-actions");
@@ -26,8 +30,36 @@
   let sourceTab = null;
   let generation = 0;
   let payload = null;
+  let activeRead = null;
 
-  function report(text, error = false) { status.textContent = text; status.dataset.level = error ? "error" : "info"; }
+  function report(text, error = false) {
+    readProgress.hidden = true;
+    status.hidden = false;
+    status.textContent = text;
+    status.dataset.level = error ? "error" : "info";
+  }
+  const progressLabels = { connect: "progressConnect", session: "progressSession", conversation: "progressConversation",
+    verify: "progressVerify", assets: "progressAssets", layout: "progressLayout" };
+  function showReadProgress({ stage, completed, total }) {
+    if (!Object.hasOwn(progressLabels, stage)) return;
+    progressLabel.textContent = t(progressLabels[stage]);
+    progressCount.textContent = "";
+    progressBar.removeAttribute("value");
+    if (stage === "assets" && Number.isSafeInteger(total) && total > 0 &&
+        Number.isSafeInteger(completed) && completed >= 0 && completed <= total) {
+      progressBar.max = total;
+      progressBar.value = completed;
+      progressCount.textContent = `${completed} / ${total}`;
+    }
+    status.hidden = true;
+    readProgress.hidden = false;
+  }
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    if (sender.id !== chrome.runtime.id || sender.tab?.id !== activeRead?.tabId ||
+        !activeRead || activeRead.generation !== generation || message?.type !== "READ_PROGRESS" ||
+        message.readId !== activeRead.id) return;
+    if (message.progress && typeof message.progress === "object") showReadProgress(message.progress);
+  });
   function tabLoaded(tabId) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => done(new Error(t("loadTimeout"))), 60000);
@@ -53,8 +85,10 @@
     actions.hidden = true;
     main.hidden = true;
     payload = null;
+    activeRead = null;
     try {
       const target = globalThis.ChatGPTPdfSource.parseUrl(input.value.trim());
+      showReadProgress({ stage: "connect" });
       if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
       sourceTab = null;
       // Reuse only the requested conversation; never navigate or close a user's tab.
@@ -64,8 +98,6 @@
         try { return globalThis.ChatGPTPdfSource.parseUrl(tab.url).url === target.url; }
         catch (_) { return false; }
       });
-      report(existing ? t("readExisting") :
-        t("readBackground"));
       const tab = existing || await chrome.tabs.create({ url: target.url, active: false });
       if (mine !== generation) {
         if (!existing) await chrome.tabs.remove(tab.id).catch(() => {});
@@ -76,12 +108,15 @@
       await tabLoaded(tab.id);
       if (mine !== generation) return;
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "conversation-source.js", "content.js"] });
-      report(t("verifyFull"));
-      const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url });
       if (mine !== generation) return;
+      activeRead = { id: crypto.randomUUID(), tabId: tab.id, generation: mine };
+      showReadProgress({ stage: "conversation" });
+      const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id });
+      if (mine !== generation) return;
+      activeRead = null;
       if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
       payload = response.payload;
-      report(t("layoutProgress", payload.messages.length));
+      showReadProgress({ stage: "layout" });
       const problems = globalThis.ChatGPTPdfExporter.render(payload, main);
       document.title = `${payload.title} — PDF / HTML`;
       await document.fonts.ready;
@@ -97,6 +132,7 @@
       if (mine === generation) report(error.message || t("readFailed"), true);
     } finally {
       if (mine === generation) {
+        activeRead = null;
         startButton.disabled = false;
         cancelButton.hidden = true;
       }
@@ -105,11 +141,12 @@
   document.getElementById("export-form").addEventListener("submit", start);
   cancelButton.addEventListener("click", async () => {
     generation++;
+    activeRead = null;
+    report(t("cancelled"));
     if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
     sourceTab = null;
     startButton.disabled = false;
     cancelButton.hidden = true;
-    report(t("cancelled"));
   });
   document.getElementById("page-layout").addEventListener("change", (event) => {
     document.getElementById("page-direction").textContent = `@page { size: A4 ${event.target.value}; }`;

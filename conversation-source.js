@@ -99,9 +99,24 @@
     };
   }
 
-  async function inlineAssets(payload, headers) {
+  async function inlineAssets(payload, headers, onProgress) {
     const cache = new Map();
     let totalBytes = 0;
+    const imagesByMessage = payload.messages.map((message) => [...new Set(
+      [...message.text.matchAll(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]))]);
+    // Count the same attachment tasks that the loops below will process, including failures.
+    const total = payload.messages.reduce((count, message, index) => {
+      const seen = new Set(message.attachments.map(pointer).filter(Boolean));
+      let files = 0;
+      for (const file of message.files) {
+        const id = file.id || file.file_id;
+        if (!seen.has(id)) { seen.add(id); files++; }
+      }
+      return count + message.attachments.length + files + imagesByMessage[index].length;
+    }, 0);
+    let completed = 0;
+    const assetDone = () => onProgress({ stage: "assets", completed: ++completed, total });
+    if (total) onProgress({ stage: "assets", completed, total });
     async function dataUrl(url) {
       const parsed = new URL(url, location.origin);
       if (!["https:", "http:"].includes(parsed.protocol)) throw new Error(t("unsupportedAssetUrl"));
@@ -141,7 +156,7 @@
       for (const value of Object.values(part)) { if (typeof value === "object") { const nested = pointer(value); if (nested) return nested; } }
       return null;
     }
-    for (const message of payload.messages) {
+    for (const [index, message] of payload.messages.entries()) {
       message.assets = [];
       const seen = new Set();
       for (const part of message.attachments) {
@@ -153,6 +168,7 @@
           if (!id) throw new Error(t("unsupportedComponent"));
           message.assets.push({ label, dataUrl: await fileData(id) });
         } catch (error) { message.assets.push({ label, error: error.message }); }
+        assetDone();
       }
       for (const file of message.files) {
         const id = file.id || file.file_id;
@@ -162,11 +178,12 @@
           if (!id) throw new Error(t("missingAssetId"));
           message.assets.push({ label: file.name || t("attachment"), dataUrl: await fileData(id) });
         } catch (error) { message.assets.push({ label: file.name || t("attachment"), error: error.message }); }
+        assetDone();
       }
-      const images = [...new Set([...message.text.matchAll(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]))];
-      for (const url of images) {
+      for (const url of imagesByMessage[index]) {
         try { message.text = message.text.split(url).join(await dataUrl(url)); }
         catch (_) { /* Renderer marks remote images explicitly instead of silently dropping them. */ }
+        assetDone();
       }
       delete message.attachments;
       delete message.files;
@@ -174,9 +191,10 @@
     return payload;
   }
 
-  async function read(value) {
+  async function read(value, { onProgress = () => {} } = {}) {
     const target = parseUrl(value);
     if (target.url !== parseUrl(location.href).url) throw new Error(t("conversationMismatch"));
+    onProgress({ stage: "session" });
     let token = null;
     try {
       const session = await fetch("/api/auth/session", { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(20000) });
@@ -188,6 +206,7 @@
     const headers = { Accept: "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
     try {
+      onProgress({ stage: "conversation" });
       const response = await fetch(endpoint, { headers, credentials: "include", cache: "no-store", signal: AbortSignal.timeout(60000) });
       if (!response.ok) {
         if ([401, 403, 404].includes(response.status)) {
@@ -195,7 +214,9 @@
         }
         throw new Error(t("readHttpFailed", response.status));
       }
-      return await inlineAssets(normalize(await response.json(), target.url), headers);
+      const data = await response.json();
+      onProgress({ stage: "verify" });
+      return await inlineAssets(normalize(data, target.url), headers, onProgress);
     } finally {
       token = null;
       delete headers.Authorization;

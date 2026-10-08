@@ -32,7 +32,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 
 1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
-3. Wait for confirmation that the message chain and rendered message counts have passed validation.
+3. Follow the progress bar through connection, reading, validation, attachment processing and formatting. Network waits use an animated bar; attachment processing shows the completed count. Wait for confirmation that the message chain and rendered message counts have passed validation.
 4. Choose an output:
    - **Save offline HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
    - **Export PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.

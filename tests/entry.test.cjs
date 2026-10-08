@@ -43,7 +43,7 @@ test('toolbar sends conversation, project conversation and shared links; homepag
 function contentFixture(read) {
   const nodes = new Map();
   const listeners = new Set();
-  const reads = [];
+  const reads = [], progress = [];
   for (const id of ['chatgpt-pdf-export-btn', 'chatgpt-pdf-export-status']) {
     nodes.set(id, { remove: () => nodes.delete(id) });
   }
@@ -54,15 +54,16 @@ function contentFixture(read) {
       createElement: () => { throw new Error('The bridge must not create page UI.'); },
       body: { appendChild: () => { throw new Error('The bridge must not inject page UI.'); } }
     },
-    ChatGPTPdfSource: { read: async source => { reads.push(source); return read(source); } },
+    ChatGPTPdfSource: { read: async (source, options) => { reads.push(source); return read(source, options); } },
     chrome: { runtime: {
       id: 'extension-id',
+      sendMessage: async message => { progress.push(message); },
       onMessage: { addListener: listener => listeners.add(listener), removeListener: listener => listeners.delete(listener) }
     } }
   });
   const inject = () => vm.runInContext(fs.readFileSync(path.join(project, 'content.js'), 'utf8'), context);
   inject();
-  return { context, nodes, listeners, reads, inject, request: message => new Promise(resolve => {
+  return { context, nodes, listeners, reads, progress, inject, request: message => new Promise(resolve => {
     assert.equal([...listeners][0](message, { id: 'extension-id' }, resolve), true);
   }) };
 }
@@ -77,6 +78,21 @@ test('the read bridge removes legacy controls and reads without adding page butt
   assert.equal(result.ok, true);
   assert.equal(result.payload, payload);
   assert.deepEqual(page.reads, ['https://chatgpt.com/c/target-conversation']);
+  assert.equal(page.nodes.size, 0);
+});
+
+test('the read bridge relays progress with the request ID without adding page UI', async () => {
+  const page = contentFixture((source, { onProgress }) => {
+    onProgress({ stage: 'session' });
+    onProgress({ stage: 'assets', completed: 1, total: 2 });
+    return { messages: [] };
+  });
+  await page.request({ type: 'READ_FULL_CONVERSATION', readId: 'request-one' });
+  assert.equal(page.progress.length, 2);
+  assert.equal(page.progress[0].type, 'READ_PROGRESS');
+  assert.equal(page.progress[0].readId, 'request-one');
+  assert.equal(page.progress[1].progress.completed, 1);
+  assert.equal(page.progress[1].progress.total, 2);
   assert.equal(page.nodes.size, 0);
 });
 

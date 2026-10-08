@@ -76,6 +76,24 @@
 .export-panel .hint { color: #62686e; font-size: 13px; }
 #export-status { margin-top: 16px; padding: 12px; border-radius: 6px; background: #edf6f2; color: #176b58; }
 #export-status[data-level="error"] { background: #fff0ed; color: #b42318; }
+#export-status[hidden], #read-progress[hidden] { display: none; }
+#read-progress { margin-top: 16px; padding: 12px; border-radius: 6px; background: #edf6f2; color: #176b58; }
+.read-progress-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+#read-progress-count { font-variant-numeric: tabular-nums; }
+#read-progress-bar { display: block; width: 100%; height: 8px; border: 0; border-radius: 4px; overflow: hidden; appearance: none; background: #d7e7df; accent-color: #176b58; }
+#read-progress-bar::-webkit-progress-bar { background: #d7e7df; border-radius: 4px; }
+#read-progress-bar::-webkit-progress-value { background: #176b58; border-radius: 4px; transition: width .2s ease; }
+#read-progress-bar::-moz-progress-bar { background: #176b58; border-radius: 4px; }
+#read-progress-bar:not([value])::-webkit-progress-bar {
+  background: linear-gradient(90deg, #d7e7df 25%, #176b58 50%, #d7e7df 75%);
+  background-size: 200% 100%; animation: read-progress-pulse 1.6s linear infinite;
+}
+#read-progress-bar:not([value])::-webkit-progress-value { background: transparent; }
+@keyframes read-progress-pulse { from { background-position: 200% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  #read-progress-bar:not([value])::-webkit-progress-bar { animation: none; background-position: 50% 0; }
+  #read-progress-bar::-webkit-progress-value { transition: none; }
+}
 #output-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
 #output-actions > .hint { width: 100%; margin: 0; }
 .export-extra { width: 100%; }

@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { webcrypto } = require('node:crypto');
 const { test } = require('node:test');
 const { installI18n, catalogs } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
@@ -14,6 +15,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   const elements = new Map();
   const created = [], removed = [], activated = [], requests = [];
   const downloads = [];
+  const progressListeners = new Set();
   let notifyReading;
   const reading = new Promise(resolve => { notifyReading = resolve; });
   function element(id) {
@@ -21,6 +23,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : 'portrait',
       checked: id === 'show-back-links',
       dataset: {}, handlers: {}, hidden: false,
+      removeAttribute(name) { delete this[name]; },
       querySelectorAll(selector) { return selector === '.pdf-toc li a' ? [{ textContent: 'Question', getAttribute: () => '#question-1' }] : []; },
       addEventListener(type, handler) { this.handlers[type] = handler; }
     });
@@ -34,7 +37,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   const localized = [...fs.readFileSync(path.join(project, 'print.html'), 'utf8').matchAll(/data-i18n="([^"]+)"/g)]
     .map((match) => ({ textContent: '', getAttribute: () => match[1] }));
   const context = vm.createContext({
-    URL: DownloadURL, URLSearchParams, Date, Blob,
+    URL: DownloadURL, URLSearchParams, Date, Blob, crypto: webcrypto,
     setTimeout: (fn, delay) => { const timer = setTimeout(fn, delay); timer.unref(); return timer; }, clearTimeout,
     location: { search: output.initialSource ? `?${new URLSearchParams({ source: output.initialSource })}` : '' },
     fetch: async url => ({ ok: !output.catalogFailure, status: 404, json: async () => url.includes('/zh_CN/') ? catalogs.zh_CN : catalogs.en }),
@@ -43,7 +46,8 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       createElement: () => { const link = { click() { downloads.push(link.download); } }; return link; }
     },
     chrome: {
-      runtime: { getURL: file => `chrome-extension://test-extension/${file}` },
+      runtime: { id: 'test-extension', getURL: file => `chrome-extension://test-extension/${file}`,
+        onMessage: { addListener: listener => progressListeners.add(listener) } },
       tabs: {
         query: async () => tabs,
         create: async options => { created.push(options); return { id: 90 }; },
@@ -72,10 +76,60 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
   const initialized = vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
   return { created, removed, activated, requests, reading, element, downloads, initialized,
+    progress: (progress, options = {}) => {
+      const request = requests.at(-1);
+      for (const listener of progressListeners) listener(
+        { type: 'READ_PROGRESS', readId: options.readId ?? request.message.readId, progress },
+        { id: options.extensionId ?? 'test-extension', tab: { id: options.tabId ?? request.id } });
+    },
     start: async () => { await initialized; return element('export-form').handlers.submit({ preventDefault() {} }); },
     cancel: () => element('cancel-export').handlers.click()
-  };
+};
 }
+
+for (const locale of ['en-US', 'zh-CN']) {
+  test(`reading shows real stage and attachment progress, ignores unrelated updates, and hides on success (${locale})`, async () => {
+    let finish;
+    const app = fixture([{ id: 20, url: conversationUrl }], new Promise(resolve => { finish = resolve; }), { locale });
+    const pending = app.start();
+    await app.reading;
+    assert.equal(app.element('read-progress').hidden, false);
+    assert.equal(app.element('export-status').hidden, true);
+    assert.equal(app.element('read-progress-bar').value, undefined);
+    assert.match(app.element('read-progress-label').textContent, locale === 'zh-CN' ? /读取完整对话/ : /Reading the full/);
+    for (const options of [{ tabId: 123 }, { extensionId: 'other-extension' }, { readId: 'stale-read' }]) {
+      app.progress({ stage: 'assets', completed: 3, total: 4 }, options);
+      assert.equal(app.element('read-progress-bar').value, undefined);
+    }
+    app.progress({ stage: 'assets', completed: 3, total: 4 });
+    assert.equal(app.element('read-progress-bar').value, 3);
+    assert.equal(app.element('read-progress-bar').max, 4);
+    assert.equal(app.element('read-progress-count').textContent, '3 / 4');
+    assert.match(app.element('read-progress-label').textContent, locale === 'zh-CN' ? /附件/ : /attachments/);
+    app.progress({ stage: 'verify' });
+    assert.equal(app.element('read-progress-bar').value, undefined);
+    assert.equal(app.element('read-progress-count').textContent, '');
+    finish(response);
+    await pending;
+    assert.equal(app.element('read-progress').hidden, true);
+    assert.equal(app.element('export-status').hidden, false);
+    app.progress({ stage: 'assets', completed: 4, total: 4 });
+    assert.equal(app.element('read-progress').hidden, true);
+  });
+}
+
+test('read failure hides the progress bar and shows the error', async () => {
+  let finish;
+  const app = fixture([{ id: 20, url: conversationUrl }], new Promise(resolve => { finish = resolve; }));
+  const pending = app.start();
+  await app.reading;
+  finish({ ok: false, error: 'Login expired' });
+  await pending;
+  assert.equal(app.element('read-progress').hidden, true);
+  assert.equal(app.element('export-status').hidden, false);
+  assert.equal(app.element('export-status').textContent, 'Login expired');
+  assert.equal(app.element('export-status').dataset.level, 'error');
+});
 
 for (const locale of ['en-US', 'zh-CN']) {
   test(`a source URL fills automatically and reads even with an old Chrome locale cache (${locale})`, async () => {
@@ -185,6 +239,9 @@ for (const reuse of [true, false]) {
     const pending = app.start();
     await app.reading;
     await app.cancel();
+    app.progress({ stage: 'assets', completed: 1, total: 2 });
+    assert.equal(app.element('read-progress').hidden, true);
+    assert.equal(app.element('export-status').hidden, false);
     finishReading(response);
     await pending;
     assert.deepEqual(app.removed, reuse ? [] : [90]);

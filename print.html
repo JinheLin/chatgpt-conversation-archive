@@ -27,6 +27,13 @@
     </form>
     <p class="hint" data-i18n="sessionHint">Private conversations use your ChatGPT login session in this browser. Only the selected branch is read, including all its user and assistant messages from beginning to end.</p>
     <p id="export-status" role="status" aria-live="polite" data-i18n="waitingInput">Waiting for a conversation link.</p>
+    <div id="read-progress" hidden>
+      <div class="read-progress-heading">
+        <span id="read-progress-label" role="status" aria-live="polite"></span>
+        <span id="read-progress-count"></span>
+      </div>
+      <progress id="read-progress-bar" aria-labelledby="read-progress-label" aria-describedby="read-progress-count"></progress>
+    </div>
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
     <div id="output-actions" hidden>
       <button id="save-html" type="button" data-i18n="saveHtml">Save offline HTML</button>

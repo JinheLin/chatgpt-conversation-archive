@@ -56,25 +56,26 @@
   "readTabClosed": {
     "message": "读取窗口已关闭。"
   },
-  "readExisting": {
-    "message": "正在读取已打开的对话。将使用当前浏览器中的 ChatGPT 登录状态读取完整消息链…"
+  "progressConnect": {
+    "message": "正在连接 ChatGPT…"
   },
-  "readBackground": {
-    "message": "正在后台打开对话。将使用当前浏览器中的 ChatGPT 登录状态读取完整消息链…"
+  "progressSession": {
+    "message": "正在确认 ChatGPT 登录状态…"
   },
-  "verifyFull": {
-    "message": "正在读取并校验完整对话；不依赖页面是否滚动或已加载旧消息…"
+  "progressConversation": {
+    "message": "正在读取完整对话…"
+  },
+  "progressVerify": {
+    "message": "正在校验完整消息链…"
+  },
+  "progressAssets": {
+    "message": "正在处理附件…"
+  },
+  "progressLayout": {
+    "message": "正在排版并生成问题目录…"
   },
   "readFullFailed": {
     "message": "无法读取完整对话。"
-  },
-  "layoutProgress": {
-    "message": "已读取 $count$ 条消息。正在排版并创建问题目录…",
-    "placeholders": {
-      "count": {
-        "content": "$1"
-      }
-    }
   },
   "readVerified": {
     "message": "完整消息链及渲染数量校验通过：$count$ 条消息，$questions$ 个问题。$next$",

@@ -41,6 +41,9 @@
   "pageDirection": {
     "message": "PDF 纸张方向"
   },
+  "showBackLinks": {
+    "message": "显示返回问题目录链接"
+  },
   "portrait": {
     "message": "A4 纵向"
   },

@@ -37,6 +37,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
    - **Save offline HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
    - **Print / Save PDF**: select **Save as PDF**, A4 paper, **All** pages, and the default scale in Chrome's print dialog. Disable **Headers and footers** to hide the browser URL; enable **Background graphics** to retain shaded backgrounds.
    - For wide text diagrams, select **A4 landscape** before printing or saving HTML.
+   - **Show links back to the question index** is checked by default. Uncheck it to hide return links in the preview, offline HTML and PDF. The question index at the beginning remains available.
 
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 

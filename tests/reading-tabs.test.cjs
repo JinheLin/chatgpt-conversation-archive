@@ -18,6 +18,7 @@ function fixture(tabs, readResponse = Promise.resolve(response)) {
   function element(id) {
     if (!elements.has(id)) elements.set(id, {
       value: id === 'conversation-url' ? conversationUrl : 'portrait',
+      checked: id === 'show-back-links',
       dataset: {}, handlers: {}, hidden: false,
       addEventListener(type, handler) { this.handlers[type] = handler; }
     });

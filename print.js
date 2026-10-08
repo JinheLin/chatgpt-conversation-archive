@@ -8,6 +8,10 @@
   const startButton = document.getElementById("start-export");
   const cancelButton = document.getElementById("cancel-export");
   const actions = document.getElementById("output-actions");
+  const showBackLinks = document.getElementById("show-back-links");
+  function updateBackLinks() { main.dataset.showBackLinks = String(showBackLinks.checked); }
+  showBackLinks.addEventListener("change", updateBackLinks);
+  updateBackLinks();
   let sourceTab = null;
   let generation = 0;
   let payload = null;

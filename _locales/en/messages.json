@@ -41,6 +41,9 @@
   "pageDirection": {
     "message": "PDF orientation"
   },
+  "showBackLinks": {
+    "message": "Show links back to the question index"
+  },
   "portrait": {
     "message": "A4 portrait"
   },

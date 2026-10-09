@@ -94,33 +94,45 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
 }
 
 for (const locale of ['en-US', 'zh-CN']) {
-  test(`reading shows real stage and attachment progress, ignores unrelated updates, and hides on success (${locale})`, async () => {
+  test(`reading shows workflow percentages, ignores unrelated or late updates, and completes at 100% (${locale})`, async () => {
     let finish;
     const app = fixture([{ id: 20, url: conversationUrl }], new Promise(resolve => { finish = resolve; }), { locale });
     const pending = app.start();
     await app.reading;
     assert.equal(app.element('read-progress').hidden, false);
     assert.equal(app.element('export-status').hidden, true);
-    assert.equal(app.element('read-progress-bar').value, undefined);
-    assert.match(app.element('read-progress-label').textContent, locale === 'zh-CN' ? /读取完整对话/ : /Reading the full/);
+    assert.equal(app.element('read-progress-bar').value, 10);
+    assert.equal(app.element('read-progress-count').textContent, '10%');
+    assert.match(app.element('read-progress-label').textContent, locale === 'zh-CN' ? /登录状态/ : /login session/);
     for (const options of [{ tabId: 123 }, { extensionId: 'other-extension' }, { readId: 'stale-read' }]) {
       app.progress({ stage: 'assets', completed: 3, total: 4 }, options);
-      assert.equal(app.element('read-progress-bar').value, undefined);
+      assert.equal(app.element('read-progress-bar').value, 10);
     }
+    app.progress({ stage: 'complete' }); // Only the export page may finish the overall workflow.
+    assert.equal(app.element('read-progress-bar').value, 10);
+    app.progress({ stage: 'conversation' });
+    assert.equal(app.element('read-progress-count').textContent, '20%');
+    app.progress({ stage: 'verify' });
+    assert.equal(app.element('read-progress-count').textContent, '55%');
     app.progress({ stage: 'assets', completed: 3, total: 4 });
-    assert.equal(app.element('read-progress-bar').value, 3);
-    assert.equal(app.element('read-progress-bar').max, 4);
-    assert.equal(app.element('read-progress-count').textContent, '3 / 4');
+    assert.equal(app.element('read-progress-bar').value, 83);
+    assert.equal(app.element('read-progress-bar').max, 100);
+    assert.equal(app.element('read-progress-count').textContent, '83%');
     assert.match(app.element('read-progress-label').textContent, locale === 'zh-CN' ? /附件/ : /attachments/);
     app.progress({ stage: 'verify' });
-    assert.equal(app.element('read-progress-bar').value, undefined);
-    assert.equal(app.element('read-progress-count').textContent, '');
+    app.progress({ stage: 'assets', completed: 1, total: 4 });
+    assert.equal(app.element('read-progress-bar').value, 83);
+    assert.equal(app.element('read-progress-count').textContent, '83%');
+    app.progress({ stage: 'assets', completed: 4, total: 4 });
+    assert.equal(app.element('read-progress-bar').value, 90);
     finish(response);
     await pending;
-    assert.equal(app.element('read-progress').hidden, true);
+    assert.equal(app.element('read-progress').hidden, false);
     assert.equal(app.element('export-status').hidden, false);
+    assert.equal(app.element('read-progress-count').textContent, '100%');
+    assert.equal(app.element('read-progress-bar').value, 100);
     app.progress({ stage: 'assets', completed: 4, total: 4 });
-    assert.equal(app.element('read-progress').hidden, true);
+    assert.equal(app.element('read-progress-count').textContent, '100%');
   });
 }
 
@@ -132,6 +144,7 @@ test('read failure hides the progress bar and shows the error', async () => {
   finish({ ok: false, error: 'Login expired' });
   await pending;
   assert.equal(app.element('read-progress').hidden, true);
+  assert.ok(app.element('read-progress-bar').value < 100);
   assert.equal(app.element('export-status').hidden, false);
   assert.equal(app.element('export-status').textContent, 'Login expired');
   assert.equal(app.element('export-status').dataset.level, 'error');

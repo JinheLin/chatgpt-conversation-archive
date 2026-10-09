@@ -38,26 +38,38 @@
   let generation = 0;
   let payload = null;
   let activeRead = null;
+  let readPercent = 0;
 
-  function report(text, error = false) {
-    readProgress.hidden = true;
+  function report(text, error = false, keepProgress = false) {
+    readProgress.hidden = !keepProgress;
     status.hidden = false;
     status.textContent = text;
     status.dataset.level = error ? "error" : "info";
   }
-  const progressLabels = { connect: "progressConnect", session: "progressSession", conversation: "progressConversation",
-    verify: "progressVerify", assets: "progressAssets", layout: "progressLayout" };
+  // Overall workflow milestones, not elapsed time or network byte percentages.
+  const progressStages = {
+    connect: { label: "progressConnect", percent: 0 },
+    session: { label: "progressSession", percent: 10 },
+    conversation: { label: "progressConversation", percent: 20 },
+    verify: { label: "progressVerify", percent: 55 },
+    assets: { label: "progressAssets", percent: 60 },
+    layout: { label: "progressLayout", percent: 90 },
+    complete: { label: "progressComplete", percent: 100 }
+  };
   function showReadProgress({ stage, completed, total }) {
-    if (!Object.hasOwn(progressLabels, stage)) return;
-    progressLabel.textContent = t(progressLabels[stage]);
-    progressCount.textContent = "";
-    progressBar.removeAttribute("value");
-    if (stage === "assets" && Number.isSafeInteger(total) && total > 0 &&
-        Number.isSafeInteger(completed) && completed >= 0 && completed <= total) {
-      progressBar.max = total;
-      progressBar.value = completed;
-      progressCount.textContent = `${completed} / ${total}`;
+    if (!Object.hasOwn(progressStages, stage)) return;
+    let percent = progressStages[stage].percent;
+    if (stage === "assets") {
+      if (!Number.isSafeInteger(total) || total <= 0 || !Number.isSafeInteger(completed) ||
+          completed < 0 || completed > total) return;
+      percent += Math.round(30 * completed / total);
     }
+    if (percent < readPercent) return;
+    readPercent = percent;
+    progressLabel.textContent = t(progressStages[stage].label);
+    progressCount.textContent = `${percent}%`;
+    progressBar.max = 100;
+    progressBar.value = percent;
     status.hidden = true;
     readProgress.hidden = false;
   }
@@ -65,7 +77,7 @@
     if (sender.id !== chrome.runtime.id || sender.tab?.id !== activeRead?.tabId ||
         !activeRead || activeRead.generation !== generation || message?.type !== "READ_PROGRESS" ||
         message.readId !== activeRead.id) return;
-    if (message.progress && typeof message.progress === "object") showReadProgress(message.progress);
+    if (["session", "conversation", "verify", "assets"].includes(message.progress?.stage)) showReadProgress(message.progress);
   });
   function tabLoaded(tabId) {
     return new Promise((resolve, reject) => {
@@ -94,6 +106,7 @@
     main.hidden = true;
     payload = null;
     activeRead = null;
+    readPercent = 0;
     try {
       const target = globalThis.ChatGPTPdfSource.parseUrl(input.value.trim());
       showReadProgress({ stage: "connect" });
@@ -118,7 +131,7 @@
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "conversation-source.js", "content.js"] });
       if (mine !== generation) return;
       activeRead = { id: crypto.randomUUID(), tabId: tab.id, generation: mine };
-      showReadProgress({ stage: "conversation" });
+      showReadProgress({ stage: "session" });
       const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id });
       if (mine !== generation) return;
       activeRead = null;
@@ -131,7 +144,8 @@
       if (mine !== generation) return;
       globalThis.ChatGPTPdfExporter.fitCode(main, document.getElementById("page-layout").value === "landscape");
       actions.hidden = false;
-      report(t("readVerified", payload.messages.length, payload.completeness.questions, problems.length ? t("assetProblems", problems.length) : t("readyOutput")));
+      showReadProgress({ stage: "complete" });
+      report(t("readVerified", payload.messages.length, payload.completeness.questions, problems.length ? t("assetProblems", problems.length) : t("readyOutput")), false, true);
       if (!existing) {
         await chrome.tabs.remove(tab.id);
         sourceTab = null;

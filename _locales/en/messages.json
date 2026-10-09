@@ -77,6 +77,9 @@
   "progressLayout": {
     "message": "Formatting and creating the question index…"
   },
+  "progressComplete": {
+    "message": "Reading complete"
+  },
   "readFullFailed": {
     "message": "Could not read the full conversation."
   },

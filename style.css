@@ -253,7 +253,6 @@
   .reader-workspace .hint { font-size: 12px; margin-top: 8px; }
   .reader-current { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 16px 0; padding: 10px 12px; border-radius: 6px; background: #f5f7f6; font-size: 13px; }
   .reader-current a { color: #47534d; }
-  .reader-current button { padding: 6px 10px; font-size: 12px; }
   .reader-library { margin-top: 20px; padding-top: 16px; }
   .reader-library-entry { padding: 6px 0; }
   .reader-library-list { margin: 0; }
@@ -293,6 +292,7 @@
   .pdf-print-page { --reader-bar-height: 124px; }
   .reader-bar-inner { align-items: stretch; flex-direction: column; gap: 10px; }
   .reader-toolbar { justify-content: flex-end; flex-wrap: wrap; }
+  .reader-bar #output-actions:not([hidden]) { display: contents; }
   .reader-bar button { font-size: 12px; padding: 7px 9px; }
   .reader-workspace { margin: 16px 10px; padding: 20px; }
   .reader-workspace-heading h2 { font-size: 16px; }

@@ -47,7 +47,8 @@ for (const locale of ['en', 'zh-CN']) {
     assert.equal(app.get('reader-workspace').hidden, false);
     assert.equal(app.get('reader-open').getAttribute('aria-expanded'), 'true');
     assert.equal(app.w.document.activeElement, app.get('conversation-url'));
-    assert.ok(app.get('reader-update').closest('#reader-workspace'));
+    assert.ok(app.get('reader-update').closest('.reader-toolbar'));
+    assert.equal(app.get('reader-update').closest('#reader-workspace'), null);
     assert.ok(app.get('reader-backup').closest('#reader-data-tools'));
     assert.ok(app.get('reader-restore').closest('#reader-data-tools'));
     app.get('reader-workspace-close').click();

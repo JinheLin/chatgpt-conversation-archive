@@ -35,6 +35,7 @@
       <div class="reader-toolbar">
         <button id="reader-open" class="button-secondary" type="button" aria-expanded="true" aria-controls="reader-workspace" data-i18n="readerOpen" hidden>Conversation list</button>
         <div id="output-actions" hidden>
+          <button id="reader-update" class="button-secondary" type="button" data-i18n="readerUpdate">Update conversation</button>
           <button id="reader-toggle" class="button-secondary" type="button" aria-expanded="false" aria-controls="reader-annotations" data-i18n="readerAnnotations">Annotations</button>
           <div id="export-menu" class="export-menu">
             <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
@@ -68,7 +69,6 @@
     <p class="hint" data-i18n="readerLoginHint">To read a private conversation, sign in to ChatGPT in this browser.</p>
     <div id="reader-current" class="reader-current" hidden>
       <a id="reader-current-link" target="_blank" rel="noopener noreferrer" data-i18n="originalLink">Original conversation</a>
-      <button id="reader-update" class="button-secondary" type="button" data-i18n="readerUpdate">Update conversation</button>
     </div>
     <details id="reader-library" class="reader-library" open>
       <summary id="reader-library-title" data-i18n="readerLibrary">Local conversations</summary>

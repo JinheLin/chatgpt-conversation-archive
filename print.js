@@ -46,6 +46,7 @@
     reader.setLocked(value);
     if (value) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
+    for (const control of document.getElementById("reader-library-list").querySelectorAll("button")) control.disabled = value;
   }
   function updatePageLayout() {
     const layout = mobileLayout.checked ? "mobile" : pageLayout.checked ? "landscape" : "portrait";
@@ -136,19 +137,74 @@
       chrome.tabs.get(tabId).then((tab) => { if (tab.status === "complete") done(); }, done);
     });
   }
+  let libraryRevision = 0;
+  let libraryTimer;
+  function formatBytes(bytes) {
+    const units = ["B", "KiB", "MiB", "GiB"];
+    let unit = 0;
+    while (bytes >= 1024 && unit < units.length - 1) { bytes /= 1024; unit++; }
+    return new Intl.NumberFormat(language, { maximumFractionDigits: unit ? 1 : 0 }).format(bytes) + " " + units[unit];
+  }
+  async function deleteConversation(entry) {
+    if (outputBusy) return;
+    const current = payload && store.keyFor(payload.sourceUrl) === entry.key;
+    if (current && !reader.canLeave()) return;
+    if (!globalThis.confirm(t("readerDeleteConversationConfirm", entry.title))) return;
+    setOutputBusy(true);
+    try {
+      await store.deleteConversation(entry.key);
+      // A refresh must not silently download a deleted conversation, even when
+      // the original entry URL points to a different chat from the one displayed.
+      const url = new URL(location.href);
+      let linked = false;
+      try { linked = store.keyFor(url.searchParams.get("source")) === entry.key; } catch (_) { /* No valid source. */ }
+      if (current || linked) {
+        url.searchParams.delete("source");
+        if (current) url.hash = "";
+        history.replaceState(null, "", url.href);
+      }
+      if (current) {
+        generation++;
+        reader.unload();
+        main.replaceChildren(); main.hidden = true;
+        previewNavigation.clear();
+        payload = null;
+        actions.hidden = pdfFallback.hidden = true;
+        input.value = "";
+        document.title = t("exportPageTitle");
+        workspace.opening();
+      }
+      await refreshLibrary();
+      report(t("readerConversationDeleted", entry.title), false, false, true);
+    } catch (error) { report(t("readerConversationDeleteFailed", error.message), true); }
+    finally { setOutputBusy(false); }
+  }
   async function refreshLibrary() {
+    clearTimeout(libraryTimer);
+    const mine = ++libraryRevision;
     const list = document.getElementById("reader-library-list");
+    const total = document.getElementById("reader-library-size");
     try {
       const entries = await store.listConversations();
+      if (mine !== libraryRevision) return;
+      const focused = document.activeElement;
+      const focusedKey = focused?.closest?.(".reader-library-entry")?.dataset.key;
+      const focusedClass = focused?.className;
       list.replaceChildren();
       document.getElementById("reader-library-title").textContent = t("readerLibraryCount", entries.length);
+      const bytes = entries.reduce((sum, entry) => sum + entry.bytes, 0);
+      total.dataset.bytes = String(bytes);
+      total.textContent = t("readerLibraryTotalSize", formatBytes(bytes));
       if (!entries.length) {
         const empty = document.createElement("p"); empty.className = "hint";
         empty.textContent = t("readerLibraryEmpty"); list.appendChild(empty);
       }
       for (const entry of entries) {
         const row = document.createElement("div"); row.className = "reader-library-entry";
+        row.dataset.key = entry.key;
+        const details = document.createElement("div"); details.className = "reader-library-details";
         const button = document.createElement("button"); button.type = "button";
+        button.className = "reader-library-open"; button.disabled = outputBusy;
         button.textContent = entry.title;
         button.addEventListener("click", () => {
           if (outputBusy) return;
@@ -158,10 +214,26 @@
         const time = document.createElement("time");
         time.dateTime = entry.capturedAt;
         time.textContent = globalThis.ChatGPTReaderWorkspace.formatTimestamp(entry.capturedAt);
-        row.append(button, time); list.appendChild(row);
+        const size = document.createElement("span"); size.className = "reader-library-entry-size";
+        size.dataset.bytes = String(entry.bytes);
+        size.textContent = t("readerLibraryEntrySize", formatBytes(entry.bytes));
+        const meta = document.createElement("div"); meta.className = "reader-library-entry-meta";
+        meta.append(time, size); details.append(button, meta);
+        const remove = document.createElement("button"); remove.type = "button";
+        remove.className = "reader-library-delete"; remove.disabled = outputBusy;
+        remove.textContent = t("readerDeleteConversation");
+        remove.setAttribute("aria-label", t("readerDeleteConversationLabel", entry.title));
+        remove.addEventListener("click", () => { void deleteConversation(entry); });
+        row.append(details, remove); list.appendChild(row);
+        if (entry.key === focusedKey) {
+          const target = focusedClass === "reader-library-delete" ? remove : button;
+          target.focus({ preventScroll: true });
+        }
       }
     } catch (error) {
+      if (mine !== libraryRevision) return;
       list.textContent = t("readerSaveFailed", error.message);
+      total.textContent = ""; delete total.dataset.bytes;
     }
   }
   async function start(event, forceRemote = false) {
@@ -447,6 +519,10 @@
     } catch (error) { report(t("readerBackupFailed", error.message), true); }
     finally { setOutputBusy(false); }
     if (restored && current) { reader.unload(); input.value = current; await start(); }
+  });
+  store.subscribe?.(() => {
+    clearTimeout(libraryTimer);
+    libraryTimer = setTimeout(() => { void refreshLibrary(); }, 50);
   });
   await refreshLibrary();
   if (initial?.trim()) await start();

@@ -189,7 +189,7 @@ test('the full reader opens an offline snapshot without reading ChatGPT and rest
   app.get('reader-update').click();
   await waitFor(() => app.requests.length === 1 && !app.get('start-export').disabled);
   assert.equal(app.main.querySelector('mark').textContent, 'important text');
-  assert.equal(app.get('reader-library-list').querySelectorAll('button').length, 1);
+  assert.equal(app.get('reader-library-list').querySelectorAll('.reader-library-open').length, 1);
 });
 
 test('HTML export keeps the original formatted document and excludes private annotations and reader controls', async (t) => {
@@ -229,8 +229,8 @@ test('backup and restore controls work without a current conversation and expose
   Object.defineProperty(fileInput, 'files', { value: [{ size: 5000, text: async () => JSON.stringify(backup) }], configurable: true });
   fileInput.dispatchEvent(new app.w.Event('change'));
   await waitFor(() => app.get('export-status').textContent.includes('Backup merged'));
-  assert.equal(app.get('reader-library-list').querySelectorAll('button').length, 1);
-  app.get('reader-library-list').querySelector('button').click();
+  assert.equal(app.get('reader-library-list').querySelectorAll('.reader-library-open').length, 1);
+  app.get('reader-library-list').querySelector('.reader-library-open').click();
   await waitFor(() => !app.main.hidden && !app.get('start-export').disabled);
   assert.equal(app.requests.length, 0);
   app.get('reader-backup').click();

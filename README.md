@@ -63,6 +63,14 @@ After updating local files, click **Reload** on the extension card in `chrome://
 - **Export** offers HTML and PDF plus the **A4 landscape** and **Mobile reading** checkboxes. They are mutually exclusive; leave both unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
 
+## Managing local conversations (v3.3)
+
+Open **Conversation list** to see each conversation's local data size and the total for all saved conversations. Sizes include the saved transcript, embedded assets and annotation records, and update when data changes in this or another reader tab. They are estimates of serialized UTF-8 data, rather than physical disk usage; database indexes, browser overhead and disk compression may change the actual footprint. Deleted annotation records still contribute to the estimate until their conversation is removed.
+
+Click **Delete** beside a conversation and confirm to remove its local snapshot, assets, highlights and comments together. The original ChatGPT conversation and downloaded files are unaffected. Deleting the conversation currently open returns you to the list; deleting another conversation preserves your reading position and comment draft. Unsaved comments require confirmation before deleting the current conversation. Opening its link again fetches a new copy; restoring a previous JSON backup can restore the deleted conversation and its saved annotations.
+
+Existing local data and version 1 backups remain supported. The database upgrade adds size metadata once; subsequent list refreshes read small metadata indexes without loading full transcripts or assets.
+
 ## Local reader, highlights and comments (v3)
 
 1. Read a conversation once. Its complete validated snapshot, including successfully embedded assets, is saved in the extension's local IndexedDB.

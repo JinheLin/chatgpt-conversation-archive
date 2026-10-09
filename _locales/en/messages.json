@@ -676,5 +676,59 @@
   },
   "mobileLayoutHint": {
     "message": "100 × 180 mm pages with larger text. Wide diagrams may need zooming."
+  },
+  "readerLibraryTotalSize": {
+    "message": "Total local data: approximately $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerLibraryEntrySize": {
+    "message": "Approximately $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerLibrarySizeHint": {
+    "message": "Includes text, assets and annotations. Actual disk usage may differ."
+  },
+  "readerDeleteConversation": {
+    "message": "Delete"
+  },
+  "readerDeleteConversationLabel": {
+    "message": "Delete local conversation: $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerDeleteConversationConfirm": {
+    "message": "Delete “$arg1$” from local storage?\n\nIts saved conversation, highlights and comments will be removed. The original ChatGPT conversation and exported files will remain. You can restore it from a previous backup.",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerConversationDeleted": {
+    "message": "Deleted local conversation: $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerConversationDeleteFailed": {
+    "message": "Could not delete the local conversation: $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   }
 }

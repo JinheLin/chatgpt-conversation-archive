@@ -676,5 +676,59 @@
   },
   "mobileLayoutHint": {
     "message": "100 × 180 mm 窄幅页面，正文大字排版。宽图表可能需要放大。"
+  },
+  "readerLibraryTotalSize": {
+    "message": "本地数据总大小：约 $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerLibraryEntrySize": {
+    "message": "约 $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerLibrarySizeHint": {
+    "message": "含正文、附件和批注；实际磁盘占用可能不同。"
+  },
+  "readerDeleteConversation": {
+    "message": "删除"
+  },
+  "readerDeleteConversationLabel": {
+    "message": "删除本地对话：$arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerDeleteConversationConfirm": {
+    "message": "删除本地对话「$arg1$」？\n\n将清理该对话的本地快照、划线和评论。ChatGPT 原始对话及已导出的文件不受影响，可通过之前的备份恢复。",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerConversationDeleted": {
+    "message": "已删除本地对话「$arg1$」。",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerConversationDeleteFailed": {
+    "message": "删除本地对话失败：$arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   }
 }

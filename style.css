@@ -227,8 +227,13 @@
 .reader-library { border-top: 1px solid #e1e7e3; padding-top: 10px; font-size: 13px; }
 .reader-library summary { cursor: pointer; color: #176b58; font-weight: 600; }
 .reader-library-entry { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.export-panel .reader-library-entry button { padding: 6px 0; background: transparent; color: #202124; text-align: left; overflow-wrap: anywhere; }
-.reader-library-entry time { flex-shrink: 0; color: #62686e; font-size: 12px; }
+.reader-library-details { flex: 1; min-width: 0; }
+.export-panel .reader-library-open { padding: 4px 0; background: transparent; color: #202124; text-align: left; overflow-wrap: anywhere; }
+.export-panel .reader-library-open:hover { color: #176b58; text-decoration: underline; }
+.reader-library-entry-meta { display: flex; flex-wrap: wrap; column-gap: 16px; row-gap: 2px; color: #62686e; font-size: 12px; }
+.reader-library-size { color: #176b58; font-weight: 600; margin: 12px 0 0; }
+.export-panel .reader-library-delete { flex-shrink: 0; padding: 6px 12px; background: #fff; color: #a3332b; border: 1px solid #e4ceca; font-weight: 500; }
+.export-panel .reader-library-delete:hover { background: #fff1ee; border-color: #d99f97; }
 #reader-status[data-level="error"] { color: #b42318; }
 .reader-selection { position: fixed; z-index: 30; display: flex; gap: 4px; padding: 4px; border: 1px solid #d8e4de; border-radius: 8px; background: #fff; box-shadow: 0 3px 14px #20212430; }
 .reader-selection button, .reader-annotations button { border: 0; border-radius: 5px; padding: 7px 10px; font: 500 13px/1.5 system-ui, sans-serif; cursor: pointer; }

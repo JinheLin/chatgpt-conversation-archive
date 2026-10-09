@@ -28,6 +28,12 @@
     if (!Number.isFinite(Date.parse(value))) invalid();
     return new Date(value).toISOString();
   }
+  function storageBytes(value) {
+    // Logical UTF-8 bytes, excluding this derived field. Disk compression and
+    // IndexedDB index/engine overhead cannot be attributed to individual chats.
+    const { byteSize, ...data } = value;
+    return new TextEncoder().encode(JSON.stringify(data)).byteLength;
+  }
   function cleanPayload(value) {
     if (!value || !Array.isArray(value.messages) || !value.messages.length || value.messages.length > 100000) invalid();
     const sourceUrl = globalThis.ChatGPTPdfSource.parseUrl(string(value.sourceUrl, 2000)).url;
@@ -106,18 +112,34 @@
     if (opening) return opening;
     opening = new Promise((resolve, reject) => {
       if (!globalThis.indexedDB) return reject(new Error(t("readerStorageUnavailable")));
-      const request = indexedDB.open("chatgpt-conversation-reader", 1);
+      const request = indexedDB.open("chatgpt-conversation-reader", 2);
       let failed = false;
       const fail = () => { failed = true; reject(new Error(t("readerStorageUnavailable"))); };
       request.onerror = fail;
       request.onblocked = fail;
       request.onupgradeneeded = () => {
         const db = request.result;
-        const conversations = db.createObjectStore("conversations", { keyPath: "key" });
+        const tx = request.transaction;
+        const conversations = db.objectStoreNames.contains("conversations")
+          ? tx.objectStore("conversations") : db.createObjectStore("conversations", { keyPath: "key" });
+        if (conversations.indexNames.contains("summary")) conversations.deleteIndex("summary");
         conversations.createIndex("summary",
-          ["savedAt", "payload.title", "payload.sourceUrl", "payload.capturedAt", "payload.completeness.count", "key"]);
-        const annotations = db.createObjectStore("annotations", { keyPath: "id" });
-        annotations.createIndex("conversationKey", "conversationKey");
+          ["savedAt", "payload.title", "payload.sourceUrl", "payload.capturedAt", "payload.completeness.count", "key", "byteSize"]);
+        const annotations = db.objectStoreNames.contains("annotations")
+          ? tx.objectStore("annotations") : db.createObjectStore("annotations", { keyPath: "id" });
+        if (!annotations.indexNames.contains("conversationKey")) annotations.createIndex("conversationKey", "conversationKey");
+        annotations.createIndex("storageSize", ["conversationKey", "byteSize"]);
+        // Existing snapshots are read once during the atomic schema upgrade.
+        // Later library refreshes read metadata keys, never bodies or assets.
+        for (const store of [conversations, annotations]) {
+          store.openCursor().onsuccess = (event) => {
+            const cursor = event.target.result;
+            if (!cursor) return;
+            const entry = cursor.value;
+            entry.byteSize = storageBytes(entry);
+            cursor.update(entry); cursor.continue();
+          };
+        }
       };
       request.onsuccess = () => {
         const db = request.result;
@@ -146,22 +168,33 @@
     });
   }
   async function listConversations() {
-    const entries = await transaction(["conversations"], "readonly", (tx, set) => {
+    const entries = await transaction(["conversations", "annotations"], "readonly", (tx, set) => {
       // Only small metadata keys are read; the library never loads message bodies or assets.
       const result = [];
+      const annotationSizes = new Map();
+      tx.objectStore("annotations").index("storageSize").openKeyCursor().onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) return;
+        const [key, bytes] = cursor.key;
+        annotationSizes.set(key, (annotationSizes.get(key) || 0) + bytes);
+        cursor.continue();
+      };
       tx.objectStore("conversations").index("summary").openKeyCursor().onsuccess = (event) => {
         const cursor = event.target.result;
-        if (!cursor) { set(result); return; }
-        const [savedAt, title, sourceUrl, capturedAt, count, key] = cursor.key;
-        result.push({ key, title, sourceUrl, capturedAt, savedAt, count });
+        if (!cursor) { set({ result, annotationSizes }); return; }
+        const [savedAt, title, sourceUrl, capturedAt, count, key, bytes] = cursor.key;
+        result.push({ key, title, sourceUrl, capturedAt, savedAt, count, bytes });
         cursor.continue();
       };
     });
-    return entries.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    return entries.result.map((entry) => ({ ...entry,
+      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0)
+    })).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
   }
   async function saveConversation(value) {
     const payload = cleanPayload(value), key = keyFor(payload.sourceUrl);
     const entry = { key, payload, savedAt: new Date().toISOString() };
+    entry.byteSize = storageBytes(entry);
     await transaction(["conversations"], "readwrite", (tx) => {
       const store = tx.objectStore("conversations");
       store.get(key).onsuccess = (event) => {
@@ -191,6 +224,7 @@
             fail(new Error(t("readerConflict"))); return;
           }
           annotation.updatedAt = new Date(Math.max(Date.now(), Date.parse(previous?.updatedAt || 0) + 1)).toISOString();
+          annotation.byteSize = storageBytes(annotation);
           store.put(annotation);
           set(annotation);
         };
@@ -201,6 +235,19 @@
   }
   function deleteAnnotation(annotation) {
     return saveAnnotation({ ...annotation, deletedAt: new Date().toISOString() }, annotation.updatedAt);
+  }
+  async function deleteConversation(key) {
+    if (typeof key !== "string" || !key) invalid();
+    await transaction(["conversations", "annotations"], "readwrite", (tx) => {
+      tx.objectStore("conversations").delete(key);
+      const annotations = tx.objectStore("annotations");
+      annotations.index("conversationKey").openKeyCursor(key).onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) return;
+        annotations.delete(cursor.primaryKey); cursor.continue();
+      };
+    });
+    announce(key);
   }
   async function backup() {
     return transaction(["conversations", "annotations"], "readonly", (tx, set) => {
@@ -214,12 +261,14 @@
     await transaction(["conversations", "annotations"], "readwrite", (tx, set, fail) => {
       const conversations = tx.objectStore("conversations"), annotations = tx.objectStore("annotations");
       for (const entry of data.conversations) {
+        entry.byteSize = storageBytes(entry);
         conversations.get(entry.key).onsuccess = (event) => {
           const old = event.target.result;
           if (!old || entry.payload.capturedAt > old.payload.capturedAt) conversations.put(entry);
         };
       }
       for (const entry of data.annotations) {
+        entry.byteSize = storageBytes(entry);
         annotations.get(entry.id).onsuccess = (event) => {
           const old = event.target.result;
           // A deletion is retained as a tombstone; old backups cannot resurrect it.
@@ -231,7 +280,7 @@
     for (const entry of data.conversations) announce(entry.key);
     return { conversations: data.conversations.length, annotations: data.annotations.filter((entry) => !entry.deletedAt).length };
   }
-  globalThis.ChatGPTReaderStore = { keyFor, getConversation, listConversations, saveConversation,
+  globalThis.ChatGPTReaderStore = { keyFor, getConversation, listConversations, saveConversation, deleteConversation,
     getAnnotations, saveAnnotation, deleteAnnotation, backup, restore, validateBackup, MAX_BACKUP_BYTES,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); } };
 })();

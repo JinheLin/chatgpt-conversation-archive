@@ -9,3 +9,5 @@ The extension bundles its runtime assets locally. No CDN is required.
 | [pdf-lib](https://github.com/Hopding/pdf-lib) | 1.17.1 | `vendor/pdf-lib.min.js` | MIT, [full license](vendor/pdf-lib.LICENSE) |
 
 `markdown-it.min.js` is the browser UMD distribution. KaTeX CSS is adjusted to use only the bundled WOFF2 fonts. Original copyright and license notices are preserved in the adjacent license files.
+
+Development-only tests use [JSDOM](https://github.com/jsdom/jsdom) 26.1.0 (MIT) and [fake-indexeddb](https://github.com/dumbmatter/fakeIndexedDB) 6.2.4 (Apache-2.0), pinned in `package-lock.json`. They and their dependencies are installed only for tests, retain their package licenses, and are not loaded by the Chrome extension.

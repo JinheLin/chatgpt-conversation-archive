@@ -1,21 +1,21 @@
 {
   "extensionDescription": {
-    "message": "从链接导出完整 ChatGPT 对话为 PDF 或离线 HTML，并附带问题目录。"
+    "message": "阅读完整 ChatGPT 对话，在本地保存划线和评论，并导出 PDF 或离线 HTML。"
   },
   "actionTitle": {
-    "message": "输入 ChatGPT 链接，导出完整 PDF / HTML"
+    "message": "打开 ChatGPT 对话阅读器"
   },
   "documentLanguage": {
     "message": "zh-CN"
   },
   "exportPageTitle": {
-    "message": "ChatGPT 完整对话导出"
+    "message": "ChatGPT 对话阅读器"
   },
   "exportHeading": {
-    "message": "导出完整 ChatGPT 对话"
+    "message": "ChatGPT 对话阅读器"
   },
   "exportDescription": {
-    "message": "输入对话链接，生成带问题目录的 PDF 或单文件 HTML。"
+    "message": "阅读完整对话，在本地保存划线和评论，并导出 HTML 或 PDF。"
   },
   "urlLabel": {
     "message": "ChatGPT 对话链接"
@@ -76,19 +76,44 @@
   },
   "progressBytes": {
     "message": "已接收 $size$",
-    "placeholders": { "size": { "content": "$1" } }
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
   },
   "progressAssetCount": {
     "message": "已处理 $count$ / $total$ 个附件",
-    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
   },
   "progressMessageCount": {
     "message": "已排版 $count$ / $total$ 条消息",
-    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
   },
   "progressCodeCount": {
     "message": "已调整 $count$ / $total$ 个代码块",
-    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
   },
   "readFullFailed": {
     "message": "无法读取完整对话。"
@@ -422,5 +447,179 @@
   },
   "pdfExportNoData": {
     "message": "Chrome 未返回完整的 PDF 数据，请重试。"
+  },
+  "readerTitle": {
+    "message": "对话阅读器"
+  },
+  "readerBackup": {
+    "message": "备份本地数据"
+  },
+  "readerRestore": {
+    "message": "恢复备份"
+  },
+  "readerLibrary": {
+    "message": "本地对话"
+  },
+  "readerLibraryCount": {
+    "message": "本地对话（$arg1$）",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerLibraryEmpty": {
+    "message": "读取后的对话会保存在这里，之后可离线打开。"
+  },
+  "readerUpdate": {
+    "message": "更新对话"
+  },
+  "readerAnnotations": {
+    "message": "批注"
+  },
+  "readerAnnotationsCount": {
+    "message": "批注（$arg1$）",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerNoAnnotations": {
+    "message": "选中消息中的文字，即可添加划线或评论。"
+  },
+  "readerClose": {
+    "message": "关闭"
+  },
+  "readerCommentLabel": {
+    "message": "评论"
+  },
+  "readerSaveComment": {
+    "message": "保存评论"
+  },
+  "readerCancelComment": {
+    "message": "取消"
+  },
+  "readerHighlight": {
+    "message": "划线"
+  },
+  "readerAddComment": {
+    "message": "评论"
+  },
+  "readerSelectionToolbar": {
+    "message": "文字批注"
+  },
+  "readerHint": {
+    "message": "选中文字可划线或评论。划线立即保存；评论请点击「保存评论」。HTML 和 PDF 导出原始对话；批注请通过「备份本地数据」保存。"
+  },
+  "readerUnresolved": {
+    "message": "原文已变化"
+  },
+  "readerUnresolvedHint": {
+    "message": "无法可靠定位这条批注。原文摘录和评论仍保存在列表中。"
+  },
+  "readerEdit": {
+    "message": "编辑评论"
+  },
+  "readerDelete": {
+    "message": "删除"
+  },
+  "readerDeleteConfirm": {
+    "message": "删除这条划线及其评论？"
+  },
+  "readerDiscardDraft": {
+    "message": "放弃尚未保存的评论？"
+  },
+  "readerSaving": {
+    "message": "正在保存到本地…"
+  },
+  "readerSaved": {
+    "message": "批注已保存到本地。"
+  },
+  "readerRestored": {
+    "message": "已恢复 $arg1$ 条本地批注。",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerRestoredUnresolved": {
+    "message": "已恢复 $arg1$ 条批注，其中 $arg2$ 条原文已变化，保留在批注列表中。",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      }
+    }
+  },
+  "readerSelectionUnsupported": {
+    "message": "请在同一条消息内选择文字。暂不支持对公式、图形、引用和附件标签添加批注。"
+  },
+  "readerStorageUnavailable": {
+    "message": "本地存储不可用，请检查扩展存储限制或磁盘剩余空间。"
+  },
+  "readerReadOnly": {
+    "message": "对话未能保存到本地，可继续阅读和导出。成功保存前无法添加批注。"
+  },
+  "readerSaveFailed": {
+    "message": "批注保存或恢复失败：$arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerSnapshotRequired": {
+    "message": "请先将对话保存到本地，再添加批注。"
+  },
+  "readerSnapshotFailed": {
+    "message": "对话可阅读和导出，但本地快照保存失败：$arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerOpenedLocal": {
+    "message": "已打开 $arg1$ 保存的本地对话。点击「更新对话」可读取最新内容。",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerConflict": {
+    "message": "这条批注已在另一阅读器标签页中修改。请从列表重新打开后再编辑，当前草稿仍保留在这里。"
+  },
+  "readerInvalidBackup": {
+    "message": "阅读器备份格式无效或版本不受支持。"
+  },
+  "readerBackupTooLarge": {
+    "message": "阅读器备份文件不能超过 100 MiB。"
+  },
+  "readerBackupSaved": {
+    "message": "本地对话和批注已备份，请妥善保存这份私人文件。"
+  },
+  "readerBackupFailed": {
+    "message": "备份或恢复失败：$arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerBackupRestored": {
+    "message": "备份已合并：$arg1$ 个对话、$arg2$ 条批注；保留较新的本地修改。",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      }
+    }
   }
 }

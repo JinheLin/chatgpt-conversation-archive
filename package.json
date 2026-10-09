@@ -1,8 +1,8 @@
 {
   "name": "chatgpt-conversation-archive",
-  "version": "2.2.12",
+  "version": "3.0.0",
   "private": true,
-  "description": "Chrome extension for exporting complete ChatGPT conversation branches to PDF or offline HTML.",
+  "description": "Chrome extension for reading complete ChatGPT conversations with local annotations and PDF/HTML export.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,5 +13,9 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.4",
+    "jsdom": "26.1.0"
   }
 }

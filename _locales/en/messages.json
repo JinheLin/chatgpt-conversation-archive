@@ -1,21 +1,21 @@
 {
   "extensionDescription": {
-    "message": "Export a complete ChatGPT conversation from its link to PDF or offline HTML, with a question index."
+    "message": "Read complete ChatGPT conversations with local highlights and comments, and export PDF or offline HTML."
   },
   "actionTitle": {
-    "message": "Enter a ChatGPT link to export the full conversation as PDF / HTML"
+    "message": "Open the ChatGPT conversation reader"
   },
   "documentLanguage": {
     "message": "en"
   },
   "exportPageTitle": {
-    "message": "ChatGPT Conversation Export"
+    "message": "ChatGPT Conversation Reader"
   },
   "exportHeading": {
-    "message": "Export a complete ChatGPT conversation"
+    "message": "ChatGPT conversation reader"
   },
   "exportDescription": {
-    "message": "Enter a conversation link to create a PDF or a single HTML file with a question index."
+    "message": "Read complete conversations, save highlights and comments locally, and export HTML or PDF."
   },
   "urlLabel": {
     "message": "ChatGPT conversation link"
@@ -76,19 +76,44 @@
   },
   "progressBytes": {
     "message": "Received $size$",
-    "placeholders": { "size": { "content": "$1" } }
+    "placeholders": {
+      "size": {
+        "content": "$1"
+      }
+    }
   },
   "progressAssetCount": {
     "message": "Processed $count$ / $total$ attachments",
-    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
   },
   "progressMessageCount": {
     "message": "Formatted $count$ / $total$ messages",
-    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
   },
   "progressCodeCount": {
     "message": "Fitted $count$ / $total$ code blocks",
-    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      }
+    }
   },
   "readFullFailed": {
     "message": "Could not read the full conversation."
@@ -422,5 +447,179 @@
   },
   "pdfExportNoData": {
     "message": "Chrome did not return a complete PDF. Please retry."
+  },
+  "readerTitle": {
+    "message": "Conversation reader"
+  },
+  "readerBackup": {
+    "message": "Back up local data"
+  },
+  "readerRestore": {
+    "message": "Restore backup"
+  },
+  "readerLibrary": {
+    "message": "Local conversations"
+  },
+  "readerLibraryCount": {
+    "message": "Local conversations ($arg1$)",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerLibraryEmpty": {
+    "message": "Read a conversation to save it here. Saved conversations can be opened offline."
+  },
+  "readerUpdate": {
+    "message": "Update conversation"
+  },
+  "readerAnnotations": {
+    "message": "Annotations"
+  },
+  "readerAnnotationsCount": {
+    "message": "Annotations ($arg1$)",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerNoAnnotations": {
+    "message": "Select text in a message to add a highlight or comment."
+  },
+  "readerClose": {
+    "message": "Close"
+  },
+  "readerCommentLabel": {
+    "message": "Comment"
+  },
+  "readerSaveComment": {
+    "message": "Save comment"
+  },
+  "readerCancelComment": {
+    "message": "Cancel"
+  },
+  "readerHighlight": {
+    "message": "Highlight"
+  },
+  "readerAddComment": {
+    "message": "Comment"
+  },
+  "readerSelectionToolbar": {
+    "message": "Text annotations"
+  },
+  "readerHint": {
+    "message": "Select text to highlight or comment. Highlights save immediately; click Save comment to save a note. HTML and PDF contain the original conversation; use a backup for annotations."
+  },
+  "readerUnresolved": {
+    "message": "Original text changed"
+  },
+  "readerUnresolvedHint": {
+    "message": "This annotation could not be located reliably. Its quote and comment are still saved in this list."
+  },
+  "readerEdit": {
+    "message": "Edit comment"
+  },
+  "readerDelete": {
+    "message": "Delete"
+  },
+  "readerDeleteConfirm": {
+    "message": "Delete this highlight and its comment?"
+  },
+  "readerDiscardDraft": {
+    "message": "Discard the unsaved comment?"
+  },
+  "readerSaving": {
+    "message": "Saving locally…"
+  },
+  "readerSaved": {
+    "message": "Annotation saved locally."
+  },
+  "readerRestored": {
+    "message": "$arg1$ annotations restored from local storage.",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerRestoredUnresolved": {
+    "message": "$arg1$ annotations restored; $arg2$ could not be located because the original text changed.",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      }
+    }
+  },
+  "readerSelectionUnsupported": {
+    "message": "Select text within a single message. Math, diagrams, citations and attachment labels are not supported yet."
+  },
+  "readerStorageUnavailable": {
+    "message": "Local storage is unavailable. Check extension storage permissions or available disk space."
+  },
+  "readerReadOnly": {
+    "message": "The conversation could not be saved locally. Reading and export are available, but annotations are disabled until saving succeeds."
+  },
+  "readerSaveFailed": {
+    "message": "Could not save or restore annotations: $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerSnapshotRequired": {
+    "message": "Save the conversation locally before adding annotations."
+  },
+  "readerSnapshotFailed": {
+    "message": "The conversation is ready to read and export, but its local snapshot could not be saved: $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerOpenedLocal": {
+    "message": "Opened the local conversation saved on $arg1$. Use Update conversation to read the latest version.",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerConflict": {
+    "message": "This annotation was changed in another reader tab. Reopen it from the list before editing again; your draft is kept here."
+  },
+  "readerInvalidBackup": {
+    "message": "Invalid or unsupported reader backup."
+  },
+  "readerBackupTooLarge": {
+    "message": "Reader backups are limited to 100 MiB."
+  },
+  "readerBackupSaved": {
+    "message": "Local conversations and annotations backed up. Keep this private file somewhere safe."
+  },
+  "readerBackupFailed": {
+    "message": "Backup or restore failed: $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerBackupRestored": {
+    "message": "Backup merged: $arg1$ conversations and $arg2$ annotations. Newer local changes were kept.",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      }
+    }
   }
 }

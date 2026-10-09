@@ -4,7 +4,7 @@ English | [简体中文](README_zh.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A Chrome extension that exports a ChatGPT conversation from its URL to PDF or a single offline HTML file, with a clickable index of every user question.
+A Chrome extension for reading complete ChatGPT conversations, keeping highlights and comments locally, and exporting PDF or offline HTML with a clickable question index.
 
 No server, API key, or dependency installation is required to use the extension. It reads the selected conversation branch using your existing ChatGPT login session, so export does not depend on scrolling through lazy-loaded messages.
 
@@ -30,7 +30,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 
 ### 3. Export a conversation
 
-1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
+1. When opened with a conversation URL, the reader fills in the URL and opens a saved local snapshot automatically. If none exists, it reads and saves the complete conversation.
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
 3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% appears only after validation and formatting finish.
 4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
@@ -43,6 +43,19 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
 
 After updating local files, click **Reload** on the extension card in `chrome://extensions/`, accept any new permission prompt, then refresh any open ChatGPT and export pages. Version 2.2 adds the `debugger` permission for direct PDF generation. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
+
+## Local reader, highlights and comments (v3)
+
+1. Read a conversation once. Its complete validated snapshot, including successfully embedded assets, is saved in the extension's local IndexedDB.
+2. Select text within one user or assistant message. Choose **Highlight** to save a yellow highlight immediately, or **Comment**, enter your note and click **Save comment**. Paragraphs, headings, lists, tables and code text are supported; math, SVG diagrams, citations and attachment labels are excluded.
+3. Click **Annotations** to open the right panel, or click a highlight. Click a quoted passage in the panel to jump to it. Comments can be edited; **Delete** removes both the highlight and comment. Overlapping highlights preserve the original text and formatting.
+4. Reopen the same conversation URL, or expand **Local conversations** and select its title. The local snapshot and annotations open without accessing ChatGPT, so this works offline. Click **Update conversation** when you want to fetch the currently selected remote branch using your ChatGPT login session.
+5. Annotations attach to a conversation and stable message ID, then use the selected quote, surrounding text, offsets and a message-text hash to find the passage. If a message was removed, regenerated or changed ambiguously, the annotation stays in the panel as **Original text changed**. It is not moved to a different message.
+6. Use **Back up local data** to download a JSON file containing all saved conversations, assets and annotations. **Restore backup** validates the file and merges it atomically, keeping newer snapshots and annotation changes. Deletion records prevent an older backup from restoring deleted annotations. Backups up to 100 MiB are supported.
+
+The left question index remains available while reading. On wide screens the annotation panel appears beside the document; in smaller windows it opens as a panel on the right. Reader controls and annotations are excluded from HTML/PDF exports, which keep the original conversation. Use the JSON backup for annotations; opening a standalone exported HTML file does not provide the extension reader's editing features.
+
+Data stays in this browser profile and extension installation; it is not synchronized across devices. Reloading the same installed extension preserves it. **Back up before uninstalling the extension, clearing its storage, changing the extension ID or moving an unpacked installation to a different folder.** The backup contains private conversation text and comments. Failed writes are reported, and a failed comment save keeps the draft available for retry or copying. Separate reader tabs synchronize saved annotations; conflicting edits keep the draft and report a conflict.
 
 ### PDF index versus sidebar bookmarks
 
@@ -93,7 +106,10 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
 | `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
 | `preview-navigation.js` | Preview sidebar with question links, separate from the exported document |
-| `print.html` / `print.js` | URL input, progress, cancellation, HTML download, one-step PDF export and manual printing |
+| `reader-store.js` | IndexedDB snapshots, transactional annotation writes, cross-tab notifications and validated backup merging |
+| `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
+| `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
+| `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |
 | `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |
 
@@ -106,6 +122,8 @@ The extension requests `scripting`, `debugger` and host access to `chatgpt.com` 
 The current ChatGPT login session is used within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
 
 Rendering happens locally, with no upload service. Raw HTML in Markdown is not executed, and math rendering uses `trust: false`. Offline HTML disables scripts and embeds fonts and images as data URLs. Clicking a source link still opens its website.
+
+The reader saves conversation snapshots and annotations in the extension's IndexedDB. This adds no browser permission. Snapshots contain only document fields; credentials and arbitrary response metadata are not persisted. Comment text is inserted as plain text, including after restoring a backup.
 
 ## Development and debugging
 
@@ -120,10 +138,11 @@ Rendering happens locally, with no upload service. Raw HTML in Markdown is not e
 For development, install Node.js 18 or later and run from the project root:
 
 ```bash
+npm ci
 npm test
 ```
 
-Tests use Node.js's built-in test runner and the bundled PDF library, so `npm install` is unnecessary. They cover long message chains, alternative branches, missing parents, cycles, pagination, messages still being generated, invalid URLs, toolbar entry links, reading without page controls or banners, tab reuse and cancellation, background reading without focus changes, JavaScript syntax, and Manifest resource paths. PDF tests check precise bookmark positions, Unicode titles, unchanged content and rejection of incorrect files. Changes to the interface or print styles also need visual checks in Chrome.
+Tests use Node.js's built-in test runner, the bundled PDF library, and development-only JSDOM/fake-indexeddb fixtures. Installing these test dependencies is unnecessary for running the extension. Tests cover long message chains, branch validation, URL entry, progress/cancellation, tab handling, PDF bookmarks and unchanged document content. Reader tests exercise real DOM ranges, overlapping highlights, table/code structure, IndexedDB persistence across reader instances, offline reopening, explicit updates, comment editing/deletion, save failures, conflicting tabs, backup validation and transactional merging, and clean HTML export. Changes to the interface or print styles also need visual checks in Chrome.
 
 ## Known limitations
 
@@ -134,8 +153,12 @@ Tests use Node.js's built-in test runner and the bundled PDF library, so `npm in
 5. Embedded attachments are limited to 20 MiB per file and 35 MiB of total downloaded attachment data. Oversized attachments remain marked in the document. Access restrictions, cross-origin rules, or expired attachments can prevent embedding. Very large conversations are also limited by Chrome's memory and message size constraints.
 6. Extremely wide code lines use smaller fonts; A4 landscape is often more suitable. Browser pagination still has limits for long code blocks, tall table rows, and math.
 7. Direct PDF export requires Chrome's debugger permission and can be blocked by enterprise policy, another debugger or DevTools attached to the export tab. Browser download settings control the save location. Manual printing remains available and requires a separate bookmark step. Whether the bookmark pane opens automatically can differ between PDF readers.
+8. Annotations currently support text within one message and one highlight color. Math/SVG anchoring, cloud sync and annotation editing in standalone HTML/PDF are not supported. Ambiguous or missing quotes remain in the annotations panel.
+9. Local storage depends on browser disk quota. If snapshot saving fails, reading/export remain available and annotation creation is disabled. JSON backups are limited to 100 MiB.
 
 ## Bundled dependencies
+
+Reader test dependencies (JSDOM and fake-indexeddb) are development-only and are not loaded by the extension.
 
 These are included in the repository; no installation is needed:
 
@@ -144,6 +167,8 @@ These are included in the repository; no installation is needed:
 - pdf-lib 1.17.1, MIT: [project](https://github.com/Hopding/pdf-lib), [documentation](https://pdf-lib.js.org/). Used only for local PDF bookmark insertion.
 
 ## Validation scope
+
+Version 3's reader is checked with automated DOM and IndexedDB fixtures, including close/reopen, changed text, local-only loading, clean HTML export and backup recovery. It has not yet received a visual check in a real Chrome extension tab. The following live-browser checks were performed on earlier export versions.
 
 Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 

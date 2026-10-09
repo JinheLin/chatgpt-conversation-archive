@@ -28,6 +28,8 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       removeAttribute(name) { delete this[name]; },
       focus() { context.document.activeElement = this; },
       contains(node) { return node === this; },
+      replaceChildren() {},
+      appendChild() {},
       querySelectorAll(selector) { return selector === '.pdf-toc li a' ? [{ textContent: 'Question', getAttribute: () => '#question-1' }] : []; },
       addEventListener(type, handler) { this.handlers[type] = handler; }
     });
@@ -48,7 +50,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     document: {
       getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, querySelectorAll: () => localized,
       addEventListener() {},
-      createElement: () => { const link = { click() { downloads.push(link.download); } }; return link; }
+      createElement: () => { const link = { addEventListener() {}, append() {}, click() { downloads.push(link.download); } }; return link; }
     },
     chrome: {
       runtime: { id: 'test-extension', getURL: file => `chrome-extension://test-extension/${file}`,
@@ -70,6 +72,13 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       scripting: { executeScript: async () => {} }
     },
     ChatGPTPdfExporter: { render: output.render || ((payload, main) => { main.hidden = false; return []; }), fitCode: output.fit || (() => {}) },
+    ChatGPTReaderStore: {
+      keyFor: () => 'c:test-conversation',
+      listConversations: async () => [], getConversation: output.cached || (async () => null),
+      saveConversation: output.saveSnapshot || (async () => {}),
+      backup: async () => ({}), MAX_BACKUP_BYTES: 100 * 1024 * 1024
+    },
+    ChatGPTReader: { init: () => ({ canLeave: () => true, load: async () => {}, unload() {}, setLocked() {} }) },
     ChatGPTPdfPreviewNavigation: { init: ({ sidebar, layout }) => {
       const clear = () => { sidebar.hidden = layout.hidden = true; };
       clear();
@@ -206,6 +215,30 @@ test('without a source URL the page waits for a manually entered link', async ()
   app.element('conversation-url').value = conversationUrl;
   await app.start();
   assert.equal(app.requests.length, 1);
+});
+
+test('a cached conversation opens without touching ChatGPT tabs; update explicitly reads remotely', async () => {
+  const app = fixture([], Promise.resolve(response), {
+    initialSource: conversationUrl, cached: async () => ({ payload: response.payload })
+  });
+  await app.initialized;
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.created.length, 0);
+  assert.match(app.element('export-status').textContent, /local conversation/);
+  await app.element('reader-update').handlers.click();
+  assert.equal(app.requests.length, 1);
+  assert.equal(app.created.length, 1);
+});
+
+test('snapshot storage failure keeps reading and export available and reports the failure', async () => {
+  const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
+    saveSnapshot: async () => { throw new Error('Disk full'); }
+  });
+  await app.start();
+  assert.equal(app.element('pdf-document').hidden, false);
+  assert.equal(app.element('output-actions').hidden, false);
+  assert.equal(app.element('export-status').dataset.level, 'error');
+  assert.match(app.element('export-status').textContent, /Disk full/);
 });
 
 test('catalog loading failure preserves the entry link and displays an actionable startup error', async () => {

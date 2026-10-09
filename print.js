@@ -11,6 +11,8 @@
   const previewNavigation = globalThis.ChatGPTPdfPreviewNavigation.init({
     main, sidebar: document.getElementById("preview-sidebar"), layout: document.getElementById("preview-layout")
   });
+  const store = globalThis.ChatGPTReaderStore;
+  const reader = globalThis.ChatGPTReader.init({ main, layout: document.getElementById("preview-layout"), store });
   const status = document.getElementById("export-status");
   const readProgress = document.getElementById("read-progress");
   const progressLabel = document.getElementById("read-progress-label");
@@ -35,9 +37,11 @@
     isBusy: () => outputBusy
   });
   const outputControls = [input, startButton, pageLayout,
+    ...["reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
     outputBusy = value;
+    reader.setLocked(value);
     if (value) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
   }
@@ -125,51 +129,91 @@
       chrome.tabs.get(tabId).then((tab) => { if (tab.status === "complete") done(); }, done);
     });
   }
-  async function start(event) {
+  async function refreshLibrary() {
+    const list = document.getElementById("reader-library-list");
+    try {
+      const entries = await store.listConversations();
+      list.replaceChildren();
+      document.getElementById("reader-library-title").textContent = t("readerLibraryCount", entries.length);
+      if (!entries.length) {
+        const empty = document.createElement("p"); empty.className = "hint";
+        empty.textContent = t("readerLibraryEmpty"); list.appendChild(empty);
+      }
+      for (const entry of entries) {
+        const row = document.createElement("div"); row.className = "reader-library-entry";
+        const button = document.createElement("button"); button.type = "button";
+        button.textContent = entry.title;
+        button.addEventListener("click", () => {
+          if (outputBusy) return;
+          input.value = entry.sourceUrl;
+          void start();
+        });
+        const time = document.createElement("time");
+        time.textContent = new Date(entry.capturedAt).toLocaleDateString(language);
+        row.append(button, time); list.appendChild(row);
+      }
+    } catch (error) {
+      list.textContent = t("readerSaveFailed", error.message);
+    }
+  }
+  async function start(event, forceRemote = false) {
     event?.preventDefault();
-    if (outputBusy) return;
+    if (outputBusy || !reader.canLeave()) return;
     const mine = ++generation;
-    startButton.disabled = true;
+    setOutputBusy(true);
     cancelButton.hidden = false;
     actions.hidden = true;
     pdfFallback.hidden = true;
     exportMenu.close();
+    reader.unload();
     main.hidden = true;
     previewNavigation.clear();
     payload = null;
     activeRead = null;
     readPercent = 0;
     progressView.reset();
+    let storageProblem = null;
     try {
       const target = globalThis.ChatGPTPdfSource.parseUrl(input.value.trim());
+      const key = store.keyFor(target.url);
       showReadProgress({ stage: "connect" });
-      if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
-      sourceTab = null;
-      // Reuse only the requested conversation; never navigate or close a user's tab.
-      const candidates = await chrome.tabs.query({ url: `${target.origin}/*` });
-      if (mine !== generation) return;
-      const existing = candidates.find((tab) => {
-        try { return globalThis.ChatGPTPdfSource.parseUrl(tab.url).url === target.url; }
-        catch (_) { return false; }
-      });
-      const tab = existing || await chrome.tabs.create({ url: target.url, active: false });
-      if (mine !== generation) {
-        if (!existing) await chrome.tabs.remove(tab.id).catch(() => {});
-        return;
+      let cached = null;
+      if (!forceRemote) {
+        try { cached = await store.getConversation(key); }
+        catch (error) { storageProblem = error; }
       }
-      // sourceTab tracks only temporary tabs owned by this read operation.
-      sourceTab = existing ? null : tab.id;
-      await tabLoaded(tab.id);
       if (mine !== generation) return;
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "conversation-source.js", "content.js"] });
-      if (mine !== generation) return;
-      activeRead = { id: crypto.randomUUID(), tabId: tab.id, generation: mine };
-      showReadProgress({ stage: "session" });
-      const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id });
-      if (mine !== generation) return;
-      activeRead = null;
-      if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
-      payload = response.payload;
+      if (cached) {
+        payload = cached.payload;
+      } else {
+        if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
+        sourceTab = null;
+        // Reuse only the requested conversation; never navigate or close a user's tab.
+        const candidates = await chrome.tabs.query({ url: target.origin + "/*" });
+        if (mine !== generation) return;
+        const existing = candidates.find((tab) => {
+          try { return globalThis.ChatGPTPdfSource.parseUrl(tab.url).url === target.url; }
+          catch (_) { return false; }
+        });
+        const tab = existing || await chrome.tabs.create({ url: target.url, active: false });
+        if (mine !== generation) {
+          if (!existing) await chrome.tabs.remove(tab.id).catch(() => {});
+          return;
+        }
+        sourceTab = existing ? null : tab.id;
+        await tabLoaded(tab.id);
+        if (mine !== generation) return;
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "conversation-source.js", "content.js"] });
+        if (mine !== generation) return;
+        activeRead = { id: crypto.randomUUID(), tabId: tab.id, generation: mine };
+        showReadProgress({ stage: "session" });
+        const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id });
+        if (mine !== generation) return;
+        activeRead = null;
+        if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
+        payload = response.payload;
+        if (store.keyFor(payload.sourceUrl) !== key) throw new Error(t("readerInvalidBackup"));
+      }
       const problems = await globalThis.ChatGPTPdfExporter.render(payload, main, {
         isCancelled: () => mine !== generation,
         onProgress: ({ completed, total }) => {
@@ -177,7 +221,7 @@
         }
       });
       if (mine !== generation) return;
-      document.title = `${payload.title} — PDF / HTML`;
+      document.title = payload.title + " — " + t("readerTitle");
       showReadProgress({ stage: "fonts" });
       await document.fonts.ready;
       if (mine !== generation) return;
@@ -188,20 +232,34 @@
         }
       });
       if (mine !== generation) return;
+      if (!cached) {
+        try { await store.saveConversation(payload); storageProblem = null; }
+        catch (error) { storageProblem = error; }
+      }
+      if (mine !== generation) return;
+      await reader.load(key, !storageProblem);
+      if (mine !== generation) return;
       previewNavigation.refresh();
       actions.hidden = false;
       showReadProgress({ stage: "complete" });
-      report(t("readVerified", payload.messages.length, payload.completeness.questions, problems.length ? t("assetProblems", problems.length) : t("readyOutput")), false, true);
-      if (!existing) {
-        await chrome.tabs.remove(tab.id);
+      const verified = t("readVerified", payload.messages.length, payload.completeness.questions,
+        problems.length ? t("assetProblems", problems.length) : t("readyOutput"));
+      report(storageProblem ? t("readerSnapshotFailed", storageProblem.message) :
+        cached ? t("readerOpenedLocal", new Date(payload.capturedAt).toLocaleString(language)) : verified, !!storageProblem, true);
+      if (sourceTab) {
+        await chrome.tabs.remove(sourceTab).catch(() => {});
         sourceTab = null;
       }
+      await refreshLibrary();
     } catch (error) {
-      if (mine === generation) report(error.message || t("readFailed"), true);
+      if (mine === generation) {
+        main.hidden = true; previewNavigation.clear(); reader.unload(); payload = null;
+        report(error.message || t("readFailed"), true);
+      }
     } finally {
       if (mine === generation) {
         activeRead = null;
-        startButton.disabled = false;
+        setOutputBusy(false);
         cancelButton.hidden = true;
       }
     }
@@ -209,6 +267,7 @@
   document.getElementById("export-form").addEventListener("submit", start);
   cancelButton.addEventListener("click", async () => {
     generation++;
+    reader.unload();
     activeRead = null;
     main.hidden = true;
     previewNavigation.clear();
@@ -217,7 +276,7 @@
     report(t("cancelled"));
     if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
     sourceTab = null;
-    startButton.disabled = false;
+    setOutputBusy(false);
     cancelButton.hidden = true;
   });
   pageLayout.addEventListener("change", async () => {
@@ -327,13 +386,50 @@
       const style = exported.createElement("style"); style.textContent = css + "\n" + document.getElementById("page-direction").textContent;
       exported.head.appendChild(style);
       exported.body.className = "pdf-print-page pdf-offline";
-      exported.body.appendChild(main.cloneNode(true));
+      const transcript = main.cloneNode(true);
+      globalThis.ChatGPTReaderAnchor.clear(transcript);
+      exported.body.appendChild(transcript);
       download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`);
       report(t("htmlSaved"));
     } catch (error) { report(t("saveHtmlFailed", error.message), true); }
     finally { setOutputBusy(false); }
   });
 
+  document.getElementById("reader-update").addEventListener("click", () => {
+    if (payload && !outputBusy) { input.value = payload.sourceUrl; return start(null, true); }
+  });
+  document.getElementById("reader-backup").addEventListener("click", async () => {
+    if (outputBusy) return;
+    setOutputBusy(true);
+    try {
+      const data = await store.backup();
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      if (blob.size > store.MAX_BACKUP_BYTES) throw new Error(t("readerBackupTooLarge"));
+      download(blob, "chatgpt-reader-backup-" + new Date().toISOString().slice(0, 10) + ".json");
+      report(t("readerBackupSaved"));
+    } catch (error) { report(t("readerBackupFailed", error.message), true); }
+    finally { setOutputBusy(false); }
+  });
+  const backupFile = document.getElementById("reader-backup-file");
+  document.getElementById("reader-restore").addEventListener("click", () => { if (!outputBusy) backupFile.click(); });
+  backupFile.addEventListener("change", async () => {
+    const file = backupFile.files?.[0];
+    backupFile.value = "";
+    if (!file || outputBusy || !reader.canLeave()) return;
+    setOutputBusy(true);
+    let restored = false;
+    const current = payload?.sourceUrl;
+    try {
+      if (file.size > store.MAX_BACKUP_BYTES) throw new Error(t("readerBackupTooLarge"));
+      const result = await store.restore(JSON.parse(await file.text()));
+      await refreshLibrary();
+      report(t("readerBackupRestored", result.conversations, result.annotations));
+      restored = true;
+    } catch (error) { report(t("readerBackupFailed", error.message), true); }
+    finally { setOutputBusy(false); }
+    if (restored && current) { reader.unload(); input.value = current; await start(); }
+  });
+  await refreshLibrary();
   if (initial?.trim()) await start();
 })().catch((error) => {
   // This message cannot depend on the catalog that may have failed to load.

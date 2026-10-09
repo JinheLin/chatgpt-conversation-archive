@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title data-i18n="exportPageTitle">ChatGPT Conversation Export</title>
+  <title data-i18n="exportPageTitle">ChatGPT Conversation Reader</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="vendor/katex.min.css">
   <script src="i18n.js" defer></script>
@@ -19,17 +19,29 @@
   <script src="export-menu.js" defer></script>
   <script src="read-progress.js" defer></script>
   <script src="preview-navigation.js" defer></script>
+  <script src="reader-store.js" defer></script>
+  <script src="reader-anchor.js" defer></script>
+  <script src="reader.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
   <div class="export-panel">
-    <h1 data-i18n="exportHeading">Export a complete ChatGPT conversation</h1>
-    <p data-i18n="exportDescription">Enter a conversation link to create a PDF or a single HTML file with a question index.</p>
+    <h1 data-i18n="exportHeading">ChatGPT conversation reader</h1>
+    <p data-i18n="exportDescription">Read complete conversations, save highlights and comments locally, and export HTML or PDF.</p>
     <form id="export-form">
       <label for="conversation-url" data-i18n="urlLabel">ChatGPT conversation link</label>
       <div class="input-row"><input id="conversation-url" type="url" required placeholder="https://chatgpt.com/c/…" autocomplete="off"><button id="start-export" type="submit" data-i18n="readFull">Read full conversation</button></div>
     </form>
     <p class="hint" data-i18n="sessionHint">Private conversations use your ChatGPT login session in this browser. Only the selected branch is read, including all its user and assistant messages from beginning to end.</p>
+    <div class="reader-library-actions">
+      <button id="reader-backup" type="button" data-i18n="readerBackup">Back up local data</button>
+      <button id="reader-restore" type="button" data-i18n="readerRestore">Restore backup</button>
+      <input id="reader-backup-file" type="file" accept=".json,application/json" hidden>
+    </div>
+    <details id="reader-library" class="reader-library">
+      <summary id="reader-library-title" data-i18n="readerLibrary">Local conversations</summary>
+      <div id="reader-library-list"></div>
+    </details>
     <p id="export-status" role="status" aria-live="polite" data-i18n="waitingInput">Waiting for a conversation link.</p>
     <div id="read-progress" hidden>
       <div class="read-progress-heading">
@@ -42,6 +54,8 @@
     </div>
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
     <div id="output-actions" hidden>
+      <button id="reader-update" type="button" data-i18n="readerUpdate">Update conversation</button>
+      <button id="reader-toggle" type="button" aria-expanded="false" aria-controls="reader-annotations" data-i18n="readerAnnotations">Annotations</button>
       <div id="export-menu" class="export-menu">
         <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
         <div id="export-formats" class="export-formats" hidden>
@@ -52,6 +66,8 @@
         </div>
       </div>
       <label class="export-option"><input id="page-layout" type="checkbox"><span data-i18n="landscape">A4 landscape</span></label>
+      <p id="reader-status" class="hint" role="status" aria-live="polite"></p>
+      <p class="hint" data-i18n="readerHint">Highlights save immediately; click Save comment to save a note. HTML and PDF contain the original conversation; use a backup for annotations.</p>
       <p class="hint" data-i18n="directPdfHint">Export → PDF creates sidebar bookmarks automatically, using the selected orientation. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
       <div id="pdf-fallback" class="pdf-fallback" role="group" aria-labelledby="pdf-fallback-heading" hidden>
         <h2 id="pdf-fallback-heading" data-i18n="pdfFallbackHeading">Alternative PDF export</h2>
@@ -65,6 +81,26 @@
   <div id="preview-layout" class="preview-layout" hidden>
     <aside id="preview-sidebar" class="preview-sidebar" hidden></aside>
     <main id="pdf-document" class="pdf-document" hidden></main>
+    <aside id="reader-annotations" class="reader-annotations" aria-labelledby="reader-annotations-title" hidden>
+      <div class="reader-panel-heading">
+        <h2 id="reader-annotations-title" data-i18n="readerAnnotations">Annotations</h2>
+        <button id="reader-close" type="button" data-i18n="readerClose">Close</button>
+      </div>
+      <div id="reader-editor" class="reader-editor" hidden>
+        <blockquote id="reader-editor-quote"></blockquote>
+        <label for="reader-comment" data-i18n="readerCommentLabel">Comment</label>
+        <textarea id="reader-comment" rows="5" maxlength="20000"></textarea>
+        <div class="reader-note-controls">
+          <button id="reader-save-comment" type="button" data-i18n="readerSaveComment">Save comment</button>
+          <button id="reader-cancel-comment" type="button" data-i18n="readerCancelComment">Cancel</button>
+        </div>
+      </div>
+      <div id="reader-annotation-list"></div>
+    </aside>
+  </div>
+  <div id="reader-selection" class="reader-selection" role="toolbar" aria-label="Text annotations" hidden>
+    <button id="reader-highlight" type="button" data-i18n="readerHighlight">Highlight</button>
+    <button id="reader-add-comment" type="button" data-i18n="readerAddComment">Comment</button>
   </div>
   <style id="page-direction">@page { size: A4 portrait; }</style>
 </body>

@@ -37,8 +37,8 @@
 .pdf-message-body samp { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 9pt; }
 .pdf-message-body pre { padding: .8em 1em; border: 1px solid #e1e4e6; border-radius: 4px; background: #f6f8fa; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
 .pdf-message-body :not(pre) > code { padding: .05em .25em; border-radius: 3px; background: #f2f4f5; overflow-wrap: anywhere; }
-.pdf-message-body table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9pt; }
-.pdf-message-body th, .pdf-message-body td { padding: .4em .55em; border: 1px solid #ccd2d5; vertical-align: top; overflow-wrap: anywhere; }
+.pdf-message-body :is(table, .archive-layout-table) { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9pt; }
+.pdf-message-body :is(th, td, .archive-layout-table-cell) { padding: .4em .55em; border: 1px solid #ccd2d5; vertical-align: top; overflow-wrap: anywhere; }
 .pdf-message-body th { background: #f3f6f5; text-align: left; }
 .pdf-message-body img { max-width: 100%; height: auto; }
 .pdf-message-body a, .pdf-meta a { color: #185e9d; text-decoration: underline; overflow-wrap: anywhere; }
@@ -58,9 +58,9 @@
     widows: 3;
   }
   .pdf-message-body pre { break-inside: auto; }
-  .pdf-message-body table { break-inside: avoid-page; page-break-inside: avoid; }
+  .pdf-message-body :is(table, .archive-layout-table) { break-inside: avoid-page; page-break-inside: avoid; }
   .pdf-message-body thead { display: table-header-group; }
-  .pdf-message-body tr, .pdf-message-body img { break-inside: avoid-page; page-break-inside: avoid; }
+  .pdf-message-body :is(tr, .archive-layout-table-row, img) { break-inside: avoid-page; page-break-inside: avoid; }
 }
 
 /* Full-conversation exporter */
@@ -142,6 +142,10 @@
   display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
 .pdf-message-body .archive-layout-row > .archive-layout-box { flex: 1; }
+.pdf-message-body .archive-layout-table { display: table; }
+.pdf-message-body span.archive-layout-table { display: inline-table; }
+.pdf-message-body .archive-layout-table-row { display: table-row; }
+.pdf-message-body .archive-layout-table-cell { display: table-cell; }
 .pdf-message-body .archive-layout-title { display: block; font-size: 1.2em; font-weight: 600; }
 .pdf-message-body .archive-layout-badge { display: inline-block; flex: none; font-weight: 600; }
 .pdf-message-body .archive-layout-icon { display: block; text-align: center; font-size: 18pt; line-height: 1.2; }

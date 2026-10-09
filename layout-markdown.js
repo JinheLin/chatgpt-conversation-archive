@@ -1,7 +1,8 @@
 /* Render a small, inert subset of ChatGPT layout markup without enabling raw HTML. */
 (() => {
   "use strict";
-  const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider"]);
+  const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
+    "table", "table-row", "table-cell"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
@@ -103,6 +104,16 @@
     return null;
   }
 
+  function readEscape(source, start) {
+    if (!source.startsWith("<escape", start)) return null;
+    const input = source.slice(start, start + 10000);
+    const open = /^<escape\s*>/.exec(input);
+    if (!open) return null;
+    const close = /<\/escape\s*>/.exec(input.slice(open[0].length));
+    return close && { content: input.slice(open[0].length, open[0].length + close.index),
+      end: start + open[0].length + close.index + close[0].length };
+  }
+
   // A data-only expression grammar: numbers, strings, loop data, arithmetic,
   // comparisons and ternaries. Only own literal fields and array indexes can be
   // read; no calls, prototype access, assignment or JavaScript evaluation.
@@ -199,6 +210,8 @@
       while (cursor < source.length) {
         // Layout examples inside Markdown code and escaped tags remain literal.
         if (source[cursor] === "\\") { cursor += 2; continue; }
+        const escaped = readEscape(source, cursor);
+        if (escaped) { cursor = escaped.end; continue; }
         const code = (source[cursor] === "`" || source[cursor] === "~") && /^(`+|~{3,})/.exec(source.slice(cursor));
         if (code) {
           const marker = code[1];
@@ -236,6 +249,16 @@
       return null;
     }
     const node = nodeAt(start, 0);
+    // Rows and cells must remain inside their table, including through loops.
+    // Reject malformed table trees instead of emitting HTML the browser repairs.
+    function validTables(node, parent = null) {
+      if (parent === "table" && !["table-row", "each"].includes(node.name) ||
+          parent === "table-row" && !["table-cell", "each"].includes(node.name) ||
+          node.name === "table-row" && parent !== "table" || node.name === "table-cell" && parent !== "table-row") return false;
+      const context = node.name === "each" ? parent : ["table", "table-row"].includes(node.name) ? node.name : null;
+      return node.children.every(child => typeof child === "string" ? !context || !child.trim() : validTables(child, context));
+    }
+    if (node && !validTables(node)) return null;
     if (node) node.source = source.slice(start, node.end);
     return node;
   }
@@ -318,6 +341,14 @@
   }
 
   function install(md) {
+    md.inline.ruler.before("html_inline", "archive_escape_inline", (state, silent) => {
+      const escaped = readEscape(state.src.slice(0, state.posMax), state.pos);
+      if (!escaped) return false;
+      if (!silent) state.push("archive_escape", "", 0).content = md.utils.unescapeAll(escaped.content);
+      state.pos = escaped.end;
+      return true;
+    });
+    md.renderer.rules.archive_escape = (tokens, index) => md.utils.escapeHtml(tokens[index].content);
     function renderNode(node, env, inline, scope = Object.create(null), budget = { left: MAX_NODES }) {
       if (--budget.left < 0) throw new Error("Layout expansion limit");
       if (node.name === "each") {
@@ -334,6 +365,14 @@
         else attrs[key] = String(result.value);
       }
       if (node.svg) return `<${node.name} ${svgPresentation(node, attrs)}>${children(node, env, inline, scope, budget)}</${node.name}>`;
+      if (["table", "table-row", "table-cell"].includes(node.name)) {
+        const tags = { table: "table", "table-row": "tr", "table-cell": "td" };
+        const roles = { table: "table", "table-row": "row", "table-cell": "cell" };
+        const tag = inline ? "span" : tags[node.name];
+        let content = children(node, env, inline, scope, budget);
+        if (node.name === "table" && !inline) content = `<tbody>${content}</tbody>`;
+        return `<${tag} ${presentation(node, attrs)}${inline ? ` role="${roles[node.name]}"` : ""}>${content}</${tag}>`;
+      }
       const tag = inline ? "span" : "div";
       if (node.name === "icon") {
         const symbols = { "arrow-down": "↓", "arrow-up": "↑", "arrow-right": "→", "arrow-left": "←", check: "✓" };

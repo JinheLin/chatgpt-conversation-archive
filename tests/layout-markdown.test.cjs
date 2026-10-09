@@ -193,6 +193,70 @@ test('object loops reject executable syntax and prototype fields while escaping 
   assert.doesNotMatch(html, /<img|<[^>]+(?:onclick|url\()/);
 });
 
+test('snapshot layout tables preserve SVG, all rows and bold comparison operators', () => {
+  const { render } = renderer();
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/snapshot-table-layout.md'), 'utf8');
+  for (const input of [source, source.replace(/\n\s*/g, ' ')]) {
+    const html = render(input);
+    assert.match(html, /<svg viewBox="0 0 400 60"/);
+    assert.match(html, /<table class="archive-layout archive-layout-table"><tbody>/);
+    assert.equal((html.match(/<tr /g) || []).length, 3);
+    assert.equal((html.match(/<td /g) || []).length, 6);
+    assert.match(html, /<strong>T &lt; MinTS<\/strong>/);
+    assert.match(html, /<strong>MinTS ≤ T &lt; MaxTS<\/strong>/);
+    assert.match(html, /<strong>T ≥ MaxTS<\/strong>/);
+    assert.match(html, /所有记录都在未来，跳过 Block/);
+    assert.match(html, /部分版本可见，继续查找/);
+    assert.match(html, /可免去逐条上界比较/);
+    assert.doesNotMatch(html, /&lt;\/?(?:table|table-row|table-cell|escape)\b|<escape|<table-(?:row|cell)/);
+    assert.doesNotMatch(html, /<p>\s*<(?:table|tr|td)/);
+  }
+});
+
+test('table loops and inline layouts retain valid structure, Markdown, math and links', () => {
+  const { render } = renderer();
+  const html = render('<table>{#each [{label:"First"},{label:"Second"}] as x}<table-row><table-cell>**{x.label}**</table-cell><table-cell>[link](https://example.com) $x^2$</table-cell></table-row>{/each}</table>');
+  assert.equal((html.match(/<tr /g) || []).length, 2);
+  assert.equal((html.match(/<td /g) || []).length, 4);
+  assert.match(html, /<strong>First<\/strong>/);
+  assert.match(html, /<strong>Second<\/strong>/);
+  assert.match(html, /href="https:\/\/example.com"/);
+  assert.match(html, /class="katex"/);
+  const inline = render('Before <table><table-row><table-cell>**cell**</table-cell></table-row></table> after.');
+  assert.match(inline, /<span class="archive-layout archive-layout-table" role="table">/);
+  assert.match(inline, /role="row"/);
+  assert.match(inline, /role="cell"><strong>cell<\/strong>/);
+  assert.doesNotMatch(inline, /<table\b|<tr\b|<td\b/);
+});
+
+test('escape components emit literal characters without parsing their content or changing code examples', () => {
+  const { render } = renderer();
+  assert.match(render('**T <escape>&lt;</escape> MinTS**'), /<strong>T &lt; MinTS<\/strong>/);
+  const literal = render('<box><text><escape><box>**literal** <script>evil()</script></escape></text></box>');
+  assert.match(literal, /&lt;box&gt;\*\*literal\*\* &lt;script&gt;evil\(\)&lt;\/script&gt;/);
+  assert.doesNotMatch(literal, /<script|<strong>literal/);
+  for (const input of ['```html\n<table><table-row><table-cell><escape><</escape></table-cell></table-row></table>\n```',
+    '`<escape><</escape>`', '\\<escape><\\</escape>']) {
+    const html = render(input);
+    assert.match(html, /&lt;escape/);
+    assert.doesNotMatch(html, /archive-layout-table|<table\b/);
+  }
+});
+
+test('malformed table structure stays readable and untrusted table attributes are discarded', () => {
+  const { render } = renderer();
+  for (const source of ['<table-row><table-cell>orphan</table-cell></table-row>',
+    '<table><table-cell>missing row</table-cell></table>', '<table>unexpected text</table>',
+    '<table><table-row>missing cell</table-row></table>']) {
+    const html = render(source);
+    assert.match(html, /&lt;table/);
+    assert.doesNotMatch(html, /<(?:table|tr|td)\b/);
+  }
+  const html = render('<table onclick="evil()"><table-row id="question-index"><table-cell style="background:url(evil)" onload="evil()">safe</table-cell></table-row></table>');
+  assert.match(html, /<td class="archive-layout archive-layout-table-cell"><p>safe<\/p>/);
+  assert.doesNotMatch(html, /<[^>]+(?:onclick|onload|style=|id=|url\()/);
+});
+
 test('SVG output strips executable elements, external references and untrusted attributes', () => {
   const { render } = renderer();
   const html = render('<svg viewBox="0 0 30 30" onload="evil()" style="color:red">\n<script>evil()</script><foreignObject><iframe src="https://evil.example"></iframe></foreignObject>\n<g fontSize="12" fill="currentColor" textAnchor="middle"><text x="15" y="20">中文 &amp; A</text></g>\n<rect width="30" height="30" fill="url(https://evil.example)" onclick="evil()"/>\n<path d="M0 0 L30 30" stroke="#000" href="https://evil.example"/>\n</svg>');

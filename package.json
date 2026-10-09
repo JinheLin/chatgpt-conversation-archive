@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-conversation-archive",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "private": true,
   "description": "Chrome extension for reading complete ChatGPT conversations with local annotations and PDF/HTML export.",
   "license": "MIT",

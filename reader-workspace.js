@@ -1,8 +1,14 @@
 /* Opening a conversation and reading it are separate interface states. */
 (() => {
   "use strict";
+  function formatTimestamp(value) {
+    return new Date(value).toLocaleString(globalThis.ChatGPTPdfI18n.language, {
+      year: "numeric", month: "numeric", day: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+    });
+  }
   function init({ document, isBusy }) {
-    const { t, language } = globalThis.ChatGPTPdfI18n;
+    const { t } = globalThis.ChatGPTPdfI18n;
     const get = (id) => document.getElementById(id);
     const workspace = get("reader-workspace"), toggle = get("reader-open");
     const close = get("reader-workspace-close"), heading = get("reader-heading");
@@ -29,7 +35,7 @@
       heading.textContent = payload.title;
       heading.title = payload.title;
       meta.textContent = t("readerDocumentMeta", payload.completeness.questions, payload.messages.length,
-        saved ? t("readerLocalVersion", new Date(payload.capturedAt).toLocaleDateString(language)) : t("readerNotSaved"));
+        saved ? t("readerLocalVersion", formatTimestamp(payload.capturedAt)) : t("readerNotSaved"));
       meta.hidden = false;
       const link = get("reader-current-link");
       link.href = payload.sourceUrl; link.textContent = t("originalLink");
@@ -62,5 +68,5 @@
     opening(); clearNotice();
     return { opening, reading, notice, clearNotice };
   }
-  globalThis.ChatGPTReaderWorkspace = { init };
+  globalThis.ChatGPTReaderWorkspace = { init, formatTimestamp };
 })();

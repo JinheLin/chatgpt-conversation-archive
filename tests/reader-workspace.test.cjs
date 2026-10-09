@@ -20,11 +20,17 @@ test('the empty reader starts with opening and local conversations, while data t
 for (const locale of ['en', 'zh-CN']) {
   test('reading has a compact toolbar; opening and returning preserve the current document (' + locale + ')', async (t) => {
     const app = fixture({ locale, initial: payload().sourceUrl }); t.after(() => app.w.close());
-    await app.w.ChatGPTReaderStore.saveConversation(payload());
+    const saved = payload();
+    saved.capturedAt = '2026-10-09T12:34:56.000Z';
+    await app.w.ChatGPTReaderStore.saveConversation(saved);
     await app.start();
     assert.equal(app.w.document.body.dataset.readerState, 'reading');
     assert.equal(app.get('reader-heading').textContent, payload().title);
     assert.match(app.get('reader-meta').textContent, locale === 'zh-CN' ? /1 个问题 · 2 条消息 · 本地版本/ : /1 questions · 2 messages · Local version/);
+    assert.match(app.get('reader-meta').textContent, /\d{2}:\d{2}:56/);
+    const timestamp = app.get('reader-library-list').querySelector('time');
+    assert.match(timestamp.textContent, /\d{2}:\d{2}:56/);
+    assert.equal(timestamp.dateTime, saved.capturedAt);
     assert.equal(app.get('reader-workspace').hidden, true);
     assert.equal(app.get('reader-open').getAttribute('aria-expanded'), 'false');
     assert.equal(app.get('output-actions').hidden, false);

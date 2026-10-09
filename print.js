@@ -152,7 +152,8 @@
           void start();
         });
         const time = document.createElement("time");
-        time.textContent = new Date(entry.capturedAt).toLocaleDateString(language);
+        time.dateTime = entry.capturedAt;
+        time.textContent = globalThis.ChatGPTReaderWorkspace.formatTimestamp(entry.capturedAt);
         row.append(button, time); list.appendChild(row);
       }
     } catch (error) {

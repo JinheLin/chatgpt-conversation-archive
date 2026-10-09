@@ -47,6 +47,7 @@ After updating local files, click **Reload** on the extension card in `chrome://
 ## Reading interface (v3.1)
 
 - Before opening a conversation, the page shows the URL field and your local conversation list.
+- Local version timestamps in the toolbar and conversation list include seconds, using the browser’s local time zone.
 - After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Open conversation**, **Highlights & comments** and **Export**.
 - **Open conversation** shows the link field, local conversations and the current conversation's update action. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
 - **Highlights & comments** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.

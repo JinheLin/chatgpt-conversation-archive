@@ -32,8 +32,11 @@
   "cancelRead": {
     "message": "Cancel reading"
   },
+  "exportMenu": {
+    "message": "Export"
+  },
   "saveHtml": {
-    "message": "Save offline HTML"
+    "message": "HTML"
   },
   "printPdf": {
     "message": "Print / Save PDF"
@@ -319,7 +322,7 @@
     "message": "Add PDF sidebar index"
   },
   "pdfOutlineHint": {
-    "message": "For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; direct Export PDF adds bookmarks automatically."
+    "message": "For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; Export → PDF adds bookmarks automatically."
   },
   "pdfOutlineProgress": {
     "message": "Adding PDF sidebar bookmarks locally…"
@@ -365,10 +368,10 @@
     "message": "Could not read this PDF. Choose a valid PDF saved by Chrome."
   },
   "savePdf": {
-    "message": "Export PDF"
+    "message": "PDF"
   },
   "directPdfHint": {
-    "message": "Export PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes."
+    "message": "Export → PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes."
   },
   "moreOptions": {
     "message": "More options"

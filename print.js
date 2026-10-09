@@ -18,10 +18,17 @@
   const actions = document.getElementById("output-actions");
   const showBackLinks = document.getElementById("show-back-links");
   let outputBusy = false;
+  const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
+    root: document.getElementById("export-menu"), button: document.getElementById("export-toggle"),
+    popup: document.getElementById("export-formats"),
+    items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
+    isBusy: () => outputBusy
+  });
   const outputControls = [input, startButton, showBackLinks,
-    ...["save-html", "save-pdf", "print-again", "add-pdf-outline", "page-layout"].map((id) => document.getElementById(id))];
+    ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline", "page-layout"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
     outputBusy = value;
+    if (value) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
   }
   function updateBackLinks() { main.dataset.showBackLinks = String(showBackLinks.checked); }
@@ -83,6 +90,7 @@
     startButton.disabled = true;
     cancelButton.hidden = false;
     actions.hidden = true;
+    exportMenu.close();
     main.hidden = true;
     payload = null;
     activeRead = null;
@@ -177,6 +185,7 @@
   }
   document.getElementById("save-pdf").addEventListener("click", async () => {
     if (outputBusy) return;
+    exportMenu.close({ restoreFocus: true });
     setOutputBusy(true);
     try {
       const metadata = pdfMetadata();
@@ -233,6 +242,8 @@
   }
   document.getElementById("save-html").addEventListener("click", async () => {
     if (outputBusy) return;
+    exportMenu.close({ restoreFocus: true });
+    setOutputBusy(true);
     try {
       if (!payload) throw new Error(t("readFirst"));
       const css = await offlineCss();
@@ -249,6 +260,7 @@
       download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`);
       report(t("htmlSaved"));
     } catch (error) { report(t("saveHtmlFailed", error.message), true); }
+    finally { setOutputBusy(false); }
   });
 
   if (initial?.trim()) await start();

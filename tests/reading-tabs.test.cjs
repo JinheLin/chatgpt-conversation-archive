@@ -23,7 +23,11 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : 'portrait',
       checked: id === 'show-back-links',
       dataset: {}, handlers: {}, hidden: false,
+      ownerDocument: context.document,
+      setAttribute(name, value) { this[name] = String(value); },
       removeAttribute(name) { delete this[name]; },
+      focus() { context.document.activeElement = this; },
+      contains(node) { return node === this; },
       querySelectorAll(selector) { return selector === '.pdf-toc li a' ? [{ textContent: 'Question', getAttribute: () => '#question-1' }] : []; },
       addEventListener(type, handler) { this.handlers[type] = handler; }
     });
@@ -43,6 +47,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     fetch: async url => ({ ok: !output.catalogFailure, status: 404, json: async () => url.includes('/zh_CN/') ? catalogs.zh_CN : catalogs.en }),
     document: {
       getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, querySelectorAll: () => localized,
+      addEventListener() {},
       createElement: () => { const link = { click() { downloads.push(link.download); } }; return link; }
     },
     chrome: {
@@ -74,6 +79,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     context.chrome.i18n.getMessage = (key, ...args) => ['savePdf', 'directPdfHint', 'moreOptions'].includes(key) ? '' : original(key, ...args);
   }
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(project, 'export-menu.js'), 'utf8'), context);
   const initialized = vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
   return { created, removed, activated, requests, reading, element, downloads, initialized,
     progress: (progress, options = {}) => {

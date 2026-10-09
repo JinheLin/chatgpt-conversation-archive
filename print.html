@@ -15,6 +15,7 @@
   <script src="vendor/pdf-lib.min.js" defer></script>
   <script src="pdf-outline.js" defer></script>
   <script src="pdf-capture.js" defer></script>
+  <script src="export-menu.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
@@ -36,17 +37,24 @@
     </div>
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
     <div id="output-actions" hidden>
-      <button id="save-html" type="button" data-i18n="saveHtml">Save offline HTML</button>
-      <button id="save-pdf" type="button" data-i18n="savePdf">Export PDF</button>
+      <div id="export-menu" class="export-menu">
+        <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
+        <div id="export-formats" class="export-formats" hidden>
+          <div class="export-format-list" role="menu" aria-labelledby="export-toggle">
+            <button id="save-html" type="button" role="menuitem" tabindex="-1" data-i18n="saveHtml">HTML</button>
+            <button id="save-pdf" type="button" role="menuitem" tabindex="-1" data-i18n="savePdf">PDF</button>
+          </div>
+        </div>
+      </div>
       <label for="page-layout" data-i18n="pageDirection">PDF orientation</label><select id="page-layout"><option value="portrait" data-i18n="portrait">A4 portrait</option><option value="landscape" data-i18n="landscape">A4 landscape (for wide text diagrams)</option></select>
       <label class="export-option"><input id="show-back-links" type="checkbox" checked><span data-i18n="showBackLinks">Show links back to the question index</span></label>
-      <p class="hint" data-i18n="directPdfHint">Export PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
+      <p class="hint" data-i18n="directPdfHint">Export → PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
       <details class="export-extra">
         <summary data-i18n="moreOptions">More options</summary>
         <button id="print-again" type="button" data-i18n="printPdf">Print / Save PDF</button>
         <button id="add-pdf-outline" type="button" data-i18n="addPdfOutline">Add PDF sidebar index</button>
         <input id="pdf-outline-file" type="file" accept=".pdf,application/pdf" hidden>
-        <p class="hint" data-i18n="pdfOutlineHint">For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; direct Export PDF adds bookmarks automatically.</p>
+        <p class="hint" data-i18n="pdfOutlineHint">For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; Export → PDF adds bookmarks automatically.</p>
       </details>
     </div>
   </div>

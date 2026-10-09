@@ -33,9 +33,9 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
 3. Follow the progress bar through connection, reading, validation, attachment processing and formatting. Network waits use an animated bar; attachment processing shows the completed count. Wait for confirmation that the message chain and rendered message counts have passed validation.
-4. Choose an output:
-   - **Save offline HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
-   - **Export PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
+4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
+   - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
+   - **Export → PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
    - For wide text diagrams, select **A4 landscape** before exporting PDF or saving HTML.
    - **Show links back to the question index** is checked by default. Uncheck it to hide return links in the preview, offline HTML and PDF. The question index at the beginning remains available.
    - **More options** includes manual **Print / Save PDF** and **Add PDF sidebar index** for existing files. For manual printing, select **Save as PDF**, A4, **All** pages and default scale. Disable **Headers and footers** and enable **Background graphics** if needed. Manual print output needs the separate bookmark step.
@@ -46,7 +46,7 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ### PDF index versus sidebar bookmarks
 
-The index printed at the beginning is a page of clickable links. The sidebar directory is a native PDF outline. **Export PDF** includes both automatically: Chrome renders the current extension export tab to PDF, then the extension adds question bookmarks using the exact destinations in that PDF. All processing happens locally. No extra tab is created for PDF rendering.
+The index printed at the beginning is a page of clickable links. The sidebar directory is a native PDF outline. **Export → PDF** includes both automatically: Chrome renders the current extension export tab to PDF, then the extension adds question bookmarks using the exact destinations in that PDF. All processing happens locally. No extra tab is created for PDF rendering.
 
 Chrome may display a debugging notice while rendering. The extension attaches only to its own export tab and disconnects as soon as the PDF data has been read, including on errors. It does not attach to ChatGPT or unrelated tabs. If direct export fails, close DevTools on the export tab and retry; browser policy or another debugger can prevent the connection. Manual printing is available under **More options**.
 
@@ -89,6 +89,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `layout-markdown.js` | Restricted ChatGPT layout parsing and static rendering without enabling raw HTML |
 | `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
 | `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
+| `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
 | `print.html` / `print.js` | URL input, progress, cancellation, HTML download, one-step PDF export and manual printing |
 | `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |

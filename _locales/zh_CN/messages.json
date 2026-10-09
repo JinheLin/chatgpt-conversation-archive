@@ -32,8 +32,11 @@
   "cancelRead": {
     "message": "取消读取"
   },
+  "exportMenu": {
+    "message": "导出"
+  },
   "saveHtml": {
-    "message": "保存本地 HTML"
+    "message": "HTML"
   },
   "printPdf": {
     "message": "打印 / 保存 PDF"
@@ -319,7 +322,7 @@
     "message": "添加 PDF 侧栏目录"
   },
   "pdfOutlineHint": {
-    "message": "已有 PDF 缺少侧栏目录时，先在这里读取同一个对话，再点击「添加 PDF 侧栏目录」选择文件。手动打印也需要此步骤；直接「导出 PDF」会自动添加目录。"
+    "message": "已有 PDF 缺少侧栏目录时，先在这里读取同一个对话，再点击「添加 PDF 侧栏目录」选择文件。手动打印也需要此步骤；「导出 → PDF」会自动添加目录。"
   },
   "pdfOutlineProgress": {
     "message": "正在本机添加 PDF 侧栏书签…"
@@ -365,10 +368,10 @@
     "message": "无法读取此 PDF。请选择 Chrome 保存的有效 PDF。"
   },
   "savePdf": {
-    "message": "导出 PDF"
+    "message": "PDF"
   },
   "directPdfHint": {
-    "message": "导出 PDF 会自动生成侧栏目录，保留所选纸张方向和返回目录链接。Chrome 在导出时可能显示调试提示，渲染完成后自动结束连接。"
+    "message": "「导出 → PDF」会自动生成侧栏目录，保留所选纸张方向和返回目录链接。Chrome 在导出时可能显示调试提示，渲染完成后自动结束连接。"
   },
   "moreOptions": {
     "message": "更多选项"

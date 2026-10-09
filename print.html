@@ -16,6 +16,7 @@
   <script src="pdf-outline.js" defer></script>
   <script src="pdf-capture.js" defer></script>
   <script src="export-menu.js" defer></script>
+  <script src="read-progress.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
@@ -33,7 +34,9 @@
         <span id="read-progress-label" role="status" aria-live="polite"></span>
         <span id="read-progress-count"></span>
       </div>
+      <div class="read-progress-track"><span id="read-progress-fill" aria-hidden="true"></span></div>
       <progress id="read-progress-bar" max="100" value="0" aria-labelledby="read-progress-label" aria-describedby="read-progress-count"></progress>
+      <p id="read-progress-detail" class="hint" hidden></p>
     </div>
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
     <div id="output-actions" hidden>

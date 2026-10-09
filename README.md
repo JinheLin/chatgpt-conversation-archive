@@ -32,7 +32,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 
 1. When opened with a conversation URL, the export page fills in the URL and starts reading automatically.
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
-3. Follow the percentage bar through connection, reading, validation, attachment processing and formatting. The percentage represents workflow stages, not download bytes or remaining time: attachment processing advances from 60% to 90% based on completed tasks, and 100% appears only after rendering and validation finish. It can pause while waiting for a network request. Wait for confirmation that the message chain and rendered message counts have passed validation.
+3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% appears only after validation and formatting finish.
 4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
    - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
    - **Export → PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
@@ -90,6 +90,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
 | `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
+| `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
 | `print.html` / `print.js` | URL input, progress, cancellation, HTML download, one-step PDF export and manual printing |
 | `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |

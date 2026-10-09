@@ -80,12 +80,20 @@
 #read-progress { margin-top: 16px; padding: 12px; border-radius: 6px; background: #edf6f2; color: #176b58; }
 .read-progress-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 #read-progress-count { flex-shrink: 0; min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
-#read-progress-bar { display: block; width: 100%; height: 8px; border: 0; border-radius: 4px; overflow: hidden; appearance: none; background: #d7e7df; accent-color: #176b58; }
-#read-progress-bar::-webkit-progress-bar { background: #d7e7df; border-radius: 4px; }
-#read-progress-bar::-webkit-progress-value { background: #176b58; border-radius: 4px; transition: width .2s ease; }
-#read-progress-bar::-moz-progress-bar { background: #176b58; border-radius: 4px; }
+.read-progress-track { height: 8px; border-radius: 4px; overflow: hidden; background: #d7e7df; }
+#read-progress-detail { margin: 6px 0 0; }
+#read-progress-detail[hidden] { display: none; }
+#read-progress-fill { display: block; position: relative; height: 100%; background: #176b58; transform: scaleX(0); transform-origin: left; }
+#read-progress-bar { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); }
+#read-progress[data-running="true"] .read-progress-track { position: relative; }
+#read-progress[data-running="true"] .read-progress-track::after {
+  content: ""; position: absolute; inset: 0; width: 30%;
+  background: linear-gradient(90deg, transparent, #ffffff50, transparent);
+  animation: read-progress-activity 1.4s linear infinite;
+}
+@keyframes read-progress-activity { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 @media (prefers-reduced-motion: reduce) {
-  #read-progress-bar::-webkit-progress-value { transition: none; }
+  #read-progress[data-running="true"] .read-progress-track::after { animation: none; }
 }
 #output-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
 #output-actions > .hint { width: 100%; margin: 0; }

@@ -7,10 +7,12 @@ const { installI18n } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
 const sourceUrl = 'https://chatgpt.com/c/progress-test';
 
-function readerFixture(data, status = 200) {
+function readerFixture(data, status = 200, streaming) {
   const progress = [], fetches = [];
+  let streamResponse;
+  let ticks = 0;
   const context = vm.createContext({
-    URL, Date, AbortSignal, location: new URL(sourceUrl),
+    URL, Date, AbortSignal, TextDecoder, performance: { now: () => ticks += 101 }, location: new URL(sourceUrl),
     FileReader: class {
       readAsDataURL() { this.result = 'data:image/png;base64,cGljdHVyZQ=='; this.onload(); }
     },
@@ -19,6 +21,15 @@ function readerFixture(data, status = 200) {
       if (url === '/api/auth/session') return { ok: true, json: async () => ({ accessToken: 'private-token' }) };
       if (url === '/backend-api/conversation/progress-test') {
         assert.equal(options.headers.Authorization, 'Bearer private-token');
+        if (streaming) {
+          const bytes = new TextEncoder().encode(streaming.invalidJson ? '{invalid' : JSON.stringify(data));
+          const headers = streaming.encoding ? { 'content-encoding': streaming.encoding } : { 'content-length': String(bytes.length) };
+          streamResponse = new Response(new ReadableStream({ start(controller) {
+            for (let i = 0; i < bytes.length; i += 7) controller.enqueue(bytes.slice(i, i + 7));
+            controller.close();
+          } }), { status, headers });
+          return streamResponse;
+        }
         return { ok: status === 200, status, json: async () => data };
       }
       if (url === '/backend-api/files/one/download') return {
@@ -33,7 +44,7 @@ function readerFixture(data, status = 200) {
   });
   installI18n(context);
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
-  return { progress, fetches, read: () => context.ChatGPTPdfSource.read(sourceUrl, {
+  return { progress, fetches, stream: () => streamResponse?.body, read: () => context.ChatGPTPdfSource.read(sourceUrl, {
     onProgress: event => progress.push(JSON.parse(JSON.stringify(event)))
   }) };
 }
@@ -62,6 +73,32 @@ test('asset progress counts processed tasks including unsupported and failed ass
   assert.equal(payload.messages[0].assets.length, 4);
   assert.equal(payload.messages[0].assets.filter(asset => asset.error).length, 2);
   assert.doesNotMatch(JSON.stringify(reader.progress), /private-token|Question|https?:|data:/);
+});
+
+for (const encoding of [null, 'gzip']) {
+  test(`streamed JSON preserves split Chinese characters, reports received bytes and releases its reader (${encoding || 'identity'})`, async () => {
+    const plain = structuredClone(data);
+    plain.mapping.message.message.content.parts = ['中文问题，保留全部内容'];
+    delete plain.mapping.message.message.metadata;
+    const reader = readerFixture(plain, 200, { encoding });
+    const payload = await reader.read();
+    assert.equal(payload.messages[0].text, '中文问题，保留全部内容');
+    const downloads = reader.progress.filter(event => event.received !== undefined);
+    assert.ok(downloads.length > 1);
+    assert.ok(downloads[0].received < downloads.at(-1).received);
+    for (const event of downloads) {
+      if (encoding) assert.equal(event.total, undefined);
+      else assert.ok(event.total >= event.completed);
+    }
+    assert.equal(reader.stream().locked, false);
+    assert.doesNotMatch(JSON.stringify(downloads), /中文|private-token|https?:/);
+  });
+}
+
+test('invalid streamed JSON fails and releases the stream reader', async () => {
+  const reader = readerFixture(data, 200, { invalidJson: true });
+  await assert.rejects(reader.read(), /JSON|position|property/i);
+  assert.equal(reader.stream().locked, false);
 });
 
 test('a text-only conversation skips attachment progress and remains fully readable', async () => {

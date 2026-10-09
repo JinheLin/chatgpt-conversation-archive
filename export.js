@@ -94,11 +94,13 @@
     if (text !== undefined) node.textContent = text;
     return node;
   }
-  function render(payload, main) {
+  const yieldToPage = () => new Promise((resolve) => setTimeout(resolve, 0));
+  async function render(payload, main, { onProgress = () => {}, isCancelled = () => false } = {}) {
     if (!payload.completeness?.verified || payload.messages.length !== payload.completeness.count) {
       throw new Error(t("countMismatch"));
     }
     main.replaceChildren();
+    main.hidden = true;
     main.appendChild(el("h1", "pdf-title", payload.title));
     main.appendChild(el("p", "pdf-meta", t("conversationMeta", payload.messages.length, payload.completeness.questions, new Date(payload.capturedAt).toLocaleString(language))));
     if (payload.sourceUrl) {
@@ -117,7 +119,11 @@
     main.appendChild(nav);
     let question = 0;
     const problems = [];
+    onProgress({ completed: 0, total: payload.messages.length });
+    await yieldToPage();
+    let sliceStart = performance.now();
     for (const [index, message] of payload.messages.entries()) {
+      if (isCancelled()) throw new Error(t("cancelled"));
       const section = el("section", `pdf-message pdf-${message.role}`);
       if (message.role === "user") {
         question++;
@@ -185,7 +191,13 @@
       back.href = "#question-index";
       section.appendChild(back);
       main.appendChild(section);
+      if (performance.now() - sliceStart >= 8 || index + 1 === payload.messages.length) {
+        onProgress({ completed: index + 1, total: payload.messages.length });
+        await yieldToPage();
+        sliceStart = performance.now();
+      }
     }
+    if (isCancelled()) throw new Error(t("cancelled"));
     if (main.querySelectorAll("section.pdf-message").length !== payload.completeness.count || question !== payload.completeness.questions) {
       throw new Error(t("renderMismatch"));
     }
@@ -193,14 +205,23 @@
     return problems;
   }
 
-  function fitCode(main, landscape = false) {
+  async function fitCode(main, landscape = false, { isCancelled = () => false, onProgress = () => {} } = {}) {
+    if (isCancelled()) throw new Error(t("cancelled"));
     const width = ((landscape ? 297 : 210) - 34) * 96 / 25.4 - 26;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    for (const pre of main.querySelectorAll("pre")) {
-      pre.style.fontSize = "10pt";
+    const blocks = [...main.querySelectorAll("pre")];
+    // Group style writes and reads so every block does not force a document layout.
+    for (const pre of blocks) pre.style.fontSize = "10pt";
+    const fonts = blocks.map((pre) => {
       const style = getComputedStyle(pre);
-      ctx.font = `${style.fontSize} ${style.fontFamily}`;
+      return `${style.fontSize} ${style.fontFamily}`;
+    });
+    const sizes = [];
+    let sliceStart = performance.now();
+    for (const [index, pre] of blocks.entries()) {
+      if (isCancelled()) throw new Error(t("cancelled"));
+      ctx.font = fonts[index];
       let widest = 0;
       for (const raw of pre.textContent.split("\n")) {
         let line = "", col = 0;
@@ -209,9 +230,17 @@
           else { line += char; col++; }
         }
         widest = Math.max(widest, ctx.measureText(line).width);
+        if (performance.now() - sliceStart >= 8) {
+          await yieldToPage();
+          if (isCancelled()) throw new Error(t("cancelled"));
+          sliceStart = performance.now();
+        }
       }
-      if (widest > width) pre.style.fontSize = `${10 * width / widest}pt`;
+      sizes.push(widest > width ? `${10 * width / widest}pt` : "10pt");
+      onProgress({ completed: index + 1, total: blocks.length });
     }
+    if (isCancelled()) throw new Error(t("cancelled"));
+    blocks.forEach((pre, index) => { pre.style.fontSize = sizes[index]; });
   }
 
   globalThis.ChatGPTPdfExporter = { render, fitCode, preserveDiagrams };

@@ -80,6 +80,25 @@
   "progressComplete": {
     "message": "Reading complete"
   },
+  "progressFonts": {
+    "message": "Preparing fonts and fitting code…"
+  },
+  "progressBytes": {
+    "message": "Received $size$",
+    "placeholders": { "size": { "content": "$1" } }
+  },
+  "progressAssetCount": {
+    "message": "Processed $count$ / $total$ attachments",
+    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "progressMessageCount": {
+    "message": "Formatted $count$ / $total$ messages",
+    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "progressCodeCount": {
+    "message": "Fitted $count$ / $total$ code blocks",
+    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+  },
   "readFullFailed": {
     "message": "Could not read the full conversation."
   },

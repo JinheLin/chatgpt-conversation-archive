@@ -13,6 +13,11 @@
   const progressLabel = document.getElementById("read-progress-label");
   const progressCount = document.getElementById("read-progress-count");
   const progressBar = document.getElementById("read-progress-bar");
+  const progressDetail = document.getElementById("read-progress-detail");
+  const progressView = globalThis.ChatGPTPdfReadProgress.init({
+    bar: progressBar, fill: document.getElementById("read-progress-fill"), count: progressCount,
+    reducedMotion: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  });
   const startButton = document.getElementById("start-export");
   const cancelButton = document.getElementById("cancel-export");
   const actions = document.getElementById("output-actions");
@@ -41,6 +46,7 @@
   let readPercent = 0;
 
   function report(text, error = false, keepProgress = false) {
+    if (!keepProgress) progressView.stop();
     readProgress.hidden = !keepProgress;
     status.hidden = false;
     status.textContent = text;
@@ -53,25 +59,40 @@
     conversation: { label: "progressConversation", percent: 20 },
     verify: { label: "progressVerify", percent: 55 },
     assets: { label: "progressAssets", percent: 60 },
-    layout: { label: "progressLayout", percent: 90 },
+    layout: { label: "progressLayout", percent: 80 },
+    fonts: { label: "progressFonts", percent: 95 },
     complete: { label: "progressComplete", percent: 100 }
   };
-  function showReadProgress({ stage, completed, total }) {
+  function showReadProgress({ stage, completed, total, received }) {
     if (!Object.hasOwn(progressStages, stage)) return;
     let percent = progressStages[stage].percent;
-    if (stage === "assets") {
+    if (stage === "assets" || stage === "layout") {
       if (!Number.isSafeInteger(total) || total <= 0 || !Number.isSafeInteger(completed) ||
           completed < 0 || completed > total) return;
-      percent += Math.round(30 * completed / total);
+      percent += Math.round((stage === "assets" ? 20 : 15) * completed / total);
+    } else if (stage === "conversation" && Number.isSafeInteger(total) && total > 0 &&
+        Number.isSafeInteger(completed) && completed >= 0 && completed <= total) {
+      percent += Math.round(34 * completed / total);
+    } else if (stage === "fonts" && Number.isSafeInteger(total) && total > 0 &&
+        Number.isSafeInteger(completed) && completed >= 0 && completed <= total) {
+      percent += Math.round(4 * completed / total);
     }
     if (percent < readPercent) return;
     readPercent = percent;
     progressLabel.textContent = t(progressStages[stage].label);
-    progressCount.textContent = `${percent}%`;
-    progressBar.max = 100;
-    progressBar.value = percent;
+    progressView.set(percent);
+    let detail = "";
+    if (stage === "conversation" && Number.isSafeInteger(received) && received >= 0) {
+      const size = received < 1024 * 1024 ? `${(received / 1024).toFixed(1)} KB` : `${(received / (1024 * 1024)).toFixed(1)} MB`;
+      detail = t("progressBytes", size);
+    } else if (stage === "assets") detail = t("progressAssetCount", completed, total);
+    else if (stage === "layout") detail = t("progressMessageCount", completed, total);
+    else if (stage === "fonts" && total) detail = t("progressCodeCount", completed, total);
+    progressDetail.textContent = detail;
+    progressDetail.hidden = !detail;
     status.hidden = true;
     readProgress.hidden = false;
+    readProgress.dataset.running = String(stage !== "complete");
   }
   chrome.runtime.onMessage.addListener((message, sender) => {
     if (sender.id !== chrome.runtime.id || sender.tab?.id !== activeRead?.tabId ||
@@ -107,6 +128,7 @@
     payload = null;
     activeRead = null;
     readPercent = 0;
+    progressView.reset();
     try {
       const target = globalThis.ChatGPTPdfSource.parseUrl(input.value.trim());
       showReadProgress({ stage: "connect" });
@@ -137,12 +159,24 @@
       activeRead = null;
       if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
       payload = response.payload;
-      showReadProgress({ stage: "layout" });
-      const problems = globalThis.ChatGPTPdfExporter.render(payload, main);
+      const problems = await globalThis.ChatGPTPdfExporter.render(payload, main, {
+        isCancelled: () => mine !== generation,
+        onProgress: ({ completed, total }) => {
+          if (mine === generation) showReadProgress({ stage: "layout", completed, total });
+        }
+      });
+      if (mine !== generation) return;
       document.title = `${payload.title} — PDF / HTML`;
+      showReadProgress({ stage: "fonts" });
       await document.fonts.ready;
       if (mine !== generation) return;
-      globalThis.ChatGPTPdfExporter.fitCode(main, document.getElementById("page-layout").value === "landscape");
+      await globalThis.ChatGPTPdfExporter.fitCode(main, document.getElementById("page-layout").value === "landscape", {
+        isCancelled: () => mine !== generation,
+        onProgress: ({ completed, total }) => {
+          if (mine === generation) showReadProgress({ stage: "fonts", completed, total });
+        }
+      });
+      if (mine !== generation) return;
       actions.hidden = false;
       showReadProgress({ stage: "complete" });
       report(t("readVerified", payload.messages.length, payload.completeness.questions, problems.length ? t("assetProblems", problems.length) : t("readyOutput")), false, true);
@@ -164,16 +198,24 @@
   cancelButton.addEventListener("click", async () => {
     generation++;
     activeRead = null;
+    main.hidden = true;
+    actions.hidden = true;
+    payload = null;
     report(t("cancelled"));
     if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
     sourceTab = null;
     startButton.disabled = false;
     cancelButton.hidden = true;
   });
-  document.getElementById("page-layout").addEventListener("change", (event) => {
-    document.getElementById("page-direction").textContent = `@page { size: A4 ${event.target.value}; }`;
-    main.dataset.landscape = String(event.target.value === "landscape");
-    globalThis.ChatGPTPdfExporter.fitCode(main, event.target.value === "landscape");
+  document.getElementById("page-layout").addEventListener("change", async (event) => {
+    if (outputBusy) return;
+    setOutputBusy(true);
+    try {
+      document.getElementById("page-direction").textContent = `@page { size: A4 ${event.target.value}; }`;
+      main.dataset.landscape = String(event.target.value === "landscape");
+      await globalThis.ChatGPTPdfExporter.fitCode(main, event.target.value === "landscape");
+    } catch (error) { report(error.message, true); }
+    finally { setOutputBusy(false); }
   });
   document.getElementById("print-again").addEventListener("click", async () => {
     if (outputBusy) return;
@@ -207,7 +249,7 @@
       await document.fonts.ready;
       await Promise.all([...main.querySelectorAll("img")].map((image) => image.decode()));
       const landscape = document.getElementById("page-layout").value === "landscape";
-      globalThis.ChatGPTPdfExporter.fitCode(main, landscape);
+      await globalThis.ChatGPTPdfExporter.fitCode(main, landscape);
       const bytes = await globalThis.ChatGPTPdfCapture.capture({ landscape });
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(bytes, metadata);

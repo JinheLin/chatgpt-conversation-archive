@@ -22,7 +22,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     if (!elements.has(id)) elements.set(id, {
       value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : 'portrait',
       checked: id === 'show-back-links',
-      dataset: {}, handlers: {}, hidden: false,
+      dataset: {}, style: {}, handlers: {}, hidden: false,
       ownerDocument: context.document,
       setAttribute(name, value) { this[name] = String(value); },
       removeAttribute(name) { delete this[name]; },
@@ -69,7 +69,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       },
       scripting: { executeScript: async () => {} }
     },
-    ChatGPTPdfExporter: { render: () => [], fitCode() {} },
+    ChatGPTPdfExporter: { render: output.render || (() => []), fitCode: output.fit || (() => {}) },
     ChatGPTPdfCapture: { capture: output.capture || (async () => new Uint8Array([1, 2, 3])) },
     ChatGPTPdfOutline: { add: output.add || (async () => ({ bytes: new Uint8Array([1, 2, 3]), questions: 1, pages: 2 })) }
   });
@@ -80,6 +80,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   }
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'export-menu.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(project, 'read-progress.js'), 'utf8'), context);
   const initialized = vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
   return { created, removed, activated, requests, reading, element, downloads, initialized,
     progress: (progress, options = {}) => {
@@ -115,16 +116,16 @@ for (const locale of ['en-US', 'zh-CN']) {
     app.progress({ stage: 'verify' });
     assert.equal(app.element('read-progress-count').textContent, '55%');
     app.progress({ stage: 'assets', completed: 3, total: 4 });
-    assert.equal(app.element('read-progress-bar').value, 83);
+    assert.equal(app.element('read-progress-bar').value, 75);
     assert.equal(app.element('read-progress-bar').max, 100);
-    assert.equal(app.element('read-progress-count').textContent, '83%');
+    assert.equal(app.element('read-progress-count').textContent, '75%');
     assert.match(app.element('read-progress-label').textContent, locale === 'zh-CN' ? /附件/ : /attachments/);
     app.progress({ stage: 'verify' });
     app.progress({ stage: 'assets', completed: 1, total: 4 });
-    assert.equal(app.element('read-progress-bar').value, 83);
-    assert.equal(app.element('read-progress-count').textContent, '83%');
+    assert.equal(app.element('read-progress-bar').value, 75);
+    assert.equal(app.element('read-progress-count').textContent, '75%');
     app.progress({ stage: 'assets', completed: 4, total: 4 });
-    assert.equal(app.element('read-progress-bar').value, 90);
+    assert.equal(app.element('read-progress-bar').value, 80);
     finish(response);
     await pending;
     assert.equal(app.element('read-progress').hidden, false);
@@ -148,6 +149,28 @@ test('read failure hides the progress bar and shows the error', async () => {
   assert.equal(app.element('export-status').hidden, false);
   assert.equal(app.element('export-status').textContent, 'Login expired');
   assert.equal(app.element('export-status').dataset.level, 'error');
+});
+
+test('cancelling while fitting code hides the document and ignores late completion', async () => {
+  let fittingStarted, finishFitting;
+  const fitting = new Promise(resolve => { fittingStarted = resolve; });
+  const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
+    render: (payload, main) => { main.hidden = false; return []; },
+    fit: async (main, landscape, options) => {
+      fittingStarted();
+      await new Promise(resolve => { finishFitting = resolve; });
+      options.onProgress({ completed: 1, total: 1 });
+    }
+  });
+  const pending = app.start();
+  await fitting;
+  await app.cancel();
+  finishFitting();
+  await pending;
+  assert.equal(app.element('pdf-document').hidden, true);
+  assert.equal(app.element('output-actions').hidden, true);
+  assert.equal(app.element('read-progress').hidden, true);
+  assert.equal(app.element('export-status').textContent, 'Reading cancelled.');
 });
 
 for (const locale of ['en-US', 'zh-CN']) {

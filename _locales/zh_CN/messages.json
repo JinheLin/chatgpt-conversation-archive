@@ -80,6 +80,25 @@
   "progressComplete": {
     "message": "读取完成"
   },
+  "progressFonts": {
+    "message": "正在准备字体并调整代码排版…"
+  },
+  "progressBytes": {
+    "message": "已接收 $size$",
+    "placeholders": { "size": { "content": "$1" } }
+  },
+  "progressAssetCount": {
+    "message": "已处理 $count$ / $total$ 个附件",
+    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "progressMessageCount": {
+    "message": "已排版 $count$ / $total$ 条消息",
+    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+  },
+  "progressCodeCount": {
+    "message": "已调整 $count$ / $total$ 个代码块",
+    "placeholders": { "count": { "content": "$1" }, "total": { "content": "$2" } }
+  },
   "readFullFailed": {
     "message": "无法读取完整对话。"
   },

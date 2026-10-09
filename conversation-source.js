@@ -191,6 +191,32 @@
     return payload;
   }
 
+  async function readJson(response, onProgress) {
+    if (!response.body?.getReader) return response.json();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const chunks = [];
+    // Fetch decodes compressed bodies; Content-Length describes decoded bytes only for identity encoding.
+    const encoding = response.headers.get("content-encoding");
+    const length = Number(response.headers.get("content-length"));
+    const total = (!encoding || encoding === "identity") && Number.isSafeInteger(length) && length > 0 ? length : null;
+    let received = 0, lastReported = -Infinity;
+    const report = () => onProgress({ stage: "conversation", received, ...(total && received <= total ? { completed: received, total } : {}) });
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        received += part.value.byteLength;
+        chunks.push(decoder.decode(part.value, { stream: true }));
+        const now = performance.now();
+        if (now - lastReported >= 100) { report(); lastReported = now; }
+      }
+      chunks.push(decoder.decode());
+      report();
+      return JSON.parse(chunks.join(""));
+    } finally { reader.releaseLock(); }
+  }
+
   async function read(value, { onProgress = () => {} } = {}) {
     const target = parseUrl(value);
     if (target.url !== parseUrl(location.href).url) throw new Error(t("conversationMismatch"));
@@ -214,7 +240,7 @@
         }
         throw new Error(t("readHttpFailed", response.status));
       }
-      const data = await response.json();
+      const data = await readJson(response, onProgress);
       onProgress({ stage: "verify" });
       return await inlineAssets(normalize(data, target.url), headers, onProgress);
     } finally {

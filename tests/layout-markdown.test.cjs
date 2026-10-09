@@ -137,6 +137,62 @@ test('layout loops preserve row order and conditional background without executi
   assert.doesNotMatch(attrs, /\sx=|\sy=|\swidth=|alert\(|constructor/);
 });
 
+test('object-array loops render every CSE entry field, byte size, background and pixel gap', () => {
+  const { render } = renderer();
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/cse-entry-layout.md'), 'utf8');
+  for (const input of [source, source.replace(/\n\s*/g, ' ')]) {
+    const html = render(input);
+    assert.equal((html.match(/class="archive-layout archive-layout-row/g) || []).length, 7);
+    assert.equal((html.match(/>8 B<\/div>/g) || []).length, 2);
+    assert.equal((html.match(/>变长<\/div>/g) || []).length, 2);
+    assert.match(html, /--archive-layout-gap:2px/);
+    assert.match(html, /background-color:rgba\(55,120,195,0.12\)/);
+    assert.match(html, /background-color:rgba\(44,150,95,0.07\)/);
+    assert.match(html, /CSE Data Block Entry/);
+    const fields = ['Key Suffix Length', 'Key Suffix', 'Meta', 'Version', 'Old Version（可选）',
+      'User Meta Length', 'User Meta / Value / BlobRef'];
+    let previous = -1;
+    for (const field of fields) {
+      const position = html.indexOf(`>${field}</div>`);
+      assert.ok(position > previous, field);
+      previous = position;
+    }
+    assert.doesNotMatch(html, /&lt;box|\{#each|\{\/each\}|\{x\./);
+  }
+  for (const input of [`\`\`\`html\n${source}\n\`\`\``, `\`${source.replace(/\n\s*/g, ' ')}\``]) {
+    const html = render(input);
+    assert.match(html, /&lt;box/);
+    assert.match(html, /\{x\.name\}/);
+    assert.doesNotMatch(html, /class="archive-layout/);
+  }
+});
+
+test('literal object data supports nested fields, escaped strings and trailing commas', () => {
+  const { render } = renderer();
+  const html = render('<box>{#each [{name: "contains as x} text", nested: {value: "中文\\nnext"}, sizes: [2, 8,],}, {name: \'it\\\'s a field\', nested: {value: "\\u4e2d"}, sizes: [1, 4]}] as x,i}<row><text>{i}: {x.name}</text><text>{x.nested.value} / {x.sizes[1]} / {x["name"]}</text></row>{/each}</box>');
+  assert.equal((html.match(/archive-layout-row/g) || []).length, 2);
+  assert.match(html, /0: contains as x} text/);
+  assert.match(html, /中文\nnext \/ 8/);
+  assert.match(html, /1: it's a field/);
+  assert.match(html, /中 \/ 4/);
+  assert.doesNotMatch(html, /\{#each|\{x\./);
+});
+
+test('object loops reject executable syntax and prototype fields while escaping literal values', () => {
+  const { render } = renderer();
+  for (const data of ['[{name: evil()}]', '[{get name(){return "bad"}}]', '[{...other}]',
+    '[{["name"]:"bad"}]', '[{name: globalThis.location}]', '[{__proto__: {name:"bad"}}]',
+    '[{"constructor": "bad"}]', '[{name:"one",name:"two"}]', '[{name: "unterminated}]']) {
+    const html = render(`<box>{#each ${data} as x}<text>{x.name}</text>{/each}</box>`);
+    assert.match(html, /&lt;box/);
+    assert.doesNotMatch(html, /archive-layout-box/);
+  }
+  const html = render('<box>{#each [{name:"<img src=x onerror=evil()>", color:"url(https://evil.example)"}] as x}<row background={x.color} onclick={x.name}><text>{x.name}</text><text>{x.constructor}</text></row>{/each}</box>');
+  assert.match(html, /&lt;img/);
+  assert.match(html, /\{x\.constructor\}/);
+  assert.doesNotMatch(html, /<img|<[^>]+(?:onclick|url\()/);
+});
+
 test('SVG output strips executable elements, external references and untrusted attributes', () => {
   const { render } = renderer();
   const html = render('<svg viewBox="0 0 30 30" onload="evil()" style="color:red">\n<script>evil()</script><foreignObject><iframe src="https://evil.example"></iframe></foreignObject>\n<g fontSize="12" fill="currentColor" textAnchor="middle"><text x="15" y="20">中文 &amp; A</text></g>\n<rect width="30" height="30" fill="url(https://evil.example)" onclick="evil()"/>\n<path d="M0 0 L30 30" stroke="#000" href="https://evil.example"/>\n</svg>');

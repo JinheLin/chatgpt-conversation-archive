@@ -6,6 +6,82 @@
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
   const MAX_NODES = 2000;
+  const forbiddenFields = new Set(["__proto__", "prototype", "constructor"]);
+
+  // Parse array/object data with quoted or bare keys. This is a literal reader,
+  // not JavaScript: calls, spreads, getters and computed keys are never accepted.
+  function loopItems(source, start) {
+    let pos = start, count = 0;
+    const end = Math.min(source.length, start + 100000);
+    const whitespace = () => { while (pos < end && /\s/.test(source[pos])) pos++; };
+    function string() {
+      const quote = source[pos++];
+      let value = "";
+      const escapes = { '"': '"', "'": "'", "\\": "\\", "/": "/", n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" };
+      while (pos < end) {
+        const char = source[pos++];
+        if (char === quote) return value;
+        if (char.charCodeAt(0) < 32) throw new Error("Invalid literal string");
+        if (char !== "\\") { value += char; continue; }
+        const escape = source[pos++];
+        if (Object.hasOwn(escapes, escape)) value += escapes[escape];
+        else if (escape === "u" && pos + 4 <= end && /^[\da-f]{4}$/i.test(source.slice(pos, pos + 4))) {
+          value += String.fromCharCode(parseInt(source.slice(pos, pos + 4), 16)); pos += 4;
+        } else throw new Error("Invalid literal escape");
+      }
+      throw new Error("Unclosed literal string");
+    }
+    function literal(depth = 0) {
+      if (depth >= 8 || ++count > MAX_NODES) throw new Error("Literal data limit");
+      whitespace();
+      if (pos >= end) throw new Error("Literal input limit");
+      const char = source[pos];
+      if (char === '"' || char === "'") return string();
+      if (char === "[" || char === "{") {
+        pos++;
+        const array = char === "[", close = array ? "]" : "}";
+        const value = array ? [] : Object.create(null);
+        let length = 0;
+        whitespace();
+        if (pos >= end) throw new Error("Unclosed literal collection");
+        while (source[pos] !== close) {
+          if (pos >= end || ++length > (array ? 200 : 50)) throw new Error("Literal collection limit");
+          if (array) value.push(literal(depth + 1));
+          else {
+            let key;
+            if (source[pos] === '"' || source[pos] === "'") key = string();
+            else {
+              const match = /^[a-zA-Z_]\w*/.exec(source.slice(pos, end));
+              if (!match) throw new Error("Invalid literal key");
+              key = match[0]; pos += key.length;
+            }
+            if (key.length > 128 || forbiddenFields.has(key) || Object.hasOwn(value, key)) throw new Error("Invalid literal field");
+            whitespace();
+            if (source[pos++] !== ":") throw new Error("Missing literal field value");
+            value[key] = literal(depth + 1);
+          }
+          whitespace();
+          if (pos >= end) throw new Error("Unclosed literal collection");
+          if (source[pos] === close) break;
+          if (source[pos++] !== ",") throw new Error("Missing literal separator");
+          whitespace();
+          if (pos >= end) throw new Error("Unclosed literal collection");
+        }
+        pos++;
+        return value;
+      }
+      const token = /^(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(source.slice(pos, end));
+      if (!token) throw new Error("Invalid literal value");
+      pos += token[0].length;
+      const value = JSON.parse(token[0]);
+      if (typeof value === "number" && !Number.isFinite(value)) throw new Error("Invalid literal number");
+      return value;
+    }
+    try {
+      const items = literal();
+      return Array.isArray(items) ? { items, end: pos } : null;
+    } catch (_) { return null; }
+  }
 
   function readTag(source, start) {
     const match = /^<(\/?)([a-z][a-z-]*)\b/.exec(source.slice(start));
@@ -27,15 +103,16 @@
     return null;
   }
 
-  // A data-only expression grammar: numbers, strings, loop variables, arithmetic,
-  // comparisons and ternaries. No calls, property access, assignment or JS evaluation.
+  // A data-only expression grammar: numbers, strings, loop data, arithmetic,
+  // comparisons and ternaries. Only own literal fields and array indexes can be
+  // read; no calls, prototype access, assignment or JavaScript evaluation.
   function valueOf(source, scope) {
     if (source.length > 1000) return null;
     const tokens = [];
     let pos = 0, cursor = 0;
     while (pos < source.length) {
       if (/\s/.test(source[pos])) { pos++; continue; }
-      const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|[+*/<>()?\[\]:!-])/.exec(source.slice(pos));
+      const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|[+*/<>()?\[\]:!.\-])/.exec(source.slice(pos));
       if (!token) return null;
       tokens.push(token[0]); pos += token[0].length;
     }
@@ -59,11 +136,14 @@
       else if (token === "null") value = null;
       else if (Object.hasOwn(scope, token)) value = scope[token];
       else throw new Error("Unknown value");
-      while (tokens[cursor] === "[") {
-        cursor++;
-        const index = expression(0, depth + 1);
-        if (tokens[cursor++] !== "]" || !Array.isArray(value) || !Number.isInteger(index) || index < 0) throw new Error("Invalid index");
-        value = value[index];
+      while (["[", "."].includes(tokens[cursor])) {
+        const access = tokens[cursor++];
+        const key = access === "." ? tokens[cursor++] : expression(0, depth + 1);
+        if (access === "[" && tokens[cursor++] !== "]") throw new Error("Invalid index");
+        const valid = Array.isArray(value) ? access === "[" && Number.isInteger(key) && key >= 0 :
+          value && typeof value === "object" && typeof key === "string" && /^[a-zA-Z_]\w*$/.test(key) && !forbiddenFields.has(key);
+        if (!valid || !Object.hasOwn(value, key)) throw new Error("Invalid data field");
+        value = value[key];
       }
       while ((precedence[tokens[cursor]] || 0) > min) {
         const op = tokens[cursor++], right = expression(precedence[op], depth + 1);
@@ -104,15 +184,14 @@
     }
     function loopAt(pos, depth, inSvg) {
       if (depth > MAX_DEPTH || ++count > MAX_NODES) return null;
-      const open = /^\{#each\s+([\s\S]*?)\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(pos));
+      const open = /^\{#each\s+/.exec(source.slice(pos));
       if (!open) return null;
-      let items;
-      try { items = JSON.parse(open[1]); } catch (_) { return null; }
-      const literal = (value, depth = 0) => depth < 8 && (value === null || ["string", "number", "boolean"].includes(typeof value) ||
-        Array.isArray(value) && value.length <= 200 && value.every(item => literal(item, depth + 1)));
-      if (!Array.isArray(items) || !literal(items)) return null;
-      const content = childrenAt(pos + open[0].length, depth, inSvg, "each");
-      return content && { name: "each", svg: inSvg, items, variable: open[2], index: open[3], ...content };
+      const data = loopItems(source, pos + open[0].length);
+      if (!data) return null;
+      const binding = /^\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(data.end));
+      if (!binding) return null;
+      const content = childrenAt(data.end + binding[0].length, depth, inSvg, "each");
+      return content && { name: "each", svg: inSvg, items: data.items, variable: binding[1], index: binding[2], ...content };
     }
     function childrenAt(pos, depth, inSvg, closing) {
       let cursor = pos, textStart = cursor;
@@ -199,6 +278,8 @@
     for (const key of ["padding", "gap"]) {
       if (/^\d{1,2}$/.test(attrs[key]) && Number(attrs[key]) <= 12) {
         styles.push(`--archive-layout-${key}:${Number(attrs[key]) * 4}px`);
+      } else if (/^\d{1,2}(?:\.\d{1,2})?px$/.test(attrs[key]) && parseFloat(attrs[key]) <= 48) {
+        styles.push(`--archive-layout-${key}:${parseFloat(attrs[key])}px`);
       }
     }
     if (/^[1-6]$/.test(attrs.columns)) styles.push(`--archive-layout-columns:${attrs.columns}`);
@@ -270,7 +351,7 @@
         const text = source.replace(/\{([^{}\n]+)\}/g, (original, expression) => {
           const result = Object.keys(scope).length && valueOf(expression, scope);
           if (!result || !["string", "number", "boolean"].includes(typeof result.value)) return original;
-          return node.svg ? String(result.value) : escape(result.value).replace(/[\\`*_[\]{}()!#$~|]/g, "\\$&");
+          return node.svg ? String(result.value) : escape(String(result.value).replace(/[\\`*_[\]{}()!#$~|]/g, "\\$&"));
         });
         if (node.svg) return escape(text);
         return inlineContent ? md.renderInline(text.includes("\n") ? dedent(text) : text, env) : md.render(dedent(text), env);

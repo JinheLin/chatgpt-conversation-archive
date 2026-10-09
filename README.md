@@ -65,7 +65,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 ## Formatting and attachments
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
-- Converts ChatGPT's boxes, grids, rows, titles, captions, badges, arrows, and basic SVG diagrams into static layouts in the preview, PDF, and offline HTML. Supports bounded literal-array loops, numeric arithmetic, and conditional presentation without executing JavaScript. Only supported layout and SVG attributes are accepted; tags in code examples remain literal source.
+- Converts ChatGPT's boxes, grids, rows, titles, captions, badges, arrows, and basic SVG diagrams into static layouts in the preview, PDF, and offline HTML. Supports bounded literal-array loops (including object records and their fields), numeric arithmetic, and conditional presentation without executing JavaScript. Supports numeric spacing and bounded pixel gaps. Only supported layout and SVG attributes are accepted; tags in code examples remain literal source.
 - Uses monospace text for code and text diagrams, preserving spaces, tabs, and line breaks without forced wrapping. Wide blocks are scaled to the available A4 width. Short blocks are kept together where possible; blocks longer than a page may still split.
 - Detects some unfenced box-drawing diagrams and preserves them as monospace blocks.
 - Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.

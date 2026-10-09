@@ -48,9 +48,9 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 - Before opening a conversation, the page shows the URL field and your local conversation list.
 - Local version timestamps in the toolbar and conversation list include seconds, using the browser’s local time zone.
-- After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Open conversation**, **Highlights & comments** and **Export**.
-- **Open conversation** shows the link field, local conversations and the current conversation's update action. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
-- **Highlights & comments** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
+- After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Annotations** and **Export**.
+- **Conversation list** shows the link field, local conversations and the current conversation's update action. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
+- **Annotations** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
 - **Export** offers HTML and PDF plus the **A4 landscape** checkbox. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
 
@@ -58,10 +58,10 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 1. Read a conversation once. Its complete validated snapshot, including successfully embedded assets, is saved in the extension's local IndexedDB.
 2. Select text within one user or assistant message. Choose **Highlight** to save a yellow highlight immediately, or **Comment**, enter your note and click **Save comment**. Paragraphs, headings, lists, tables and code text are supported; math, SVG diagrams, citations and attachment labels are excluded.
-3. Click **Highlights & comments** to open the right panel, or click a highlight. Click a quoted passage in the panel to jump to it. Comments can be edited; **Delete** removes both the highlight and comment. Overlapping highlights preserve the original text and formatting.
-4. Reopen the same conversation URL, or choose **Open conversation → Local conversations** and select its title. The local snapshot and annotations open without accessing ChatGPT, so this works offline. In **Open conversation**, click **Update conversation** when you want to fetch the currently selected remote branch using your ChatGPT login session.
+3. Click **Annotations** to open the right panel, or click a highlight. Click a quoted passage in the panel to jump to it. Comments can be edited; **Delete** removes both the highlight and comment. Overlapping highlights preserve the original text and formatting.
+4. Reopen the same conversation URL, or choose **Conversation list → Local conversations** and select its title. The local snapshot and annotations open without accessing ChatGPT, so this works offline. In **Conversation list**, click **Update conversation** when you want to fetch the currently selected remote branch using your ChatGPT login session.
 5. Annotations attach to a conversation and stable message ID, then use the selected quote, surrounding text, offsets and a message-text hash to find the passage. If a message was removed, regenerated or changed ambiguously, the annotation stays in the panel as **Original text changed**. It is not moved to a different message.
-6. Open **Open conversation → Backup & restore**. Use **Back up local data** to download a JSON file containing all saved conversations, assets and annotations. **Restore backup** validates the file and merges it atomically, keeping newer snapshots and annotation changes. Deletion records prevent an older backup from restoring deleted annotations. Backups up to 100 MiB are supported.
+6. Open **Conversation list → Backup & restore**. Use **Back up local data** to download a JSON file containing all saved conversations, assets and annotations. **Restore backup** validates the file and merges it atomically, keeping newer snapshots and annotation changes. Deletion records prevent an older backup from restoring deleted annotations. Backups up to 100 MiB are supported.
 
 The left question index remains available while reading. On wide screens the annotation panel appears beside the document; in smaller windows it opens as a panel on the right. Reader controls and annotations are excluded from HTML/PDF exports, which keep the original conversation. Use the JSON backup for annotations; opening a standalone exported HTML file does not provide the extension reader's editing features.
 

@@ -475,10 +475,10 @@
     "message": "更新对话"
   },
   "readerAnnotations": {
-    "message": "划线与评论"
+    "message": "批注信息"
   },
   "readerAnnotationsCount": {
-    "message": "划线与评论（$arg1$）",
+    "message": "批注信息（$arg1$）",
     "placeholders": {
       "arg1": {
         "content": "$1"
@@ -623,7 +623,7 @@
     }
   },
   "readerOpen": {
-    "message": "打开对话"
+    "message": "对话列表"
   },
   "readerReturn": {
     "message": "返回阅读"

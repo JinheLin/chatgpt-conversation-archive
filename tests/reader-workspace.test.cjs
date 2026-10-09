@@ -34,7 +34,10 @@ for (const locale of ['en', 'zh-CN']) {
     assert.equal(app.get('reader-workspace').hidden, true);
     assert.equal(app.get('reader-open').getAttribute('aria-expanded'), 'false');
     assert.equal(app.get('output-actions').hidden, false);
-    assert.equal(app.get('reader-toggle').textContent, locale === 'zh-CN' ? '划线与评论' : 'Highlights & comments');
+    assert.equal(app.get('reader-toggle').textContent, locale === 'zh-CN' ? '批注信息' : 'Annotations');
+    assert.equal(app.get('reader-open').textContent, locale === 'zh-CN' ? '对话列表' : 'Conversation list');
+    assert.equal(app.get('reader-workspace-title').textContent, app.get('reader-open').textContent);
+    assert.match(app.get('reader-annotations-title').textContent, locale === 'zh-CN' ? /^批注信息/ : /^Annotations/);
     assert.equal(app.get('export-status').hidden, true);
     assert.equal(app.get('read-progress').hidden, true);
     assert.equal(app.get('reader-status').hidden, true);

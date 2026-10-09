@@ -475,10 +475,10 @@
     "message": "Update conversation"
   },
   "readerAnnotations": {
-    "message": "Highlights & comments"
+    "message": "Annotations"
   },
   "readerAnnotationsCount": {
-    "message": "Highlights & comments ($arg1$)",
+    "message": "Annotations ($arg1$)",
     "placeholders": {
       "arg1": {
         "content": "$1"
@@ -623,7 +623,7 @@
     }
   },
   "readerOpen": {
-    "message": "Open conversation"
+    "message": "Conversation list"
   },
   "readerReturn": {
     "message": "Return to reading"

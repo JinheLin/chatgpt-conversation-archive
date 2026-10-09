@@ -35,7 +35,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% is confirmed only after validation and formatting finish; the completed progress indicator then disappears.
 4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
    - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index at the beginning works locally.
-   - **Export → PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
+   - **Export → PDF**: creates and downloads a PDF using the selected page layout with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
    - **A4 landscape** in the **Export** menu is unchecked by default (A4 portrait). Check it to widen the preview and saved HTML and export PDFs in landscape. This also gives wide text diagrams more space.
    - The preview shows a sticky question index beside the conversation. Click any question to jump to it; the index scrolls independently. In narrow windows it appears above the document. Saved HTML and PDF keep the index at the beginning. Messages have no return-to-index links.
    - If **Export → PDF** fails, **Alternative PDF export** appears with **Print / Save PDF** and **Add PDF sidebar index**. For manual printing, select **Save as PDF**, A4, **All** pages and default scale. Disable **Headers and footers** and enable **Background graphics** if needed, then select the saved file with **Add PDF sidebar index**. These controls are hidden during normal use and after a successful retry or a new conversation read.
@@ -44,6 +44,15 @@ Reading reuses an already-open tab for the requested conversation without changi
 
 After updating local files, click **Reload** on the extension card in `chrome://extensions/`, accept any new permission prompt, then refresh any open ChatGPT and export pages. Version 2.2 adds the `debugger` permission for direct PDF generation. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
 
+## Mobile reading PDF (v3.2)
+
+1. Open a conversation, then open **Export** and check **Mobile reading**. This clears **A4 landscape**; checking landscape clears the mobile setting. Leave both unchecked for A4 portrait.
+2. The preview changes to narrow pages. Choose **PDF** to download a separate `-mobile.pdf` file, then transfer it to your phone.
+3. Mobile pages are 100 × 180 mm, with 6 mm side margins, 7 mm top/bottom margins, 13 pt body text and 14 pt questions. The selected layout also applies to standalone HTML.
+4. Regular code stays at 10.5 pt, wraps visually without rewriting the source text, and can continue across pages. Text/ASCII diagrams preserve spacing and fit the page width and height. Very wide or tall diagrams can still need zooming.
+5. Tables that fit on one page stay together. Tables or individual rows taller than a page may span pages; browser pagination cannot keep an arbitrarily large table intact on a small sheet. Native question bookmarks and the opening index are retained; bookmark UI depends on your phone's PDF reader.
+6. Use direct **PDF** export for the custom page size. The alternative print dialog may override it with the selected printer paper size.
+
 ## Reading interface (v3.1)
 
 - Before opening a conversation, the page shows the URL field and your local conversation list.
@@ -51,7 +60,7 @@ After updating local files, click **Reload** on the extension card in `chrome://
 - After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Update conversation**, **Annotations** and **Export**.
 - **Conversation list** shows the link field and local conversations. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
 - **Annotations** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
-- **Export** offers HTML and PDF plus the **A4 landscape** checkbox. The format setting applies to the preview and both exports.
+- **Export** offers HTML and PDF plus the **A4 landscape** and **Mobile reading** checkboxes. They are mutually exclusive; leave both unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
 
 ## Local reader, highlights and comments (v3)
@@ -89,7 +98,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
 - Converts ChatGPT's boxes, grids, rows, tables, titles, captions, badges, arrows, and basic SVG diagrams into static layouts in the preview, PDF, and offline HTML. Table components (`table-row` and `table-cell`) become standard HTML tables, and `<escape>` preserves literal characters such as comparison signs. Supports bounded literal-array loops (including object records and their fields), numeric arithmetic, and conditional presentation without executing JavaScript. Supports numeric spacing and bounded pixel gaps. Only supported layout and SVG attributes are accepted; tags in code examples remain literal source.
-- Uses monospace text for code and text diagrams, preserving spaces, tabs, and line breaks without forced wrapping. Wide blocks are scaled to the available A4 width. Short blocks are kept together where possible; blocks longer than a page may still split.
+- In A4 layouts, uses monospace text for code and text diagrams, preserving spaces, tabs, and line breaks without forced wrapping. Wide blocks are scaled to the available A4 width. Short blocks are kept together where possible; blocks longer than a page may still split.
 - Detects some unfenced box-drawing diagrams and preserves them as monospace blocks.
 - Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.
 - Includes A4 print styles for keeping headings with following content, controlling orphans and widows, and keeping tables together when they fit on one page. Tables taller than a full page can still split, with repeated headers and breaks within rows avoided where possible.
@@ -108,6 +117,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `content.js` | Read request bridge; adds no page controls or banners and cleans up old instances on reinjection |
 | `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |
 | `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
+| `page-layout.js` | Shared page dimensions and margins for preview, code fitting and PDF capture |
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
 | `layout-markdown.js` | Restricted ChatGPT layout parsing and static rendering without enabling raw HTML |
 | `citation-markdown.js` | New and legacy citation parsing, localized source links, and code example preservation |
@@ -121,7 +131,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |
-| `style.css` | Export interface and A4 print styles |
+| `style.css` | Export interface, A4 and mobile reading styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |
 
 The DOM adapter prefers semantic attributes such as `data-message-author-role`, `data-chatgpt-search-unit-key`, `data-content-search-unit-key`, `data-chatgpt-selection-message-id`, and `data-markdown-text-style` over generated CSS classes. Update this adapter when the page structure changes, and update `conversation-source.js` when website data endpoints change. Do not silently substitute a partial DOM snapshot for a complete export.
@@ -162,7 +172,7 @@ Tests use Node.js's built-in test runner, the bundled PDF library, and developme
 3. Only the selected branch is exported. Alternative answers and edited branches are not merged, and internal analysis or tool logs are not included.
 4. Formatting is reconstructed from Markdown rather than copied pixel for pixel. Code syntax highlighting is not implemented, and Mermaid is preserved as source. Canvas content, interactive charts, and video players are not guaranteed to render as static content.
 5. Embedded attachments are limited to 20 MiB per file and 35 MiB of total downloaded attachment data. Oversized attachments remain marked in the document. Access restrictions, cross-origin rules, or expired attachments can prevent embedding. Very large conversations are also limited by Chrome's memory and message size constraints.
-6. Extremely wide code lines use smaller fonts; A4 landscape is often more suitable. Browser pagination still has limits for long code blocks, tall table rows, and math.
+6. In A4 layouts, extremely wide code lines use smaller fonts; A4 landscape is often more suitable. Browser pagination still has limits for long code blocks, tall table rows, and math.
 7. Direct PDF export requires Chrome's debugger permission and can be blocked by enterprise policy, another debugger or DevTools attached to the export tab. Browser download settings control the save location. Manual printing remains available and requires a separate bookmark step. Whether the bookmark pane opens automatically can differ between PDF readers.
 8. Annotations currently support text within one message and one highlight color. Math/SVG anchoring, cloud sync and annotation editing in standalone HTML/PDF are not supported. Ambiguous or missing quotes remain in the annotations panel.
 9. Local storage depends on browser disk quota. If snapshot saving fails, reading/export remain available and annotation creation is disabled. JSON backups are limited to 100 MiB.
@@ -192,3 +202,5 @@ Issues and pull requests are welcome. Include your Chrome version, extension ver
 ## License
 
 This project is licensed under the [MIT License](LICENSE). Bundled libraries and fonts retain their original licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+
+Mobile layout verification (v3.2): isolated Chrome rendering of a local 61-message, 20-question snapshot produced 189 narrow pages with 21 native bookmarks including the index. All page text stayed within page bounds and the final rendered passage was retained. A separate fixture retained all 65 long code lines, its final sentinel, math, diagrams and a four-row table kept on one page. Representative pages were visually checked. Mobile-device PDF viewer behavior has not been verified. Private snapshots and samples are excluded from the repository.

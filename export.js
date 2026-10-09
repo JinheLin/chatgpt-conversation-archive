@@ -202,14 +202,29 @@
     return problems;
   }
 
-  async function fitCode(main, landscape = false, { isCancelled = () => false, onProgress = () => {} } = {}) {
+  function isTextDiagram(pre) {
+    const code = pre.querySelector?.("code");
+    return /\blanguage-(text|plaintext|plain|ascii|diagram)\b/.test(code?.className || "") ||
+      /[┌┐└┘├┤┬┴┼│─]|\+[-=]{3,}\+/.test(pre.textContent) ||
+      (/\n/.test(pre.textContent) && /(?:[-=]{2,}>|[→↓↑←])/.test(pre.textContent));
+  }
+  async function fitCode(main, layout = false, { isCancelled = () => false, onProgress = () => {} } = {}) {
     if (isCancelled()) throw new Error(t("cancelled"));
-    const width = ((landscape ? 297 : 210) - 34) * 96 / 25.4 - 26;
+    const page = globalThis.ChatGPTPageLayout.resolve(layout);
+    const size = globalThis.ChatGPTPageLayout.contentSize(layout);
+    const mobile = page.id === "mobile";
+    const padding = mobile ? 4 * 96 / 25.4 + 2 : 26;
+    const width = size.width * 96 / 25.4 - padding;
+    const height = size.height * 96 / 25.4 - padding;
+    const base = mobile ? 10.5 : 10;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     const blocks = [...main.querySelectorAll("pre")];
     // Group style writes and reads so every block does not force a document layout.
-    for (const pre of blocks) pre.style.fontSize = "10pt";
+    for (const pre of blocks) {
+      pre.style.fontSize = `${base}pt`;
+      pre.dataset.diagram = String(isTextDiagram(pre));
+    }
     const fonts = blocks.map((pre) => {
       const style = getComputedStyle(pre);
       return `${style.fontSize} ${style.fontFamily}`;
@@ -218,6 +233,13 @@
     let sliceStart = performance.now();
     for (const [index, pre] of blocks.entries()) {
       if (isCancelled()) throw new Error(t("cancelled"));
+      // Ordinary mobile code wraps without modifying the source text. Diagrams
+      // stay intact and fit both dimensions of one page, including tall blocks.
+      if (mobile && pre.dataset.diagram !== "true") {
+        sizes.push(`${base}pt`);
+        onProgress({ completed: index + 1, total: blocks.length });
+        continue;
+      }
       ctx.font = fonts[index];
       let widest = 0;
       for (const raw of pre.textContent.split("\n")) {
@@ -233,12 +255,13 @@
           sliceStart = performance.now();
         }
       }
-      sizes.push(widest > width ? `${10 * width / widest}pt` : "10pt");
+      const heightScale = mobile ? height / (pre.textContent.split("\n").length * base * 96 / 72 * 1.35) : 1;
+      sizes.push(`${base * Math.min(1, widest ? width / widest : 1, heightScale)}pt`);
       onProgress({ completed: index + 1, total: blocks.length });
     }
     if (isCancelled()) throw new Error(t("cancelled"));
     blocks.forEach((pre, index) => { pre.style.fontSize = sizes[index]; });
   }
 
-  globalThis.ChatGPTPdfExporter = { render, fitCode, preserveDiagrams };
+  globalThis.ChatGPTPdfExporter = { render, fitCode, preserveDiagrams, isTextDiagram };
 })();

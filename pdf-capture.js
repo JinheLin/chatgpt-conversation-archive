@@ -8,12 +8,13 @@
   const MAX_BYTES = 100 * 1024 * 1024;
   let busy = false;
 
-  async function capture({ landscape = false } = {}) {
+  async function capture({ landscape = false, pageLayout } = {}) {
     if (busy) throw new Error(t("pdfExportBusy"));
     busy = true;
     let target, attached = false, stream;
     const detachOnLeave = () => { if (attached) chrome.debugger.detach(target).catch(() => {}); };
     try {
+      const page = globalThis.ChatGPTPageLayout.resolve(pageLayout ?? landscape);
       if (!chrome.debugger) throw new Error(t("pdfDebuggerRequired"));
       const tab = await chrome.tabs.getCurrent();
       // Only this page may be printed. No caller-provided target or active-tab query.
@@ -27,10 +28,10 @@
       attached = true;
       globalThis.addEventListener("pagehide", detachOnLeave);
       const result = await chrome.debugger.sendCommand(target, "Page.printToPDF", {
-        landscape, printBackground: true, displayHeaderFooter: false, scale: 1,
-        paperWidth: 210 / 25.4, paperHeight: 297 / 25.4,
-        marginTop: 16 / 25.4, marginBottom: 18 / 25.4,
-        marginLeft: 17 / 25.4, marginRight: 17 / 25.4,
+        landscape: page.landscape, printBackground: true, displayHeaderFooter: false, scale: 1,
+        paperWidth: page.width / 25.4, paperHeight: page.height / 25.4,
+        marginTop: page.top / 25.4, marginBottom: page.bottom / 25.4,
+        marginLeft: page.left / 25.4, marginRight: page.right / 25.4,
         preferCSSPageSize: true, pageRanges: "", transferMode: "ReturnAsStream",
         generateTaggedPDF: true, generateDocumentOutline: false
       });

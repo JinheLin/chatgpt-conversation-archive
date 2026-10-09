@@ -35,6 +35,7 @@ function fixture(options = {}) {
     }
   });
   installI18n(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'page-layout.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'pdf-capture.js'), 'utf8'), context);
   return { api: context.ChatGPTPdfCapture, calls, listeners, context };
 }
@@ -56,6 +57,22 @@ test('captures only the current export tab with A4 settings and binary streaming
   assert.equal(params.generateTaggedPDF, true);
   assert.equal(params.generateDocumentOutline, false);
   assert.equal(app.listeners.size, 0);
+});
+
+test('mobile capture uses the custom sheet, matching CSS margins and full-page streaming', async () => {
+  const app = fixture();
+  await app.api.capture({ pageLayout: 'mobile' });
+  const params = app.calls.find(call => call.method === 'Page.printToPDF').params;
+  assert.equal(params.paperWidth, 100 / 25.4);
+  assert.equal(params.paperHeight, 180 / 25.4);
+  assert.equal(params.marginLeft, 6 / 25.4);
+  assert.equal(params.marginRight, 6 / 25.4);
+  assert.equal(params.marginTop, 7 / 25.4);
+  assert.equal(params.marginBottom, 7 / 25.4);
+  assert.equal(params.landscape, false);
+  assert.equal(params.preferCSSPageSize, true);
+  assert.equal(params.pageRanges, '');
+  assert.equal(app.calls.at(-1).method, 'detach');
 });
 
 for (const url of ['https://chatgpt.com/c/id', 'chrome-extension://other-extension/print.html', 'chrome-extension://our-extension/worker.js']) {

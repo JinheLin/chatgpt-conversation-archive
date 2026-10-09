@@ -29,6 +29,7 @@
   const pdfFallback = document.getElementById("pdf-fallback");
   pdfFallback.hidden = true;
   const pageLayout = document.getElementById("page-layout");
+  const mobileLayout = document.getElementById("mobile-layout");
   let outputBusy = false;
   const workspace = globalThis.ChatGPTReaderWorkspace.init({ document, isBusy: () => outputBusy });
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
@@ -37,7 +38,7 @@
     items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
     isBusy: () => outputBusy
   });
-  const outputControls = [input, startButton, pageLayout,
+  const outputControls = [input, startButton, pageLayout, mobileLayout,
     ...["reader-open", "reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
@@ -47,10 +48,13 @@
     for (const control of outputControls) control.disabled = value;
   }
   function updatePageLayout() {
-    const landscape = pageLayout.checked;
-    document.getElementById("page-direction").textContent = `@page { size: A4 ${landscape ? "landscape" : "portrait"}; }`;
-    main.dataset.landscape = String(landscape);
-    return landscape;
+    const layout = mobileLayout.checked ? "mobile" : pageLayout.checked ? "landscape" : "portrait";
+    const profile = globalThis.ChatGPTPageLayout.resolve(layout);
+    document.getElementById("page-direction").textContent = globalThis.ChatGPTPageLayout.css(layout);
+    main.dataset.landscape = String(profile.landscape);
+    main.dataset.pageLayout = layout;
+    document.getElementById("mobile-layout-hint").hidden = layout !== "mobile";
+    return layout;
   }
   updatePageLayout();
   let sourceTab = null;
@@ -229,7 +233,7 @@
       showReadProgress({ stage: "fonts" });
       await document.fonts.ready;
       if (mine !== generation) return;
-      await globalThis.ChatGPTPdfExporter.fitCode(main, pageLayout.checked, {
+      await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout(), {
         isCancelled: () => mine !== generation,
         onProgress: ({ completed, total }) => {
           if (mine === generation) showReadProgress({ stage: "fonts", completed, total });
@@ -289,14 +293,17 @@
     setOutputBusy(false);
     cancelButton.hidden = true;
   });
-  pageLayout.addEventListener("change", async () => {
+  async function changeLayout(control, other) {
     if (outputBusy) return;
+    if (control.checked) other.checked = false;
     setOutputBusy(true);
     try {
       await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
     } catch (error) { report(error.message, true); }
     finally { setOutputBusy(false); }
-  });
+  }
+  pageLayout.addEventListener("change", () => changeLayout(pageLayout, mobileLayout));
+  mobileLayout.addEventListener("change", () => changeLayout(mobileLayout, pageLayout));
   document.getElementById("print-again").addEventListener("click", async () => {
     if (outputBusy) return;
     await document.fonts.ready;
@@ -329,12 +336,12 @@
       report(t("directPdfProgress"));
       await document.fonts.ready;
       await Promise.all([...main.querySelectorAll("img")].map((image) => image.decode()));
-      const landscape = updatePageLayout();
-      await globalThis.ChatGPTPdfExporter.fitCode(main, landscape);
-      const bytes = await globalThis.ChatGPTPdfCapture.capture({ landscape });
+      const layout = updatePageLayout();
+      await globalThis.ChatGPTPdfExporter.fitCode(main, layout);
+      const bytes = await globalThis.ChatGPTPdfCapture.capture({ pageLayout: layout });
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(bytes, metadata);
-      const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.pdf`;
+      const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}${layout === "mobile" ? "-mobile" : ""}.pdf`;
       download(new Blob([result.bytes], { type: "application/pdf" }), filename);
       report(t("directPdfSaved", result.questions, result.pages), false, false, true);
     } catch (error) {
@@ -390,6 +397,8 @@
       const exported = document.implementation.createHTMLDocument(payload.title);
       exported.documentElement.lang = language;
       const charset = exported.createElement("meta"); charset.setAttribute("charset", "utf-8"); exported.head.prepend(charset);
+      const viewport = exported.createElement("meta"); viewport.name = "viewport"; viewport.content = "width=device-width, initial-scale=1";
+      exported.head.appendChild(viewport);
       const csp = exported.createElement("meta"); csp.httpEquiv = "Content-Security-Policy";
       csp.content = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'none'";
       exported.head.appendChild(csp);

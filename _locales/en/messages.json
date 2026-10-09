@@ -670,5 +670,11 @@
   },
   "readerNotSaved": {
     "message": "Not saved locally"
+  },
+  "mobileLayout": {
+    "message": "Mobile reading"
+  },
+  "mobileLayoutHint": {
+    "message": "100 × 180 mm pages with larger text. Wide diagrams may need zooming."
   }
 }

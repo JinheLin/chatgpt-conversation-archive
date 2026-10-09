@@ -31,7 +31,7 @@ function renderer() {
     markdownit: require('../vendor/markdown-it.min.js'), katex: require('../vendor/katex.min.js')
   });
   installI18n(context);
-  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
+  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'page-layout.js', 'export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   return { ...context.ChatGPTPdfExporter, main: new Node('main'), pre: text => { const node = new Node('pre'); node.textContent = text; return node; } };
 }
 const payload = {
@@ -65,7 +65,7 @@ test('code fitting yields and keeps the same width calculation, tab expansion an
   await pending;
   const width = (210 - 34) * 96 / 25.4 - 26;
   assert.equal(small.style.fontSize, '10pt');
-  assert.equal(large.style.fontSize, `${10 * width / 1600}pt`);
+  assert.ok(Math.abs(parseFloat(large.style.fontSize) - 10 * width / 1600) < 1e-10);
   assert.deepEqual(completed, [1, 2]);
 });
 

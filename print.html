@@ -12,6 +12,7 @@
   <script src="layout-markdown.js" defer></script>
   <script src="citation-markdown.js" defer></script>
   <script src="conversation-source.js" defer></script>
+  <script src="page-layout.js" defer></script>
   <script src="export.js" defer></script>
   <script src="vendor/pdf-lib.min.js" defer></script>
   <script src="pdf-outline.js" defer></script>
@@ -47,7 +48,9 @@
                 </div>
                 <div class="export-format-options">
                   <label class="export-option"><input id="page-layout" type="checkbox"><span data-i18n="landscape">A4 landscape</span></label>
+                  <label class="export-option"><input id="mobile-layout" type="checkbox"><span data-i18n="mobileLayout">Mobile reading</span></label>
                   <p class="hint" data-i18n="readerOrientationHint">Applies to the preview, HTML and PDF.</p>
+                  <p id="mobile-layout-hint" class="hint" data-i18n="mobileLayoutHint" hidden>Narrow pages with larger text. Wide diagrams may need zooming.</p>
                   <p class="hint" data-i18n="readerExportHint">Exports contain the original conversation. Back up highlights and comments separately.</p>
                 </div>
               </div>

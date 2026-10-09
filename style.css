@@ -188,6 +188,39 @@
   .pdf-message-body .archive-layout { break-inside: avoid-page; page-break-inside: avoid; }
 }
 
+/* A narrow page is re-typeset from the transcript, never resized from A4. */
+.pdf-document[data-page-layout="mobile"] {
+  width: min(100mm, 100%); min-height: 180mm; padding: 7mm 6mm;
+  font-size: 13pt; line-height: 1.6;
+}
+.pdf-document[data-page-layout="mobile"] .pdf-title { font-size: 20pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-meta { font-size: 9.5pt; margin-bottom: 1em; }
+.pdf-document[data-page-layout="mobile"] .pdf-role { font-size: 10.5pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-user .pdf-message-body { font-size: 14pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body h1 { font-size: 18pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body h2 { font-size: 16pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body :is(h3, h4, h5, h6) { font-size: 14pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body :is(code, kbd, samp, table, .archive-layout-table) { font-size: 10.5pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body pre {
+  padding: 2mm; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal;
+}
+.pdf-document[data-page-layout="mobile"] .pdf-message-body pre code {
+  font-size: inherit; white-space: inherit; overflow-wrap: inherit;
+}
+.pdf-document[data-page-layout="mobile"] .pdf-message-body pre[data-diagram="true"] {
+  white-space: pre; overflow-wrap: normal;
+}
+.pdf-document[data-page-layout="mobile"] .pdf-toc { padding: .7em; font-size: 11pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-toc h2 { font-size: 15pt; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body :is(th, td, .archive-layout-table-cell) { padding: .3em; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body img { max-height: 162mm; object-fit: contain; }
+@media print {
+  .pdf-document[data-page-layout="mobile"] { width: auto; min-height: 0; padding: 0; }
+  .pdf-document[data-page-layout="mobile"] .pdf-message-body pre:not([data-diagram="true"]) {
+    break-inside: auto; page-break-inside: auto; orphans: 2; widows: 2;
+  }
+}
+
 /* Local reader: annotations never change the source transcript or its exports. */
 .reader-library-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .reader-library-actions button, .reader-note-controls button, .reader-panel-heading button { background: #edf6f2; color: #176b58; }

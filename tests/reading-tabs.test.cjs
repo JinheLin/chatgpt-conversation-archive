@@ -92,6 +92,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     const original = context.chrome.i18n.getMessage;
     context.chrome.i18n.getMessage = (key, ...args) => ['savePdf', 'directPdfHint', 'pdfFallbackHeading'].includes(key) ? '' : original(key, ...args);
   }
+  vm.runInContext(fs.readFileSync(path.join(project, 'page-layout.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'export-menu.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'read-progress.js'), 'utf8'), context);
@@ -255,8 +256,8 @@ test('one PDF button captures the selected orientation and adds question bookmar
   let app;
   const options = {
     capture: async settings => {
-      assert.equal(settings.landscape, true);
-      for (const id of ['start-export', 'page-layout']) assert.equal(app.element(id).disabled, true);
+      assert.equal(settings.pageLayout, 'landscape');
+      for (const id of ['start-export', 'page-layout', 'mobile-layout']) assert.equal(app.element(id).disabled, true);
       await app.start(); // Submitting the read form cannot replace the document mid-export.
       assert.equal(app.requests.length, 1);
       return new Uint8Array([5, 6, 7]);
@@ -290,16 +291,32 @@ test('the landscape checkbox defaults to portrait and updates document width, pr
   await app.start();
   assert.equal(app.element('page-layout').checked, false);
   assert.equal(app.element('pdf-document').dataset.landscape, 'false');
-  assert.equal(app.element('page-direction').textContent, '@page { size: A4 portrait; }');
-  assert.equal(fitted.at(-1), false);
+  assert.equal(app.element('page-direction').textContent, '@page { size: A4 portrait; margin: 16mm 17mm 18mm 17mm; }');
+  assert.equal(fitted.at(-1), 'portrait');
   for (const checked of [true, false]) {
     app.element('page-layout').checked = checked;
     await app.element('page-layout').handlers.change();
     assert.equal(app.element('pdf-document').dataset.landscape, String(checked));
-    assert.equal(app.element('page-direction').textContent, `@page { size: A4 ${checked ? 'landscape' : 'portrait'}; }`);
-    assert.equal(fitted.at(-1), checked);
+    assert.equal(app.element('page-direction').textContent, `@page { size: A4 ${checked ? 'landscape' : 'portrait'}; margin: 16mm 17mm 18mm 17mm; }`);
+    assert.equal(fitted.at(-1), checked ? 'landscape' : 'portrait');
     assert.equal(app.element('page-layout').disabled, false);
   }
+});
+
+test('mobile PDF exports all messages and bookmarks using the mobile profile and a separate filename', async () => {
+  let captured;
+  const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
+    capture: async settings => { captured = settings; return new Uint8Array([1, 2, 3]); }
+  });
+  await app.start();
+  app.element('mobile-layout').checked = true;
+  await app.element('mobile-layout').handlers.change();
+  await app.element('save-pdf').handlers.click();
+  assert.equal(captured.pageLayout, 'mobile');
+  assert.equal(app.element('pdf-document').dataset.pageLayout, 'mobile');
+  assert.deepEqual(app.downloads, ['Test conversation-mobile.pdf']);
+  assert.match(app.element('export-status').textContent, /1 question bookmarks and 2 pages/);
+  assert.equal(app.element('mobile-layout').disabled, false);
 });
 
 test('PDF capture failure does not download an incomplete file and restores controls', async () => {

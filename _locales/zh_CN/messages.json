@@ -670,5 +670,11 @@
   },
   "readerNotSaved": {
     "message": "尚未保存到本地"
+  },
+  "mobileLayout": {
+    "message": "手机阅读版"
+  },
+  "mobileLayoutHint": {
+    "message": "100 × 180 mm 窄幅页面，正文大字排版。宽图表可能需要放大。"
   }
 }

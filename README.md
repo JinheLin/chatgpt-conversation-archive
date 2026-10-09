@@ -71,7 +71,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 - Supports Chinese and English text through system fonts. Chinese characters in monospace blocks depend on font fallback; alignment errors already present in a source diagram are not redrawn automatically.
 - Includes A4 print styles for keeping headings with following content, controlling orphans and widows, and keeping tables together when they fit on one page. Tables taller than a full page can still split, with repeated headers and breaks within rows avoided where possible.
 - Renders math locally with KaTeX. Offline HTML embeds the required math fonts and needs no CDN.
-- Converts ChatGPT citation components into **Sources** links and lists sources at the end of the corresponding message. ChatGPT controls and feedback toolbars are omitted.
+- Converts ChatGPT citations, including `<cite refs={...}/>` components and older citation markers, into **Sources** links and lists sources at the end of the corresponding message. If source URLs are absent from the conversation data, it shows **Source details unavailable**. Citation markup in code examples stays literal. ChatGPT controls and feedback toolbars are omitted.
 - Embeds downloadable attachments in HTML. Non-image files have download links in the document. PDF shows attachment descriptions; it does not embed those files as PDF attachments.
 - Images, audio, video, or special components that cannot be retrieved or converted are explicitly marked in the document and reported in the export status. A complete message chain does not guarantee successful conversion of every attachment.
 
@@ -87,6 +87,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
 | `layout-markdown.js` | Restricted ChatGPT layout parsing and static rendering without enabling raw HTML |
+| `citation-markdown.js` | New and legacy citation parsing, localized source links, and code example preservation |
 | `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
 | `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |

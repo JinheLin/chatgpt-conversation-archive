@@ -12,7 +12,7 @@ function renderer() {
   const context = vm.createContext({ markdownit: options => (md = markdownit(options)),
     katex: require('../vendor/katex.min.js') });
   installI18n(context);
-  for (const file of ['layout-markdown.js', 'export.js']) {
+  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'export.js']) {
     vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context);
   }
   return { md, render: source => md.render(context.ChatGPTPdfExporter.preserveDiagrams(source)) };

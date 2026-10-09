@@ -334,6 +334,9 @@
   "sourceHeading": {
     "message": "References"
   },
+  "citationUnavailable": {
+    "message": "Source details unavailable"
+  },
   "backIndex": {
     "message": "Back to question index ↑"
   },

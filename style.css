@@ -126,6 +126,8 @@
 .pdf-message-body figcaption { font-size: 9pt; color: #687b71; }
 .pdf-asset-warning { padding: .8em; border: 1px solid #e5c48b; background: #fff8e8; }
 .pdf-sources { font-size: 9pt; color: #62686e; }
+.pdf-citation { font-size: 9pt; font-weight: 400; white-space: nowrap; }
+.pdf-citation-unavailable { color: #62686e; }
 .pdf-message-body .katex { font-size: 1.1em; }
 /* Inert ChatGPT layout components, shared by preview, offline HTML and print. */
 .pdf-message-body .archive-layout { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }

@@ -31,7 +31,7 @@ function renderer() {
     markdownit: require('../vendor/markdown-it.min.js'), katex: require('../vendor/katex.min.js')
   });
   installI18n(context);
-  for (const file of ['layout-markdown.js', 'export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
+  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   return { ...context.ChatGPTPdfExporter, main: new Node('main'), pre: text => { const node = new Node('pre'); node.textContent = text; return node; } };
 }
 const payload = {
@@ -77,4 +77,33 @@ test('cancelling during a render batch stops further messages and keeps the part
   }), /cancelled/);
   assert.equal(main.hidden, true);
   assert.equal(main.querySelectorAll('section.pdf-message').length, 1);
+});
+
+test('full export connects inline citations to each message source list and keeps TOC titles clean', async () => {
+  const { render, main } = renderer();
+  const citation = '<cite refs={["turn1search0"]}/>';
+  await render({
+    title: 'Citation export', capturedAt: '2026-10-09T00:00:00Z',
+    messages: [
+      { id: 'q1', role: 'user', text: `Question ${citation}` },
+      { id: 'a1', role: 'assistant', text: `Answer ${citation}\n\n\`${citation}\``,
+        sources: [{ title: 'Reference', url: 'https://example.com/reference' }] },
+      { id: 'a2', role: 'assistant', text: `Answer ${citation}`,
+        sources: [{ title: 'Unavailable', url: 'javascript:evil()' }] }
+    ],
+    completeness: { verified: true, count: 3, questions: 1 }
+  }, main);
+  const sections = main.querySelectorAll('section.pdf-message');
+  const body = sections[1].children.find(node => node.className === 'pdf-message-body');
+  assert.match(body.html, /href="#sources-2"/);
+  assert.match(body.html, /<code>&lt;cite refs=/);
+  const sources = body.children.find(node => node.className === 'pdf-sources');
+  assert.equal(sources.id, 'sources-2');
+  assert.equal(sources.children[1].children[0].children[0].href, 'https://example.com/reference');
+  const unresolved = sections[2].children.find(node => node.className === 'pdf-message-body');
+  assert.match(unresolved.html, /Source details unavailable/);
+  assert.doesNotMatch(unresolved.html, /href=|turn1search/);
+  assert.equal(unresolved.children.length, 0);
+  const toc = main.children.find(node => node.tag === 'nav');
+  assert.equal(toc.children[1].children[0].children[0].textContent, 'Question');
 });

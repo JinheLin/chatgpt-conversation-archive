@@ -334,6 +334,9 @@
   "sourceHeading": {
     "message": "引用来源"
   },
+  "citationUnavailable": {
+    "message": "来源信息不可用"
+  },
   "backIndex": {
     "message": "返回问题目录 ↑"
   },

@@ -4,6 +4,7 @@
   const { t, language } = globalThis.ChatGPTPdfI18n;
   const md = globalThis.markdownit({ html: false, linkify: true, breaks: false, typographer: false });
   globalThis.ChatGPTArchiveLayout.install(md);
+  globalThis.ChatGPTPdfCitations.install(md);
   const mathHtml = (source, displayMode) => globalThis.katex.renderToString(source, {
     displayMode, throwOnError: false, trust: false, strict: "ignore", output: "htmlAndMathml"
   });
@@ -82,7 +83,7 @@
   function plainQuestion(text, number) {
     const request = text.split(/^#{0,6}\s*My request:\s*$/mi).at(-1);
     const container = document.createElement("div");
-    container.innerHTML = md.render(request.replace(/[^]*/g, ""));
+    container.innerHTML = md.render(request, { archiveHideCitations: true });
     const original = container.textContent.replace(/\s+/g, " ").trim();
     const withoutUrls = original.replace(/https?[:\\]+\/\/\S+/g, "").trim();
     const title = withoutUrls || original;
@@ -139,8 +140,8 @@
       const body = el("div", "pdf-message-body");
       // html:false and KaTeX trust:false; do not execute HTML from the transcript.
       const sourceId = `sources-${index + 1}`;
-      const text = message.text.replace(/[^]*/g, () => message.sources?.length ? `[${t("sourcesLabel")}](#${sourceId})` : "");
-      body.innerHTML = md.render(preserveDiagrams(text));
+      const sources = (message.sources || []).filter((source) => /^https?:\/\//.test(source.url));
+      body.innerHTML = md.render(preserveDiagrams(message.text), { archiveSourcesId: sources.length ? sourceId : null });
       section.appendChild(body);
       for (const asset of message.assets || []) {
         if (asset.dataUrl) {
@@ -171,13 +172,12 @@
           problems.push(t("imageNotEmbedded", label));
         }
       }
-      if (message.sources?.length) {
+      if (sources.length) {
         const details = el("div", "pdf-sources");
         details.id = sourceId;
         details.appendChild(el("p", "", t("sourceHeading")));
         const links = el("ul");
-        for (const source of message.sources) {
-          if (!/^https?:\/\//.test(source.url)) continue;
+        for (const source of sources) {
           const item = el("li");
           const link = el("a", "", source.title || source.url);
           link.href = source.url;

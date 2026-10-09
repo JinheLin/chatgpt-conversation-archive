@@ -105,9 +105,10 @@
 .export-panel .export-format-list button { display: block; width: 100%; padding: 8px 12px; border-radius: 4px; background: transparent; color: #202124; font-weight: 500; text-align: left; }
 .export-panel .export-format-list button:hover, .export-panel .export-format-list button:focus-visible { background: #edf6f2; color: #176b58; }
 .export-menu button:focus-visible { outline: 2px solid #176b58; outline-offset: 2px; }
-.export-extra { width: 100%; }
-.export-extra summary { cursor: pointer; color: #62686e; }
-.export-extra button { margin: 8px 6px 0 0; }
+.pdf-fallback { width: 100%; margin-top: 4px; padding-top: 8px; }
+.pdf-fallback[hidden] { display: none; }
+.pdf-fallback h2 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.pdf-fallback button { margin: 0 6px 6px 0; }
 .export-panel .export-option { display: inline-flex; align-items: center; gap: 8px; width: 100%; font-weight: 400; }
 .export-option input { margin: 0; accent-color: #176b58; }
 #output-actions[hidden], .pdf-document[hidden], #cancel-export[hidden] { display: none; }

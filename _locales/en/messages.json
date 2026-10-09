@@ -344,7 +344,7 @@
     "message": "Add PDF sidebar index"
   },
   "pdfOutlineHint": {
-    "message": "For an existing PDF without sidebar bookmarks, select its conversation here, then use Add PDF sidebar index to choose the file. Manual printing also needs this step; Export → PDF adds bookmarks automatically."
+    "message": "First use Print / Save PDF to save all pages with Chrome's Save as PDF. Then use Add PDF sidebar index to select that file and add question bookmarks locally."
   },
   "pdfOutlineProgress": {
     "message": "Adding PDF sidebar bookmarks locally…"
@@ -395,8 +395,8 @@
   "directPdfHint": {
     "message": "Export → PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes."
   },
-  "moreOptions": {
-    "message": "More options"
+  "pdfFallbackHeading": {
+    "message": "Alternative PDF export"
   },
   "directPdfProgress": {
     "message": "Generating a PDF locally with the selected page settings…"
@@ -413,7 +413,7 @@
     }
   },
   "directPdfFailed": {
-    "message": "Could not export PDF: $error$ You can use the printing options under More options.",
+    "message": "Could not export PDF: $error$ Use the alternative export options below to save a PDF and add sidebar bookmarks.",
     "placeholders": {
       "error": {
         "content": "$1"

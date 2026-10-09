@@ -21,6 +21,8 @@
   const startButton = document.getElementById("start-export");
   const cancelButton = document.getElementById("cancel-export");
   const actions = document.getElementById("output-actions");
+  const pdfFallback = document.getElementById("pdf-fallback");
+  pdfFallback.hidden = true;
   const showBackLinks = document.getElementById("show-back-links");
   let outputBusy = false;
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
@@ -123,6 +125,7 @@
     startButton.disabled = true;
     cancelButton.hidden = false;
     actions.hidden = true;
+    pdfFallback.hidden = true;
     exportMenu.close();
     main.hidden = true;
     payload = null;
@@ -242,6 +245,7 @@
   document.getElementById("save-pdf").addEventListener("click", async () => {
     if (outputBusy) return;
     exportMenu.close({ restoreFocus: true });
+    pdfFallback.hidden = true;
     setOutputBusy(true);
     try {
       const metadata = pdfMetadata();
@@ -256,7 +260,10 @@
       const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.pdf`;
       download(new Blob([result.bytes], { type: "application/pdf" }), filename);
       report(t("directPdfSaved", result.questions, result.pages));
-    } catch (error) { report(t("directPdfFailed", error.message), true); }
+    } catch (error) {
+      report(t("directPdfFailed", error.message), true);
+      pdfFallback.hidden = !payload || main.hidden;
+    }
     finally { setOutputBusy(false); }
   });
   const outlineButton = document.getElementById("add-pdf-outline");

@@ -344,7 +344,7 @@
     "message": "添加 PDF 侧栏目录"
   },
   "pdfOutlineHint": {
-    "message": "已有 PDF 缺少侧栏目录时，先在这里读取同一个对话，再点击「添加 PDF 侧栏目录」选择文件。手动打印也需要此步骤；「导出 → PDF」会自动添加目录。"
+    "message": "先点击「打印 / 保存 PDF」，使用 Chrome 的「另存为 PDF」保存全部页面，再点击「添加 PDF 侧栏目录」选择刚保存的文件，在本机补上问题书签。"
   },
   "pdfOutlineProgress": {
     "message": "正在本机添加 PDF 侧栏书签…"
@@ -395,8 +395,8 @@
   "directPdfHint": {
     "message": "「导出 → PDF」会自动生成侧栏目录，保留所选纸张方向和返回目录链接。Chrome 在导出时可能显示调试提示，渲染完成后自动结束连接。"
   },
-  "moreOptions": {
-    "message": "更多选项"
+  "pdfFallbackHeading": {
+    "message": "备用 PDF 导出方式"
   },
   "directPdfProgress": {
     "message": "正在本机按所选纸张设置生成 PDF…"
@@ -413,7 +413,7 @@
     }
   },
   "directPdfFailed": {
-    "message": "导出 PDF 失败：$error$ 可以使用「更多选项」中的打印功能。",
+    "message": "导出 PDF 失败：$error$ 可使用下方的备用方式保存 PDF 并添加侧栏目录。",
     "placeholders": {
       "error": {
         "content": "$1"

@@ -69,14 +69,14 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       },
       scripting: { executeScript: async () => {} }
     },
-    ChatGPTPdfExporter: { render: output.render || (() => []), fitCode: output.fit || (() => {}) },
+    ChatGPTPdfExporter: { render: output.render || ((payload, main) => { main.hidden = false; return []; }), fitCode: output.fit || (() => {}) },
     ChatGPTPdfCapture: { capture: output.capture || (async () => new Uint8Array([1, 2, 3])) },
     ChatGPTPdfOutline: { add: output.add || (async () => ({ bytes: new Uint8Array([1, 2, 3]), questions: 1, pages: 2 })) }
   });
   installI18n(context, output.locale || 'en-US');
   if (output.staleLocale) {
     const original = context.chrome.i18n.getMessage;
-    context.chrome.i18n.getMessage = (key, ...args) => ['savePdf', 'directPdfHint', 'moreOptions'].includes(key) ? '' : original(key, ...args);
+    context.chrome.i18n.getMessage = (key, ...args) => ['savePdf', 'directPdfHint', 'pdfFallbackHeading'].includes(key) ? '' : original(key, ...args);
   }
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'export-menu.js'), 'utf8'), context);
@@ -235,21 +235,38 @@ test('one PDF button captures the selected orientation and adds question bookmar
   assert.equal(app.element('pdf-document').dataset.showBackLinks, 'false');
   assert.match(app.element('export-status').textContent, /1 question bookmarks and 2 pages/);
   assert.equal(app.element('save-pdf').disabled, false);
+  assert.equal(app.element('pdf-fallback').hidden, true);
   assert.equal(app.created.length, 0);
   assert.equal(app.activated.length, 0);
 });
 
 test('PDF capture failure does not download an incomplete file and restores controls', async () => {
+  let fail = true;
   const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
-    capture: async () => { throw new Error('Debugger cancelled'); }
+    capture: async () => {
+      if (fail) throw new Error('Debugger cancelled');
+      return new Uint8Array([1, 2, 3]);
+    }
   });
   await app.start();
+  assert.equal(app.element('pdf-fallback').hidden, true);
   await app.element('save-pdf').handlers.click();
   assert.equal(app.downloads.length, 0);
   assert.equal(app.element('start-export').disabled, false);
   assert.equal(app.element('show-back-links').disabled, false);
   assert.match(app.element('export-status').textContent, /Debugger cancelled/);
   assert.equal(app.element('export-status').dataset.level, 'error');
+  assert.equal(app.element('pdf-fallback').hidden, false);
+  assert.equal(app.element('print-again').disabled, false);
+  assert.equal(app.element('add-pdf-outline').disabled, false);
+  await app.start();
+  assert.equal(app.element('pdf-fallback').hidden, true);
+  await app.element('save-pdf').handlers.click();
+  assert.equal(app.element('pdf-fallback').hidden, false);
+  fail = false;
+  await app.element('save-pdf').handlers.click();
+  assert.equal(app.element('pdf-fallback').hidden, true);
+  assert.deepEqual(app.downloads, ['Test conversation.pdf']);
 });
 
 test('reading reuses the same conversation without creating, closing or activating any tab', async () => {

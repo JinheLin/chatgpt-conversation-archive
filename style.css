@@ -72,7 +72,6 @@
 .input-row input { flex: 1; min-width: 0; border: 1px solid #bcc8c2; border-radius: 6px; padding: 10px 12px; font: inherit; }
 .export-panel button { padding: 10px 16px; border: 0; border-radius: 6px; background: #176b58; color: #fff; font: 600 14px/1.4 system-ui, sans-serif; cursor: pointer; }
 .export-panel button:disabled { opacity: .6; cursor: wait; }
-.export-panel select { padding: 7px; margin: 0 8px; font: inherit; }
 .export-panel .hint { color: #62686e; font-size: 13px; }
 #export-status { margin-top: 16px; padding: 12px; border-radius: 6px; background: #edf6f2; color: #176b58; }
 #export-status[data-level="error"] { background: #fff0ed; color: #b42318; }

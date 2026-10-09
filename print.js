@@ -24,6 +24,7 @@
   const pdfFallback = document.getElementById("pdf-fallback");
   pdfFallback.hidden = true;
   const showBackLinks = document.getElementById("show-back-links");
+  const pageLayout = document.getElementById("page-layout");
   let outputBusy = false;
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
     root: document.getElementById("export-menu"), button: document.getElementById("export-toggle"),
@@ -31,8 +32,8 @@
     items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
     isBusy: () => outputBusy
   });
-  const outputControls = [input, startButton, showBackLinks,
-    ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline", "page-layout"].map((id) => document.getElementById(id))];
+  const outputControls = [input, startButton, showBackLinks, pageLayout,
+    ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
     outputBusy = value;
     if (value) exportMenu.close();
@@ -41,6 +42,13 @@
   function updateBackLinks() { main.dataset.showBackLinks = String(showBackLinks.checked); }
   showBackLinks.addEventListener("change", updateBackLinks);
   updateBackLinks();
+  function updatePageLayout() {
+    const landscape = pageLayout.checked;
+    document.getElementById("page-direction").textContent = `@page { size: A4 ${landscape ? "landscape" : "portrait"}; }`;
+    main.dataset.landscape = String(landscape);
+    return landscape;
+  }
+  updatePageLayout();
   let sourceTab = null;
   let generation = 0;
   let payload = null;
@@ -173,7 +181,7 @@
       showReadProgress({ stage: "fonts" });
       await document.fonts.ready;
       if (mine !== generation) return;
-      await globalThis.ChatGPTPdfExporter.fitCode(main, document.getElementById("page-layout").value === "landscape", {
+      await globalThis.ChatGPTPdfExporter.fitCode(main, pageLayout.checked, {
         isCancelled: () => mine !== generation,
         onProgress: ({ completed, total }) => {
           if (mine === generation) showReadProgress({ stage: "fonts", completed, total });
@@ -210,13 +218,11 @@
     startButton.disabled = false;
     cancelButton.hidden = true;
   });
-  document.getElementById("page-layout").addEventListener("change", async (event) => {
+  pageLayout.addEventListener("change", async () => {
     if (outputBusy) return;
     setOutputBusy(true);
     try {
-      document.getElementById("page-direction").textContent = `@page { size: A4 ${event.target.value}; }`;
-      main.dataset.landscape = String(event.target.value === "landscape");
-      await globalThis.ChatGPTPdfExporter.fitCode(main, event.target.value === "landscape");
+      await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
     } catch (error) { report(error.message, true); }
     finally { setOutputBusy(false); }
   });
@@ -252,7 +258,7 @@
       report(t("directPdfProgress"));
       await document.fonts.ready;
       await Promise.all([...main.querySelectorAll("img")].map((image) => image.decode()));
-      const landscape = document.getElementById("page-layout").value === "landscape";
+      const landscape = updatePageLayout();
       await globalThis.ChatGPTPdfExporter.fitCode(main, landscape);
       const bytes = await globalThis.ChatGPTPdfCapture.capture({ landscape });
       report(t("pdfOutlineProgress"));

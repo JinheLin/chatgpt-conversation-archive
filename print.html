@@ -50,7 +50,7 @@
           </div>
         </div>
       </div>
-      <label for="page-layout" data-i18n="pageDirection">PDF orientation</label><select id="page-layout"><option value="portrait" data-i18n="portrait">A4 portrait</option><option value="landscape" data-i18n="landscape">A4 landscape (for wide text diagrams)</option></select>
+      <label class="export-option"><input id="page-layout" type="checkbox"><span data-i18n="landscape">A4 landscape</span></label>
       <label class="export-option"><input id="show-back-links" type="checkbox" checked><span data-i18n="showBackLinks">Show links back to the question index</span></label>
       <p class="hint" data-i18n="directPdfHint">Export → PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
       <div id="pdf-fallback" class="pdf-fallback" role="group" aria-labelledby="pdf-fallback-heading" hidden>

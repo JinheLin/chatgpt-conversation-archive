@@ -41,17 +41,11 @@
   "printPdf": {
     "message": "Print / Save PDF"
   },
-  "pageDirection": {
-    "message": "PDF orientation"
-  },
   "showBackLinks": {
     "message": "Show links back to the question index"
   },
-  "portrait": {
-    "message": "A4 portrait"
-  },
   "landscape": {
-    "message": "A4 landscape (for wide text diagrams)"
+    "message": "A4 landscape"
   },
   "loadTimeout": {
     "message": "Page loading timed out. Check your login session and try again."

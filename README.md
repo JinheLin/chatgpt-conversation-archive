@@ -36,7 +36,7 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
    - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
    - **Export → PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
-   - For wide text diagrams, select **A4 landscape** before exporting PDF or saving HTML.
+   - **A4 landscape** is unchecked by default (A4 portrait). Check it to widen the preview and saved HTML and export PDFs in landscape. This also gives wide text diagrams more space.
    - **Show links back to the question index** is checked by default. Uncheck it to hide return links in the preview, offline HTML and PDF. The question index at the beginning remains available.
    - If **Export → PDF** fails, **Alternative PDF export** appears with **Print / Save PDF** and **Add PDF sidebar index**. For manual printing, select **Save as PDF**, A4, **All** pages and default scale. Disable **Headers and footers** and enable **Background graphics** if needed, then select the saved file with **Add PDF sidebar index**. These controls are hidden during normal use and after a successful retry or a new conversation read.
 

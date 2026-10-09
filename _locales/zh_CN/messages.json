@@ -41,17 +41,11 @@
   "printPdf": {
     "message": "打印 / 保存 PDF"
   },
-  "pageDirection": {
-    "message": "PDF 纸张方向"
-  },
   "showBackLinks": {
     "message": "显示返回问题目录链接"
   },
-  "portrait": {
-    "message": "A4 纵向"
-  },
   "landscape": {
-    "message": "A4 横向（适合宽文本图）"
+    "message": "A4 横向"
   },
   "loadTimeout": {
     "message": "页面加载超时，请检查登录状态后重试。"

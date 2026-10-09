@@ -227,7 +227,8 @@ test('one PDF button captures the selected orientation and adds question bookmar
   };
   app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), options);
   await app.start();
-  app.element('page-layout').value = 'landscape';
+  app.element('page-layout').checked = true;
+  await app.element('page-layout').handlers.change();
   app.element('show-back-links').checked = false;
   app.element('show-back-links').handlers.change();
   await app.element('save-pdf').handlers.click();
@@ -238,6 +239,26 @@ test('one PDF button captures the selected orientation and adds question bookmar
   assert.equal(app.element('pdf-fallback').hidden, true);
   assert.equal(app.created.length, 0);
   assert.equal(app.activated.length, 0);
+});
+
+test('the landscape checkbox defaults to portrait and updates document width, print size and code fitting together', async () => {
+  const fitted = [];
+  const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
+    fit: async (main, landscape) => fitted.push(landscape)
+  });
+  await app.start();
+  assert.equal(app.element('page-layout').checked, false);
+  assert.equal(app.element('pdf-document').dataset.landscape, 'false');
+  assert.equal(app.element('page-direction').textContent, '@page { size: A4 portrait; }');
+  assert.equal(fitted.at(-1), false);
+  for (const checked of [true, false]) {
+    app.element('page-layout').checked = checked;
+    await app.element('page-layout').handlers.change();
+    assert.equal(app.element('pdf-document').dataset.landscape, String(checked));
+    assert.equal(app.element('page-direction').textContent, `@page { size: A4 ${checked ? 'landscape' : 'portrait'}; }`);
+    assert.equal(fitted.at(-1), checked);
+    assert.equal(app.element('page-layout').disabled, false);
+  }
 });
 
 test('PDF capture failure does not download an incomplete file and restores controls', async () => {

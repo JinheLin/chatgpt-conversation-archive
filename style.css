@@ -229,3 +229,73 @@
   .reader-selection, .reader-annotations { display: none !important; }
   .reader-highlight { background: transparent; text-decoration: none !important; outline: none; }
 }
+
+/* Reader workspace: a compact reading bar, with opening and data tools disclosed on demand. */
+@media screen {
+  .pdf-print-page { --reader-bar-height: 86px; background: #f3f5f4; }
+  .reader-bar { position: sticky; top: 0; z-index: 25; max-width: none; margin: 0; padding: 14px 24px; border-radius: 0; border-bottom: 1px solid #dfe5e1; box-shadow: none; }
+  .reader-bar-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: calc(297mm + 264px); margin: 0 auto; }
+  .reader-document-heading { flex: 1; min-width: 0; }
+  .reader-document-heading h1 { font-size: 19px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .reader-document-heading .hint { margin: 3px 0 0; font-size: 12px; }
+  .reader-toolbar, .reader-bar #output-actions { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0; }
+  .reader-toolbar { flex-shrink: 0; }
+  .reader-bar button { white-space: nowrap; padding: 8px 12px; }
+  .export-panel .button-secondary { background: #fff; color: #47534d; border: 1px solid #d4ded8; font-weight: 500; }
+  .export-panel .button-secondary:hover { background: #f3f7f5; color: #176b58; border-color: #b5c9c1; }
+  .export-panel button:focus-visible { outline: 2px solid #176b58; outline-offset: 3px; }
+  .reader-bar #reader-toggle[aria-expanded="true"] { background: #edf6f2; color: #176b58; border-color: #b5c9c1; }
+  .reader-workspace { max-width: 880px; margin: 24px auto; padding: 24px 28px; border: 1px solid #dfe5e1; box-shadow: 0 2px 8px #20212408; }
+  .pdf-print-page[data-reader-state="reading"] .reader-workspace { position: fixed; z-index: 24; top: calc(var(--reader-bar-height) + 12px); left: 50%; transform: translateX(-50%); width: min(880px, calc(100% - 32px)); max-height: calc(100vh - var(--reader-bar-height) - 28px); overflow-y: auto; overscroll-behavior: contain; margin: 0; box-shadow: 0 8px 32px #20212420; }
+  .reader-workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .reader-workspace-heading h2 { font-size: 18px; margin: 0; }
+  .reader-workspace #export-form label { font-size: 13px; margin: 0 0 6px; }
+  .reader-workspace .hint { font-size: 12px; margin-top: 8px; }
+  .reader-current { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 16px 0; padding: 10px 12px; border-radius: 6px; background: #f5f7f6; font-size: 13px; }
+  .reader-current a { color: #47534d; }
+  .reader-current button { padding: 6px 10px; font-size: 12px; }
+  .reader-library { margin-top: 20px; padding-top: 16px; }
+  .reader-library-entry { padding: 6px 0; }
+  .reader-library-list { margin: 0; }
+  .reader-data-tools { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e1e7e3; font-size: 13px; }
+  .reader-data-tools summary { cursor: pointer; color: #62686e; }
+  .reader-data-tools .reader-library-actions { margin-bottom: 0; }
+  .reader-feedback { max-width: 880px; margin: 16px auto; padding: 0; background: none; box-shadow: none; }
+  .reader-feedback:not(:has(> :not([hidden]))) { display: none; }
+  .pdf-print-page[data-reader-state="reading"] .reader-feedback { position: fixed; z-index: 24; top: calc(var(--reader-bar-height) + 8px); left: 50%; transform: translateX(-50%); width: min(880px, calc(100% - 32px)); max-height: calc(100vh - var(--reader-bar-height) - 24px); overflow-y: auto; margin: 0; }
+  .reader-feedback #export-status, .reader-feedback #read-progress { margin: 0; font-size: 13px; }
+  .reader-feedback .pdf-fallback { box-sizing: border-box; padding: 16px; background: #fff; border: 1px solid #d8e4de; border-radius: 6px; box-shadow: 0 3px 12px #20212412; }
+  .reader-feedback #cancel-export { margin-top: 8px; padding: 6px 10px; background: #fff; color: #62686e; border: 1px solid #d4ded8; font-weight: 500; }
+  .reader-bar .export-formats { left: auto; right: 0; min-width: 260px; max-width: calc(100vw - 24px); }
+  .export-format-card { border: 1px solid #d8e4de; border-radius: 8px; background: #fff; box-shadow: 0 4px 18px #20212420; }
+  .reader-bar .export-format-list { border: 0; box-shadow: none; padding: 6px; }
+  .reader-bar .export-format-list button { padding: 9px 12px; }
+  .export-format-options { padding: 8px 14px 12px; border-top: 1px solid #e5eae7; }
+  .export-format-options .export-option { margin: 0; font-size: 13px; }
+  .export-format-options .hint { margin: 5px 0 0; font-size: 11px; line-height: 1.55; }
+  .preview-sidebar, .reader-annotations { top: calc(var(--reader-bar-height) + 16px); max-height: calc(100vh - var(--reader-bar-height) - 32px); }
+  .pdf-message { scroll-margin-top: calc(var(--reader-bar-height) + 20px); }
+  .reader-panel-hint { color: #62686e; margin: 0 0 12px; font-size: 12px; }
+  #reader-status { padding: 8px 10px; background: #edf6f2; border-radius: 5px; font-size: 12px; }
+  #reader-status[data-level="error"] { background: #fff0ed; }
+  .reader-workspace[hidden], .reader-current[hidden], #reader-meta[hidden], #reader-open[hidden],
+  #reader-workspace-close[hidden], #reader-status[hidden], .reader-bar #output-actions[hidden] { display: none; }
+}
+@media screen and (max-width: 1399px) {
+  .reader-annotations { bottom: 12px; max-height: none; }
+}
+@media screen and (max-width: 900px) {
+  .preview-sidebar { position: static; max-height: 240px; }
+  .reader-bar-inner { gap: 12px; }
+  .reader-bar { padding: 12px 16px; }
+}
+@media screen and (max-width: 700px) {
+  .pdf-print-page { --reader-bar-height: 124px; }
+  .reader-bar-inner { align-items: stretch; flex-direction: column; gap: 10px; }
+  .reader-toolbar { justify-content: flex-end; flex-wrap: wrap; }
+  .reader-bar button { font-size: 12px; padding: 7px 9px; }
+  .reader-workspace { margin: 16px 10px; padding: 20px; }
+  .reader-workspace-heading h2 { font-size: 16px; }
+  .reader-workspace-heading button { font-size: 12px; padding: 7px 10px; }
+  .reader-feedback { margin: 12px 10px; }
+}

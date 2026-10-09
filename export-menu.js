@@ -33,7 +33,8 @@
       if (event.key === "Escape" && !popup.hidden) {
         event.preventDefault();
         close({ restoreFocus: true });
-      } else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+      } else if (["ArrowDown", "ArrowUp"].includes(event.key) &&
+          (event.target === button || items.includes(event.target) || button.contains(event.target))) {
         event.preventDefault();
         if (!open()) return;
         pinned = true;
@@ -41,7 +42,7 @@
         const next = index < 0 ? (event.key === "ArrowDown" ? 0 : items.length - 1) :
           (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
         items[next].focus();
-      } else if (!popup.hidden && ["Home", "End"].includes(event.key)) {
+      } else if (!popup.hidden && ["Home", "End"].includes(event.key) && items.includes(event.target)) {
         event.preventDefault();
         items[event.key === "Home" ? 0 : items.length - 1].focus();
       }

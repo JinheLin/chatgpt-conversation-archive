@@ -22,27 +22,70 @@
   <script src="reader-store.js" defer></script>
   <script src="reader-anchor.js" defer></script>
   <script src="reader.js" defer></script>
+  <script src="reader-workspace.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
-  <div class="export-panel">
-    <h1 data-i18n="exportHeading">ChatGPT conversation reader</h1>
-    <p data-i18n="exportDescription">Read complete conversations, save highlights and comments locally, and export HTML or PDF.</p>
+  <header class="export-panel reader-bar">
+    <div class="reader-bar-inner">
+      <div class="reader-document-heading">
+        <h1 id="reader-heading" data-i18n="exportHeading">ChatGPT conversation reader</h1>
+        <p id="reader-meta" class="hint" hidden></p>
+      </div>
+      <div class="reader-toolbar">
+        <button id="reader-open" class="button-secondary" type="button" aria-expanded="true" aria-controls="reader-workspace" data-i18n="readerOpen" hidden>Open conversation</button>
+        <div id="output-actions" hidden>
+          <button id="reader-toggle" class="button-secondary" type="button" aria-expanded="false" aria-controls="reader-annotations" data-i18n="readerAnnotations">Highlights &amp; comments</button>
+          <div id="export-menu" class="export-menu">
+            <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
+            <div id="export-formats" class="export-formats" hidden>
+              <div class="export-format-card">
+                <div class="export-format-list" role="menu" aria-labelledby="export-toggle">
+                  <button id="save-html" type="button" role="menuitem" tabindex="-1" data-i18n="saveHtml">HTML</button>
+                  <button id="save-pdf" type="button" role="menuitem" tabindex="-1" data-i18n="savePdf">PDF</button>
+                </div>
+                <div class="export-format-options">
+                  <label class="export-option"><input id="page-layout" type="checkbox"><span data-i18n="landscape">A4 landscape</span></label>
+                  <p class="hint" data-i18n="readerOrientationHint">Applies to the preview, HTML and PDF.</p>
+                  <p class="hint" data-i18n="readerExportHint">Exports contain the original conversation. Back up highlights and comments separately.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <section id="reader-workspace" class="export-panel reader-workspace" aria-labelledby="reader-workspace-title">
+    <div class="reader-workspace-heading">
+      <h2 id="reader-workspace-title" data-i18n="readerOpen">Open conversation</h2>
+      <button id="reader-workspace-close" class="button-secondary" type="button" data-i18n="readerReturn" hidden>Return to reading</button>
+    </div>
     <form id="export-form">
       <label for="conversation-url" data-i18n="urlLabel">ChatGPT conversation link</label>
       <div class="input-row"><input id="conversation-url" type="url" required placeholder="https://chatgpt.com/c/…" autocomplete="off"><button id="start-export" type="submit" data-i18n="readFull">Read full conversation</button></div>
     </form>
-    <p class="hint" data-i18n="sessionHint">Private conversations use your ChatGPT login session in this browser. Only the selected branch is read, including all its user and assistant messages from beginning to end.</p>
-    <div class="reader-library-actions">
-      <button id="reader-backup" type="button" data-i18n="readerBackup">Back up local data</button>
-      <button id="reader-restore" type="button" data-i18n="readerRestore">Restore backup</button>
-      <input id="reader-backup-file" type="file" accept=".json,application/json" hidden>
+    <p class="hint" data-i18n="readerLoginHint">To read a private conversation, sign in to ChatGPT in this browser.</p>
+    <div id="reader-current" class="reader-current" hidden>
+      <a id="reader-current-link" target="_blank" rel="noopener noreferrer" data-i18n="originalLink">Original conversation</a>
+      <button id="reader-update" class="button-secondary" type="button" data-i18n="readerUpdate">Update conversation</button>
     </div>
-    <details id="reader-library" class="reader-library">
+    <details id="reader-library" class="reader-library" open>
       <summary id="reader-library-title" data-i18n="readerLibrary">Local conversations</summary>
       <div id="reader-library-list"></div>
     </details>
-    <p id="export-status" role="status" aria-live="polite" data-i18n="waitingInput">Waiting for a conversation link.</p>
+    <details id="reader-data-tools" class="reader-data-tools">
+      <summary data-i18n="readerDataTools">Backup &amp; restore</summary>
+      <p class="hint" data-i18n="readerBackupHint">Save or restore all local conversations, highlights and comments.</p>
+      <div class="reader-library-actions">
+        <button id="reader-backup" class="button-secondary" type="button" data-i18n="readerBackup">Back up local data</button>
+        <button id="reader-restore" class="button-secondary" type="button" data-i18n="readerRestore">Restore backup</button>
+        <input id="reader-backup-file" type="file" accept=".json,application/json" hidden>
+      </div>
+    </details>
+  </section>
+  <div class="reader-feedback export-panel">
+    <p id="export-status" role="status" aria-live="polite" hidden></p>
     <div id="read-progress" hidden>
       <div class="read-progress-heading">
         <span id="read-progress-label" role="status" aria-live="polite"></span>
@@ -53,29 +96,12 @@
       <p id="read-progress-detail" class="hint" hidden></p>
     </div>
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
-    <div id="output-actions" hidden>
-      <button id="reader-update" type="button" data-i18n="readerUpdate">Update conversation</button>
-      <button id="reader-toggle" type="button" aria-expanded="false" aria-controls="reader-annotations" data-i18n="readerAnnotations">Annotations</button>
-      <div id="export-menu" class="export-menu">
-        <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
-        <div id="export-formats" class="export-formats" hidden>
-          <div class="export-format-list" role="menu" aria-labelledby="export-toggle">
-            <button id="save-html" type="button" role="menuitem" tabindex="-1" data-i18n="saveHtml">HTML</button>
-            <button id="save-pdf" type="button" role="menuitem" tabindex="-1" data-i18n="savePdf">PDF</button>
-          </div>
-        </div>
-      </div>
-      <label class="export-option"><input id="page-layout" type="checkbox"><span data-i18n="landscape">A4 landscape</span></label>
-      <p id="reader-status" class="hint" role="status" aria-live="polite"></p>
-      <p class="hint" data-i18n="readerHint">Highlights save immediately; click Save comment to save a note. HTML and PDF contain the original conversation; use a backup for annotations.</p>
-      <p class="hint" data-i18n="directPdfHint">Export → PDF creates sidebar bookmarks automatically, using the selected orientation. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
-      <div id="pdf-fallback" class="pdf-fallback" role="group" aria-labelledby="pdf-fallback-heading" hidden>
+    <div id="pdf-fallback" class="pdf-fallback" role="group" aria-labelledby="pdf-fallback-heading" hidden>
         <h2 id="pdf-fallback-heading" data-i18n="pdfFallbackHeading">Alternative PDF export</h2>
         <button id="print-again" type="button" data-i18n="printPdf">Print / Save PDF</button>
         <button id="add-pdf-outline" type="button" data-i18n="addPdfOutline">Add PDF sidebar index</button>
         <input id="pdf-outline-file" type="file" accept=".pdf,application/pdf" hidden>
         <p class="hint" data-i18n="pdfOutlineHint">First use Print / Save PDF to save all pages with Chrome's Save as PDF. Then use Add PDF sidebar index to select that file and add question bookmarks locally.</p>
-      </div>
     </div>
   </div>
   <div id="preview-layout" class="preview-layout" hidden>
@@ -86,6 +112,8 @@
         <h2 id="reader-annotations-title" data-i18n="readerAnnotations">Annotations</h2>
         <button id="reader-close" type="button" data-i18n="readerClose">Close</button>
       </div>
+      <p class="hint reader-panel-hint" data-i18n="readerSelectionHint">Select text to add a highlight or comment.</p>
+      <p id="reader-status" class="hint" role="status" aria-live="polite" hidden></p>
       <div id="reader-editor" class="reader-editor" hidden>
         <blockquote id="reader-editor-quote"></blockquote>
         <label for="reader-comment" data-i18n="readerCommentLabel">Comment</label>

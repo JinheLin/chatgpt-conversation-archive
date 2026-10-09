@@ -32,11 +32,11 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 
 1. When opened with a conversation URL, the reader fills in the URL and opens a saved local snapshot automatically. If none exists, it reads and saves the complete conversation.
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
-3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% appears only after validation and formatting finish.
+3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% is confirmed only after validation and formatting finish; the completed progress indicator then disappears.
 4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
    - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index at the beginning works locally.
    - **Export → PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
-   - **A4 landscape** is unchecked by default (A4 portrait). Check it to widen the preview and saved HTML and export PDFs in landscape. This also gives wide text diagrams more space.
+   - **A4 landscape** in the **Export** menu is unchecked by default (A4 portrait). Check it to widen the preview and saved HTML and export PDFs in landscape. This also gives wide text diagrams more space.
    - The preview shows a sticky question index beside the conversation. Click any question to jump to it; the index scrolls independently. In narrow windows it appears above the document. Saved HTML and PDF keep the index at the beginning. Messages have no return-to-index links.
    - If **Export → PDF** fails, **Alternative PDF export** appears with **Print / Save PDF** and **Add PDF sidebar index**. For manual printing, select **Save as PDF**, A4, **All** pages and default scale. Disable **Headers and footers** and enable **Background graphics** if needed, then select the saved file with **Add PDF sidebar index**. These controls are hidden during normal use and after a successful retry or a new conversation read.
 
@@ -44,14 +44,23 @@ Reading reuses an already-open tab for the requested conversation without changi
 
 After updating local files, click **Reload** on the extension card in `chrome://extensions/`, accept any new permission prompt, then refresh any open ChatGPT and export pages. Version 2.2 adds the `debugger` permission for direct PDF generation. Refreshing ChatGPT also removes page buttons and status banners left by older versions.
 
+## Reading interface (v3.1)
+
+- Before opening a conversation, the page shows the URL field and your local conversation list.
+- After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Open conversation**, **Highlights & comments** and **Export**.
+- **Open conversation** shows the link field, local conversations and the current conversation's update action. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
+- **Highlights & comments** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
+- **Export** offers HTML and PDF plus the **A4 landscape** checkbox. The format setting applies to the preview and both exports.
+- Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
+
 ## Local reader, highlights and comments (v3)
 
 1. Read a conversation once. Its complete validated snapshot, including successfully embedded assets, is saved in the extension's local IndexedDB.
 2. Select text within one user or assistant message. Choose **Highlight** to save a yellow highlight immediately, or **Comment**, enter your note and click **Save comment**. Paragraphs, headings, lists, tables and code text are supported; math, SVG diagrams, citations and attachment labels are excluded.
-3. Click **Annotations** to open the right panel, or click a highlight. Click a quoted passage in the panel to jump to it. Comments can be edited; **Delete** removes both the highlight and comment. Overlapping highlights preserve the original text and formatting.
-4. Reopen the same conversation URL, or expand **Local conversations** and select its title. The local snapshot and annotations open without accessing ChatGPT, so this works offline. Click **Update conversation** when you want to fetch the currently selected remote branch using your ChatGPT login session.
+3. Click **Highlights & comments** to open the right panel, or click a highlight. Click a quoted passage in the panel to jump to it. Comments can be edited; **Delete** removes both the highlight and comment. Overlapping highlights preserve the original text and formatting.
+4. Reopen the same conversation URL, or choose **Open conversation → Local conversations** and select its title. The local snapshot and annotations open without accessing ChatGPT, so this works offline. In **Open conversation**, click **Update conversation** when you want to fetch the currently selected remote branch using your ChatGPT login session.
 5. Annotations attach to a conversation and stable message ID, then use the selected quote, surrounding text, offsets and a message-text hash to find the passage. If a message was removed, regenerated or changed ambiguously, the annotation stays in the panel as **Original text changed**. It is not moved to a different message.
-6. Use **Back up local data** to download a JSON file containing all saved conversations, assets and annotations. **Restore backup** validates the file and merges it atomically, keeping newer snapshots and annotation changes. Deletion records prevent an older backup from restoring deleted annotations. Backups up to 100 MiB are supported.
+6. Open **Open conversation → Backup & restore**. Use **Back up local data** to download a JSON file containing all saved conversations, assets and annotations. **Restore backup** validates the file and merges it atomically, keeping newer snapshots and annotation changes. Deletion records prevent an older backup from restoring deleted annotations. Backups up to 100 MiB are supported.
 
 The left question index remains available while reading. On wide screens the annotation panel appears beside the document; in smaller windows it opens as a panel on the right. Reader controls and annotations are excluded from HTML/PDF exports, which keep the original conversation. Use the JSON backup for annotations; opening a standalone exported HTML file does not provide the extension reader's editing features.
 
@@ -109,6 +118,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `reader-store.js` | IndexedDB snapshots, transactional annotation writes, cross-tab notifications and validated backup merging |
 | `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
+| `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |
 | `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |

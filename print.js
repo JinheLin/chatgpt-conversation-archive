@@ -30,6 +30,7 @@
   pdfFallback.hidden = true;
   const pageLayout = document.getElementById("page-layout");
   let outputBusy = false;
+  const workspace = globalThis.ChatGPTReaderWorkspace.init({ document, isBusy: () => outputBusy });
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
     root: document.getElementById("export-menu"), button: document.getElementById("export-toggle"),
     popup: document.getElementById("export-formats"),
@@ -37,7 +38,7 @@
     isBusy: () => outputBusy
   });
   const outputControls = [input, startButton, pageLayout,
-    ...["reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
+    ...["reader-open", "reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
     outputBusy = value;
@@ -58,12 +59,13 @@
   let activeRead = null;
   let readPercent = 0;
 
-  function report(text, error = false, keepProgress = false) {
+  function report(text, error = false, keepProgress = false, transient = false) {
     if (!keepProgress) progressView.stop();
     readProgress.hidden = !keepProgress;
     status.hidden = false;
     status.textContent = text;
     status.dataset.level = error ? "error" : "info";
+    workspace.notice(error, transient);
   }
   // Overall workflow milestones, not elapsed time or network byte percentages.
   const progressStages = {
@@ -104,6 +106,7 @@
     progressDetail.textContent = detail;
     progressDetail.hidden = !detail;
     status.hidden = true;
+    workspace.clearNotice();
     readProgress.hidden = false;
     readProgress.dataset.running = String(stage !== "complete");
   }
@@ -241,11 +244,15 @@
       if (mine !== generation) return;
       previewNavigation.refresh();
       actions.hidden = false;
+      workspace.reading(payload, !storageProblem);
       showReadProgress({ stage: "complete" });
       const verified = t("readVerified", payload.messages.length, payload.completeness.questions,
         problems.length ? t("assetProblems", problems.length) : t("readyOutput"));
       report(storageProblem ? t("readerSnapshotFailed", storageProblem.message) :
         cached ? t("readerOpenedLocal", new Date(payload.capturedAt).toLocaleString(language)) : verified, !!storageProblem, true);
+      // Keep the confirmed 100% value, then remove the completed workflow from the reading view.
+      readProgress.hidden = true;
+      if (!storageProblem && !problems.length) workspace.clearNotice();
       if (sourceTab) {
         await chrome.tabs.remove(sourceTab).catch(() => {});
         sourceTab = null;
@@ -254,6 +261,7 @@
     } catch (error) {
       if (mine === generation) {
         main.hidden = true; previewNavigation.clear(); reader.unload(); payload = null;
+        workspace.opening();
         report(error.message || t("readFailed"), true);
       }
     } finally {
@@ -273,6 +281,7 @@
     previewNavigation.clear();
     actions.hidden = true;
     payload = null;
+    workspace.opening();
     report(t("cancelled"));
     if (sourceTab) await chrome.tabs.remove(sourceTab).catch(() => {});
     sourceTab = null;
@@ -326,7 +335,7 @@
       const result = await globalThis.ChatGPTPdfOutline.add(bytes, metadata);
       const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.pdf`;
       download(new Blob([result.bytes], { type: "application/pdf" }), filename);
-      report(t("directPdfSaved", result.questions, result.pages));
+      report(t("directPdfSaved", result.questions, result.pages), false, false, true);
     } catch (error) {
       report(t("directPdfFailed", error.message), true);
       pdfFallback.hidden = !payload || main.hidden;
@@ -348,7 +357,7 @@
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(await file.arrayBuffer(), metadata);
       download(new Blob([result.bytes], { type: "application/pdf" }), `${file.name.replace(/\.pdf$/i, "")}${t("pdfOutlineSuffix")}.pdf`);
-      report(t("pdfOutlineSaved", result.questions, result.pages));
+      report(t("pdfOutlineSaved", result.questions, result.pages), false, false, true);
     } catch (error) { report(t("pdfOutlineFailed", error.message), true); }
     finally { setOutputBusy(false); }
   });
@@ -390,7 +399,7 @@
       globalThis.ChatGPTReaderAnchor.clear(transcript);
       exported.body.appendChild(transcript);
       download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`);
-      report(t("htmlSaved"));
+      report(t("htmlSaved"), false, false, true);
     } catch (error) { report(t("saveHtmlFailed", error.message), true); }
     finally { setOutputBusy(false); }
   });
@@ -406,7 +415,7 @@
       const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
       if (blob.size > store.MAX_BACKUP_BYTES) throw new Error(t("readerBackupTooLarge"));
       download(blob, "chatgpt-reader-backup-" + new Date().toISOString().slice(0, 10) + ".json");
-      report(t("readerBackupSaved"));
+      report(t("readerBackupSaved"), false, false, true);
     } catch (error) { report(t("readerBackupFailed", error.message), true); }
     finally { setOutputBusy(false); }
   });
@@ -423,7 +432,7 @@
       if (file.size > store.MAX_BACKUP_BYTES) throw new Error(t("readerBackupTooLarge"));
       const result = await store.restore(JSON.parse(await file.text()));
       await refreshLibrary();
-      report(t("readerBackupRestored", result.conversations, result.annotations));
+      report(t("readerBackupRestored", result.conversations, result.annotations), false, false, true);
       restored = true;
     } catch (error) { report(t("readerBackupFailed", error.message), true); }
     finally { setOutputBusy(false); }

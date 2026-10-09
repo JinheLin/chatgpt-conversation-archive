@@ -48,7 +48,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     location: { search: output.initialSource ? `?${new URLSearchParams({ source: output.initialSource })}` : '' },
     fetch: async url => ({ ok: !output.catalogFailure, status: 404, json: async () => url.includes('/zh_CN/') ? catalogs.zh_CN : catalogs.en }),
     document: {
-      getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, querySelectorAll: () => localized,
+      getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, body: { dataset: {} }, querySelectorAll: () => localized,
       addEventListener() {},
       createElement: () => { const link = { addEventListener() {}, append() {}, click() { downloads.push(link.download); } }; return link; }
     },
@@ -95,6 +95,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   vm.runInContext(fs.readFileSync(path.join(project, 'conversation-source.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'export-menu.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(project, 'read-progress.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(project, 'reader-workspace.js'), 'utf8'), context);
   const initialized = vm.runInContext(fs.readFileSync(path.join(project, 'print.js'), 'utf8'), context);
   return { created, removed, activated, requests, reading, element, downloads, initialized,
     progress: (progress, options = {}) => {
@@ -145,8 +146,8 @@ for (const locale of ['en-US', 'zh-CN']) {
     await pending;
     assert.equal(app.element('preview-layout').hidden, false);
     assert.equal(app.element('preview-sidebar').hidden, false);
-    assert.equal(app.element('read-progress').hidden, false);
-    assert.equal(app.element('export-status').hidden, false);
+    assert.equal(app.element('read-progress').hidden, true);
+    assert.equal(app.element('export-status').hidden, true);
     assert.equal(app.element('read-progress-count').textContent, '100%');
     assert.equal(app.element('read-progress-bar').value, 100);
     app.progress({ stage: 'assets', completed: 4, total: 4 });

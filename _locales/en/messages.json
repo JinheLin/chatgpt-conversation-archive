@@ -475,10 +475,10 @@
     "message": "Update conversation"
   },
   "readerAnnotations": {
-    "message": "Annotations"
+    "message": "Highlights & comments"
   },
   "readerAnnotationsCount": {
-    "message": "Annotations ($arg1$)",
+    "message": "Highlights & comments ($arg1$)",
     "placeholders": {
       "arg1": {
         "content": "$1"
@@ -486,7 +486,7 @@
     }
   },
   "readerNoAnnotations": {
-    "message": "Select text in a message to add a highlight or comment."
+    "message": "No highlights or comments yet."
   },
   "readerClose": {
     "message": "Close"
@@ -621,5 +621,54 @@
         "content": "$2"
       }
     }
+  },
+  "readerOpen": {
+    "message": "Open conversation"
+  },
+  "readerReturn": {
+    "message": "Return to reading"
+  },
+  "readerDataTools": {
+    "message": "Backup & restore"
+  },
+  "readerBackupHint": {
+    "message": "Save or restore all local conversations, highlights and comments."
+  },
+  "readerLoginHint": {
+    "message": "To read a private conversation, sign in to ChatGPT in this browser."
+  },
+  "readerSelectionHint": {
+    "message": "Select text to add a highlight or comment."
+  },
+  "readerOrientationHint": {
+    "message": "Applies to the preview, HTML and PDF."
+  },
+  "readerExportHint": {
+    "message": "Exports contain the original conversation. Back up highlights and comments separately."
+  },
+  "readerDocumentMeta": {
+    "message": "$arg1$ questions · $arg2$ messages · $arg3$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      },
+      "arg3": {
+        "content": "$3"
+      }
+    }
+  },
+  "readerLocalVersion": {
+    "message": "Local version · $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerNotSaved": {
+    "message": "Not saved locally"
   }
 }

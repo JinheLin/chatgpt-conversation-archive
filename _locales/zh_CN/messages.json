@@ -475,10 +475,10 @@
     "message": "更新对话"
   },
   "readerAnnotations": {
-    "message": "批注"
+    "message": "划线与评论"
   },
   "readerAnnotationsCount": {
-    "message": "批注（$arg1$）",
+    "message": "划线与评论（$arg1$）",
     "placeholders": {
       "arg1": {
         "content": "$1"
@@ -486,7 +486,7 @@
     }
   },
   "readerNoAnnotations": {
-    "message": "选中消息中的文字，即可添加划线或评论。"
+    "message": "还没有划线或评论。"
   },
   "readerClose": {
     "message": "关闭"
@@ -621,5 +621,54 @@
         "content": "$2"
       }
     }
+  },
+  "readerOpen": {
+    "message": "打开对话"
+  },
+  "readerReturn": {
+    "message": "返回阅读"
+  },
+  "readerDataTools": {
+    "message": "备份与恢复"
+  },
+  "readerBackupHint": {
+    "message": "备份或恢复全部本地对话、划线和评论。"
+  },
+  "readerLoginHint": {
+    "message": "读取私有对话前，请在此浏览器登录 ChatGPT。"
+  },
+  "readerSelectionHint": {
+    "message": "选中文字，即可添加划线或评论。"
+  },
+  "readerOrientationHint": {
+    "message": "同时调整预览、HTML 和 PDF 的宽度。"
+  },
+  "readerExportHint": {
+    "message": "导出原始对话；划线和评论请单独备份。"
+  },
+  "readerDocumentMeta": {
+    "message": "$arg1$ 个问题 · $arg2$ 条消息 · $arg3$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      },
+      "arg3": {
+        "content": "$3"
+      }
+    }
+  },
+  "readerLocalVersion": {
+    "message": "本地版本 · $arg1$",
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
+  },
+  "readerNotSaved": {
+    "message": "尚未保存到本地"
   }
 }

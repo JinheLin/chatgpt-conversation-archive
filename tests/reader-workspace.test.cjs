@@ -1,0 +1,118 @@
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const { fixture, payload, waitFor } = require('./helpers/reader.cjs');
+
+test('the empty reader starts with opening and local conversations, while data tools stay collapsed', async (t) => {
+  const app = fixture(); t.after(() => app.w.close());
+  await app.start();
+  assert.equal(app.w.document.body.dataset.readerState, 'opening');
+  assert.equal(app.get('reader-workspace').hidden, false);
+  assert.equal(app.get('reader-library').open, true);
+  assert.equal(app.get('reader-data-tools').open, false);
+  assert.equal(app.get('reader-open').hidden, true);
+  assert.equal(app.get('reader-workspace-close').hidden, true);
+  assert.equal(app.get('reader-current').hidden, true);
+  assert.equal(app.get('output-actions').hidden, true);
+  assert.equal(app.get('export-status').hidden, true);
+  assert.equal(app.requests.length, 0);
+});
+
+for (const locale of ['en', 'zh-CN']) {
+  test('reading has a compact toolbar; opening and returning preserve the current document (' + locale + ')', async (t) => {
+    const app = fixture({ locale, initial: payload().sourceUrl }); t.after(() => app.w.close());
+    await app.w.ChatGPTReaderStore.saveConversation(payload());
+    await app.start();
+    assert.equal(app.w.document.body.dataset.readerState, 'reading');
+    assert.equal(app.get('reader-heading').textContent, payload().title);
+    assert.match(app.get('reader-meta').textContent, locale === 'zh-CN' ? /1 个问题 · 2 条消息 · 本地版本/ : /1 questions · 2 messages · Local version/);
+    assert.equal(app.get('reader-workspace').hidden, true);
+    assert.equal(app.get('reader-open').getAttribute('aria-expanded'), 'false');
+    assert.equal(app.get('output-actions').hidden, false);
+    assert.equal(app.get('reader-toggle').textContent, locale === 'zh-CN' ? '划线与评论' : 'Highlights & comments');
+    assert.equal(app.get('export-status').hidden, true);
+    assert.equal(app.get('read-progress').hidden, true);
+    assert.equal(app.get('reader-status').hidden, true);
+    assert.equal(app.get('reader-current').hidden, false);
+    const original = app.main.innerHTML;
+    app.get('reader-open').click();
+    assert.equal(app.get('reader-workspace').hidden, false);
+    assert.equal(app.get('reader-open').getAttribute('aria-expanded'), 'true');
+    assert.equal(app.w.document.activeElement, app.get('conversation-url'));
+    assert.ok(app.get('reader-update').closest('#reader-workspace'));
+    assert.ok(app.get('reader-backup').closest('#reader-data-tools'));
+    assert.ok(app.get('reader-restore').closest('#reader-data-tools'));
+    app.get('reader-workspace-close').click();
+    assert.equal(app.get('reader-workspace').hidden, true);
+    assert.equal(app.w.document.activeElement, app.get('reader-open'));
+    assert.equal(app.main.innerHTML, original);
+    assert.equal(app.requests.length, 0);
+    app.get('reader-open').click();
+    app.get('conversation-url').dispatchEvent(new app.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert.equal(app.get('reader-workspace').hidden, true);
+    app.get('reader-open').click();
+    app.main.dispatchEvent(new app.w.Event('pointerdown', { bubbles: true }));
+    assert.equal(app.get('reader-workspace').hidden, true);
+    app.get('reader-toggle').click();
+    assert.equal(app.get('reader-annotations').hidden, false);
+    assert.equal(app.get('reader-toggle').getAttribute('aria-expanded'), 'true');
+    app.get('reader-close').click();
+    assert.equal(app.get('reader-toggle').getAttribute('aria-expanded'), 'false');
+  });
+}
+
+test('export includes orientation settings without changing the menu keyboard interactions', async (t) => {
+  const app = fixture({ initial: payload().sourceUrl }); t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(payload());
+  await app.start();
+  const toggle = app.get('export-toggle'), popup = app.get('export-formats');
+  assert.ok(app.get('page-layout').closest('#export-formats'));
+  assert.equal(app.get('page-layout').checked, false);
+  toggle.dispatchEvent(new app.w.MouseEvent('mouseenter', { bubbles: false }));
+  app.get('export-menu').dispatchEvent(new app.w.MouseEvent('mouseenter'));
+  assert.equal(popup.hidden, false);
+  toggle.click();
+  assert.equal(app.w.document.activeElement, app.get('save-html'));
+  app.get('save-html').dispatchEvent(new app.w.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  assert.equal(app.w.document.activeElement, app.get('save-pdf'));
+  const checkbox = app.get('page-layout'); checkbox.focus();
+  const arrow = new app.w.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+  checkbox.dispatchEvent(arrow);
+  assert.equal(arrow.defaultPrevented, false);
+  assert.equal(app.w.document.activeElement, checkbox);
+  checkbox.checked = true;
+  checkbox.dispatchEvent(new app.w.Event('change'));
+  await waitFor(() => !toggle.disabled);
+  assert.equal(app.main.dataset.landscape, 'true');
+  assert.match(app.get('page-direction').textContent, /landscape/);
+  toggle.click();
+  app.get('save-html').dispatchEvent(new app.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(popup.hidden, true);
+  assert.equal(app.w.document.activeElement, toggle);
+});
+
+test('successful notices disappear and later errors remain visible without a stale success timer hiding them', async (t) => {
+  const app = fixture({ initial: payload().sourceUrl }); t.after(() => app.w.close());
+  const timers = new Map();
+  const originalSet = app.w.setTimeout.bind(app.w), originalClear = app.w.clearTimeout.bind(app.w);
+  app.w.setTimeout = (callback, delay, ...args) => {
+    if (delay !== 4500) return originalSet(callback, delay, ...args);
+    const id = 100000 + timers.size; timers.set(id, callback); return id;
+  };
+  app.w.clearTimeout = (id) => { if (!timers.delete(id)) originalClear(id); };
+  await app.w.ChatGPTReaderStore.saveConversation(payload());
+  await app.start();
+  app.get('reader-backup').click();
+  await waitFor(() => app.get('export-status').textContent.includes('backed up'));
+  assert.equal(app.get('export-status').hidden, false);
+  assert.equal(timers.size, 1);
+  [...timers.values()][0]();
+  assert.equal(app.get('export-status').hidden, true);
+  app.get('reader-backup').click();
+  await waitFor(() => !app.get('reader-backup').disabled);
+  app.w.ChatGPTReaderStore.backup = async () => { throw new Error('Disk failure'); };
+  app.get('reader-backup').click();
+  await waitFor(() => app.get('export-status').textContent.includes('Disk failure'));
+  assert.equal(app.get('export-status').dataset.level, 'error');
+  assert.equal(app.get('export-status').hidden, false);
+  assert.equal(timers.size, 0);
+});

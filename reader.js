@@ -21,7 +21,9 @@
     }
     function report(message, error = false) {
       status.textContent = message;
+      status.hidden = !message;
       status.dataset.level = error ? "error" : "info";
+      if (error && key) openPanel();
     }
     function openPanel(open = true) {
       panel.hidden = !open;
@@ -121,7 +123,9 @@
         await refresh();
         if (mine + 1 !== revision || key !== conversationKey) return;
         const unresolved = [...positions.values()].filter((value) => value === "unresolved").length;
-        report(unresolved ? t("readerRestoredUnresolved", notes.length, unresolved) : t("readerRestored", notes.length));
+        // The list already shows saved notes; successful restoration needs no separate message.
+        report(unresolved ? t("readerRestoredUnresolved", notes.length, unresolved) : "");
+        if (unresolved) openPanel();
       } catch (error) {
         if (key !== conversationKey) return;
         enabled = false;
@@ -140,7 +144,7 @@
       if (mine !== selecting || !key) return;
       if (!captured) {
         toolbar.hidden = true; selection = null;
-        report(t("readerSelectionUnsupported"));
+        report(t("readerSelectionUnsupported"), true);
         return;
       }
       selection = captured;

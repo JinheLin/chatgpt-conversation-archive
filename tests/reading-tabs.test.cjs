@@ -21,7 +21,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   function element(id) {
     if (!elements.has(id)) elements.set(id, {
       value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : 'portrait',
-      checked: id === 'show-back-links',
+      checked: false,
       dataset: {}, style: {}, handlers: {}, hidden: false,
       ownerDocument: context.document,
       setAttribute(name, value) { this[name] = String(value); },
@@ -70,6 +70,11 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       scripting: { executeScript: async () => {} }
     },
     ChatGPTPdfExporter: { render: output.render || ((payload, main) => { main.hidden = false; return []; }), fitCode: output.fit || (() => {}) },
+    ChatGPTPdfPreviewNavigation: { init: ({ sidebar, layout }) => {
+      const clear = () => { sidebar.hidden = layout.hidden = true; };
+      clear();
+      return { clear, refresh: () => { sidebar.hidden = layout.hidden = false; } };
+    } },
     ChatGPTPdfCapture: { capture: output.capture || (async () => new Uint8Array([1, 2, 3])) },
     ChatGPTPdfOutline: { add: output.add || (async () => ({ bytes: new Uint8Array([1, 2, 3]), questions: 1, pages: 2 })) }
   });
@@ -100,6 +105,7 @@ for (const locale of ['en-US', 'zh-CN']) {
     const app = fixture([{ id: 20, url: conversationUrl }], new Promise(resolve => { finish = resolve; }), { locale });
     const pending = app.start();
     await app.reading;
+    assert.equal(app.element('preview-layout').hidden, true);
     assert.equal(app.element('read-progress').hidden, false);
     assert.equal(app.element('export-status').hidden, true);
     assert.equal(app.element('read-progress-bar').value, 10);
@@ -128,6 +134,8 @@ for (const locale of ['en-US', 'zh-CN']) {
     assert.equal(app.element('read-progress-bar').value, 80);
     finish(response);
     await pending;
+    assert.equal(app.element('preview-layout').hidden, false);
+    assert.equal(app.element('preview-sidebar').hidden, false);
     assert.equal(app.element('read-progress').hidden, false);
     assert.equal(app.element('export-status').hidden, false);
     assert.equal(app.element('read-progress-count').textContent, '100%');
@@ -149,6 +157,7 @@ test('read failure hides the progress bar and shows the error', async () => {
   assert.equal(app.element('export-status').hidden, false);
   assert.equal(app.element('export-status').textContent, 'Login expired');
   assert.equal(app.element('export-status').dataset.level, 'error');
+  assert.equal(app.element('preview-layout').hidden, true);
 });
 
 test('cancelling while fitting code hides the document and ignores late completion', async () => {
@@ -168,6 +177,7 @@ test('cancelling while fitting code hides the document and ignores late completi
   finishFitting();
   await pending;
   assert.equal(app.element('pdf-document').hidden, true);
+  assert.equal(app.element('preview-layout').hidden, true);
   assert.equal(app.element('output-actions').hidden, true);
   assert.equal(app.element('read-progress').hidden, true);
   assert.equal(app.element('export-status').textContent, 'Reading cancelled.');
@@ -212,7 +222,7 @@ test('one PDF button captures the selected orientation and adds question bookmar
   const options = {
     capture: async settings => {
       assert.equal(settings.landscape, true);
-      for (const id of ['start-export', 'page-layout', 'show-back-links']) assert.equal(app.element(id).disabled, true);
+      for (const id of ['start-export', 'page-layout']) assert.equal(app.element(id).disabled, true);
       await app.start(); // Submitting the read form cannot replace the document mid-export.
       assert.equal(app.requests.length, 1);
       return new Uint8Array([5, 6, 7]);
@@ -229,11 +239,8 @@ test('one PDF button captures the selected orientation and adds question bookmar
   await app.start();
   app.element('page-layout').checked = true;
   await app.element('page-layout').handlers.change();
-  app.element('show-back-links').checked = false;
-  app.element('show-back-links').handlers.change();
   await app.element('save-pdf').handlers.click();
   assert.deepEqual(app.downloads, ['Test conversation.pdf']);
-  assert.equal(app.element('pdf-document').dataset.showBackLinks, 'false');
   assert.match(app.element('export-status').textContent, /1 question bookmarks and 2 pages/);
   assert.equal(app.element('save-pdf').disabled, false);
   assert.equal(app.element('pdf-fallback').hidden, true);
@@ -274,7 +281,7 @@ test('PDF capture failure does not download an incomplete file and restores cont
   await app.element('save-pdf').handlers.click();
   assert.equal(app.downloads.length, 0);
   assert.equal(app.element('start-export').disabled, false);
-  assert.equal(app.element('show-back-links').disabled, false);
+  assert.equal(app.element('page-layout').disabled, false);
   assert.match(app.element('export-status').textContent, /Debugger cancelled/);
   assert.equal(app.element('export-status').dataset.level, 'error');
   assert.equal(app.element('pdf-fallback').hidden, false);

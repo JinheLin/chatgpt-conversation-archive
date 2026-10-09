@@ -18,6 +18,7 @@
   <script src="pdf-capture.js" defer></script>
   <script src="export-menu.js" defer></script>
   <script src="read-progress.js" defer></script>
+  <script src="preview-navigation.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
@@ -51,8 +52,7 @@
         </div>
       </div>
       <label class="export-option"><input id="page-layout" type="checkbox"><span data-i18n="landscape">A4 landscape</span></label>
-      <label class="export-option"><input id="show-back-links" type="checkbox" checked><span data-i18n="showBackLinks">Show links back to the question index</span></label>
-      <p class="hint" data-i18n="directPdfHint">Export → PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
+      <p class="hint" data-i18n="directPdfHint">Export → PDF creates sidebar bookmarks automatically, using the selected orientation. Chrome may show a debugging notice during export; the connection ends when rendering finishes.</p>
       <div id="pdf-fallback" class="pdf-fallback" role="group" aria-labelledby="pdf-fallback-heading" hidden>
         <h2 id="pdf-fallback-heading" data-i18n="pdfFallbackHeading">Alternative PDF export</h2>
         <button id="print-again" type="button" data-i18n="printPdf">Print / Save PDF</button>
@@ -62,7 +62,10 @@
       </div>
     </div>
   </div>
-  <main id="pdf-document" class="pdf-document" hidden></main>
+  <div id="preview-layout" class="preview-layout" hidden>
+    <aside id="preview-sidebar" class="preview-sidebar" hidden></aside>
+    <main id="pdf-document" class="pdf-document" hidden></main>
+  </div>
   <style id="page-direction">@page { size: A4 portrait; }</style>
 </body>
 </html>

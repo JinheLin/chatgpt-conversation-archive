@@ -187,9 +187,6 @@
         details.appendChild(links);
         body.appendChild(details);
       }
-      const back = el("a", "pdf-back", t("backIndex"));
-      back.href = "#question-index";
-      section.appendChild(back);
       main.appendChild(section);
       if (performance.now() - sliceStart >= 8 || index + 1 === payload.messages.length) {
         onProgress({ completed: index + 1, total: payload.messages.length });

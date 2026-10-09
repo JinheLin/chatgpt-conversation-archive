@@ -34,10 +34,10 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
 3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% appears only after validation and formatting finish.
 4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
-   - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index and return links work locally.
+   - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index at the beginning works locally.
    - **Export → PDF**: creates and downloads an A4 PDF with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
    - **A4 landscape** is unchecked by default (A4 portrait). Check it to widen the preview and saved HTML and export PDFs in landscape. This also gives wide text diagrams more space.
-   - **Show links back to the question index** is checked by default. Uncheck it to hide return links in the preview, offline HTML and PDF. The question index at the beginning remains available.
+   - The preview shows a sticky question index beside the conversation. Click any question to jump to it; the index scrolls independently. In narrow windows it appears above the document. Saved HTML and PDF keep the index at the beginning. Messages have no return-to-index links.
    - If **Export → PDF** fails, **Alternative PDF export** appears with **Print / Save PDF** and **Add PDF sidebar index**. For manual printing, select **Save as PDF**, A4, **All** pages and default scale. Disable **Headers and footers** and enable **Background graphics** if needed, then select the saved file with **Add PDF sidebar index**. These controls are hidden during normal use and after a successful retry or a new conversation read.
 
 Reading reuses an already-open tab for the requested conversation without changing or closing it. If none is available, a temporary ChatGPT tab opens in the background; it remains visible in the tab bar but does not interrupt the export page. On success or cancellation, the temporary tab closes. On failure, it remains available for checking login or access problems. Completion does not switch your active tab. You can cancel and retry.
@@ -92,6 +92,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 | `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
 | `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
+| `preview-navigation.js` | Preview sidebar with question links, separate from the exported document |
 | `print.html` / `print.js` | URL input, progress, cancellation, HTML download, one-step PDF export and manual printing |
 | `style.css` | Export interface and A4 print styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |

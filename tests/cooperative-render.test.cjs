@@ -50,6 +50,7 @@ test('rendering yields to the event loop before completion while preserving mess
   await pending;
   assert.equal(main.hidden, false);
   assert.deepEqual(main.querySelectorAll('section.pdf-message').map(node => node.dataset.messageId), payload.messages.map(message => message.id));
+  assert.ok(main.querySelectorAll('section.pdf-message').every(section => !section.children.some(node => node.className === 'pdf-back')));
   assert.equal(progress.at(-1), 20);
 });
 

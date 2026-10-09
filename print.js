@@ -8,6 +8,9 @@
   await loadCatalog();
   localizeDocument(document);
   const main = document.getElementById("pdf-document");
+  const previewNavigation = globalThis.ChatGPTPdfPreviewNavigation.init({
+    main, sidebar: document.getElementById("preview-sidebar"), layout: document.getElementById("preview-layout")
+  });
   const status = document.getElementById("export-status");
   const readProgress = document.getElementById("read-progress");
   const progressLabel = document.getElementById("read-progress-label");
@@ -23,7 +26,6 @@
   const actions = document.getElementById("output-actions");
   const pdfFallback = document.getElementById("pdf-fallback");
   pdfFallback.hidden = true;
-  const showBackLinks = document.getElementById("show-back-links");
   const pageLayout = document.getElementById("page-layout");
   let outputBusy = false;
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
@@ -32,16 +34,13 @@
     items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
     isBusy: () => outputBusy
   });
-  const outputControls = [input, startButton, showBackLinks, pageLayout,
+  const outputControls = [input, startButton, pageLayout,
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
     outputBusy = value;
     if (value) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
   }
-  function updateBackLinks() { main.dataset.showBackLinks = String(showBackLinks.checked); }
-  showBackLinks.addEventListener("change", updateBackLinks);
-  updateBackLinks();
   function updatePageLayout() {
     const landscape = pageLayout.checked;
     document.getElementById("page-direction").textContent = `@page { size: A4 ${landscape ? "landscape" : "portrait"}; }`;
@@ -136,6 +135,7 @@
     pdfFallback.hidden = true;
     exportMenu.close();
     main.hidden = true;
+    previewNavigation.clear();
     payload = null;
     activeRead = null;
     readPercent = 0;
@@ -188,6 +188,7 @@
         }
       });
       if (mine !== generation) return;
+      previewNavigation.refresh();
       actions.hidden = false;
       showReadProgress({ stage: "complete" });
       report(t("readVerified", payload.messages.length, payload.completeness.questions, problems.length ? t("assetProblems", problems.length) : t("readyOutput")), false, true);
@@ -210,6 +211,7 @@
     generation++;
     activeRead = null;
     main.hidden = true;
+    previewNavigation.clear();
     actions.hidden = true;
     payload = null;
     report(t("cancelled"));

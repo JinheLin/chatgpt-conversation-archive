@@ -41,9 +41,6 @@
   "printPdf": {
     "message": "打印 / 保存 PDF"
   },
-  "showBackLinks": {
-    "message": "显示返回问题目录链接"
-  },
   "landscape": {
     "message": "A4 横向"
   },
@@ -331,9 +328,6 @@
   "citationUnavailable": {
     "message": "来源信息不可用"
   },
-  "backIndex": {
-    "message": "返回问题目录 ↑"
-  },
   "renderMismatch": {
     "message": "渲染数量与完整消息清单不一致，未生成文件。"
   },
@@ -390,7 +384,7 @@
     "message": "PDF"
   },
   "directPdfHint": {
-    "message": "「导出 → PDF」会自动生成侧栏目录，保留所选纸张方向和返回目录链接。Chrome 在导出时可能显示调试提示，渲染完成后自动结束连接。"
+    "message": "「导出 → PDF」会自动生成侧栏目录，使用所选纸张方向。Chrome 在导出时可能显示调试提示，渲染完成后自动结束连接。"
   },
   "pdfFallbackHeading": {
     "message": "备用 PDF 导出方式"

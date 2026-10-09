@@ -41,9 +41,6 @@
   "printPdf": {
     "message": "Print / Save PDF"
   },
-  "showBackLinks": {
-    "message": "Show links back to the question index"
-  },
   "landscape": {
     "message": "A4 landscape"
   },
@@ -331,9 +328,6 @@
   "citationUnavailable": {
     "message": "Source details unavailable"
   },
-  "backIndex": {
-    "message": "Back to question index ↑"
-  },
   "renderMismatch": {
     "message": "Rendered counts do not match the full message list. No file was generated."
   },
@@ -390,7 +384,7 @@
     "message": "PDF"
   },
   "directPdfHint": {
-    "message": "Export → PDF creates sidebar bookmarks automatically, using the selected orientation and return-link setting. Chrome may show a debugging notice during export; the connection ends when rendering finishes."
+    "message": "Export → PDF creates sidebar bookmarks automatically, using the selected orientation. Chrome may show a debugging notice during export; the connection ends when rendering finishes."
   },
   "pdfFallbackHeading": {
     "message": "Alternative PDF export"

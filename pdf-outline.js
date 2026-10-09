@@ -85,7 +85,7 @@
       title: `${t("questionLabel", index + 1)} · ${entry.title}`,
       dest: destinationArray(pdf, named.get(entry.id), pageRefs)
     }));
-    // Chrome may omit an unreferenced index anchor when return links are hidden.
+    // Chrome may omit the unreferenced index anchor; its bookmark then uses page 1.
     const indexDest = named.has("question-index")
       ? destinationArray(pdf, named.get("question-index"), pageRefs)
       : pdf.context.obj([pdf.getPage(0).ref, name("Fit")]);

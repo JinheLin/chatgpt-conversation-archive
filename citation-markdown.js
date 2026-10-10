@@ -9,10 +9,16 @@
     md.inline.ruler.before("html_inline", "archive_citation", (state, silent) => {
       if (!/^<cite\b/i.test(state.src.slice(state.pos, state.pos + 6))) return false;
       const input = state.src.slice(state.pos, Math.min(state.posMax, state.pos + 14000));
-      const match = /^<cite\s+refs\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}\s*\/>/i.exec(input);
-      if (!match) return false;
+      let match = /^<cite\s+refs\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}\s*\/>/i.exec(input);
       let refs;
-      try { refs = JSON.parse(match[1]); } catch (_) { return false; }
+      if (match) {
+        try { refs = JSON.parse(match[1]); } catch (_) { return false; }
+      } else {
+        // ChatGPT also emits a single ref as a quoted or braced string literal.
+        match = /^<cite\s+ref\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*(?:"([^"]*)"|'([^']*)')\s*\})\s*\/>/i.exec(input);
+        if (!match) return false;
+        refs = [match.slice(1).find(value => value !== undefined)];
+      }
       if (!validRefs(refs)) return false;
       if (!silent) state.push("archive_citation", "", 0).meta = { refs, insideLink: state.linkLevel > 0 };
       state.pos += match[0].length;

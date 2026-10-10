@@ -236,7 +236,7 @@ test('another reader tab updates library size and deletion without overwriting a
   assert.equal((await first.w.ChatGPTReaderStore.backup()).annotations.length, 0);
 });
 
-test('deleting the original source after switching conversations clears the stale source URL without closing the current view', async t => {
+test('deleting the original conversation after switching preserves the current view and its URL', async t => {
   const app = fixture({ initial: payload().sourceUrl }); t.after(() => app.w.close());
   await app.w.ChatGPTReaderStore.saveConversation(payload());
   await app.w.ChatGPTReaderStore.saveConversation(secondPayload());
@@ -248,6 +248,56 @@ test('deleting the original source after switching conversations clears the stal
   await waitFor(() => !row(app) && !app.get('start-export').disabled);
   assert.equal(app.main.innerHTML, original);
   assert.equal(app.w.document.body.dataset.readerState, 'reading');
-  assert.equal(app.w.location.search, '');
+  assert.equal(new URL(app.w.location.href).searchParams.get('source'), secondPayload().sourceUrl);
+  assert.equal(app.requests.length, 0);
+});
+
+for (const initial of [payload().sourceUrl, '']) {
+  test('selecting a local conversation updates the URL and a fresh reader reloads it offline (' + (initial ? 'linked entry' : 'empty entry') + ')', async t => {
+    const app = fixture({ initial }); t.after(() => app.w.close());
+    await app.w.ChatGPTReaderStore.saveConversation(payload());
+    await app.w.ChatGPTReaderStore.saveConversation(secondPayload());
+    if (initial) app.w.history.replaceState(null, '', app.w.location.href + '#question-2');
+    await app.start();
+    if (initial) assert.equal(app.w.location.hash, '#question-2');
+    row(app, 'c:another-conversation').querySelector('.reader-library-open').click();
+    await waitFor(() => app.get('reader-heading').textContent === 'Another conversation' && !app.get('start-export').disabled);
+    const address = app.w.location.href;
+    assert.equal(new URL(address).searchParams.get('source'), secondPayload().sourceUrl);
+    assert.equal(app.w.location.hash, '');
+    assert.equal(app.get('conversation-url').value, secondPayload().sourceUrl);
+    const refreshed = fixture({ factory: app.factory }); t.after(() => refreshed.w.close());
+    refreshed.dom.reconfigure({ url: address });
+    await refreshed.start();
+    assert.equal(refreshed.get('reader-heading').textContent, 'Another conversation');
+    assert.ok(refreshed.main.textContent.includes('Another answer'));
+    assert.equal(refreshed.get('conversation-url').value, secondPayload().sourceUrl);
+    assert.equal(refreshed.requests.length, 0);
+    assert.equal(app.requests.length, 0);
+  });
+}
+
+test('updating the same conversation keeps its chapter fragment', async t => {
+  const app = fixture({ initial: payload().sourceUrl }); t.after(() => app.w.close());
+  app.w.history.replaceState(null, '', app.w.location.href + '#question-2');
+  await app.w.ChatGPTReaderStore.saveConversation(payload());
+  await app.start();
+  app.get('reader-update').click();
+  await waitFor(() => app.requests.length === 1 && !app.get('start-export').disabled);
+  assert.equal(app.w.location.hash, '#question-2');
+  assert.equal(new URL(app.w.location.href).searchParams.get('source'), payload().sourceUrl);
+});
+
+test('a failed conversation switch leaves the previous source URL and chapter fragment intact', async t => {
+  const app = fixture({ initial: payload().sourceUrl }); t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(payload());
+  await app.w.ChatGPTReaderStore.saveConversation(secondPayload());
+  app.w.history.replaceState(null, '', app.w.location.href + '#question-2');
+  await app.start();
+  const address = app.w.location.href;
+  app.w.ChatGPTPdfExporter.render = async () => { throw new Error('Rendering failed'); };
+  row(app, 'c:another-conversation').querySelector('.reader-library-open').click();
+  await waitFor(() => app.get('export-status').textContent.includes('Rendering failed') && !app.get('start-export').disabled);
+  assert.equal(app.w.location.href, address);
   assert.equal(app.requests.length, 0);
 });

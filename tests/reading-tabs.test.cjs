@@ -45,7 +45,9 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   const context = vm.createContext({
     URL: DownloadURL, URLSearchParams, Date, Blob, crypto: webcrypto,
     setTimeout: (fn, delay) => { const timer = setTimeout(fn, delay); timer.unref(); return timer; }, clearTimeout,
-    location: { search: output.initialSource ? `?${new URLSearchParams({ source: output.initialSource })}` : '' },
+    location: new URL('chrome-extension://test-extension/print.html' +
+      (output.initialSource ? `?${new URLSearchParams({ source: output.initialSource })}` : '')),
+    history: { replaceState: (_state, _title, url) => { context.location = new URL(url); } },
     fetch: async url => ({ ok: !output.catalogFailure, status: 404, json: async () => url.includes('/zh_CN/') ? catalogs.zh_CN : catalogs.en }),
     document: {
       getElementById: element, fonts: { ready: Promise.resolve() }, documentElement: {}, body: { dataset: {} }, querySelectorAll: () => localized,
@@ -73,7 +75,10 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     },
     ChatGPTPdfExporter: { render: output.render || ((payload, main) => { main.hidden = false; return []; }), fitCode: output.fit || (() => {}) },
     ChatGPTReaderStore: {
-      keyFor: () => 'c:test-conversation',
+      keyFor: value => {
+        const target = context.ChatGPTPdfSource.parseUrl(value);
+        return target.kind + ':' + target.id;
+      },
       listConversations: async () => [], getConversation: output.cached || (async () => null),
       saveConversation: output.saveSnapshot || (async () => {}),
       backup: async () => ({}), MAX_BACKUP_BYTES: 100 * 1024 * 1024

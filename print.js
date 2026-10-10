@@ -145,6 +145,17 @@
     while (bytes >= 1024 && unit < units.length - 1) { bytes /= 1024; unit++; }
     return new Intl.NumberFormat(language, { maximumFractionDigits: unit ? 1 : 0 }).format(bytes) + " " + units[unit];
   }
+  function updateReaderAddress() {
+    const url = new URL(location.href);
+    let previousKey = null;
+    try { previousKey = store.keyFor(url.searchParams.get("source")); } catch (_) { /* No valid source. */ }
+    // Keep chapter links within the same conversation, but discard an old
+    // conversation's fragment when switching. Refresh now opens the visible chat.
+    if (previousKey !== store.keyFor(payload.sourceUrl)) url.hash = "";
+    url.searchParams.set("source", payload.sourceUrl);
+    history.replaceState(null, "", url.href);
+    input.value = payload.sourceUrl;
+  }
   async function deleteConversation(entry) {
     if (outputBusy) return;
     const current = payload && store.keyFor(payload.sourceUrl) === entry.key;
@@ -322,6 +333,7 @@
       previewNavigation.refresh();
       actions.hidden = false;
       workspace.reading(payload, !storageProblem);
+      updateReaderAddress();
       showReadProgress({ stage: "complete" });
       const verified = t("readVerified", payload.messages.length, payload.completeness.questions,
         problems.length ? t("assetProblems", problems.length) : t("readyOutput"));

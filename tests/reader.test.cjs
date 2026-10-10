@@ -100,7 +100,7 @@ test('highlights and comments survive closing the reader and reopening the same 
   const reopened = await setup({ factory });
   t.after(() => reopened.dom.window.close());
   assert.equal(reopened.main.querySelector('mark').textContent, 'important text');
-  reopened.get('reader-toggle').click();
+  assert.equal(reopened.get('reader-annotations').hidden, false);
   reopened.get('reader-annotation-list').querySelector('.reader-quote').click();
   assert.equal(reopened.main.querySelector('mark').dataset.scrolled, 'true');
   reopened.get('reader-annotation-list').querySelector('.reader-note-controls button').click();

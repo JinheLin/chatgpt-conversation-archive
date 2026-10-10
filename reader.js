@@ -135,7 +135,7 @@
         const unresolved = [...positions.values()].filter((value) => !value).length;
         // The list already shows saved notes; successful restoration needs no separate message.
         report(unresolved ? t("readerRestoredUnresolved", notes.length, unresolved) : "");
-        if (unresolved) openPanel();
+        openPanel();
       } catch (error) {
         if (key !== conversationKey) return;
         enabled = false;

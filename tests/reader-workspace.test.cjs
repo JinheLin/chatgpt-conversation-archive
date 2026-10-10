@@ -42,6 +42,8 @@ for (const locale of ['en', 'zh-CN']) {
     assert.equal(app.get('read-progress').hidden, true);
     assert.equal(app.get('reader-status').hidden, true);
     assert.equal(app.get('reader-current').hidden, false);
+    assert.equal(app.get('reader-annotations').hidden, false);
+    assert.equal(app.get('reader-toggle').getAttribute('aria-expanded'), 'true');
     const original = app.main.innerHTML;
     app.get('reader-open').click();
     assert.equal(app.get('reader-workspace').hidden, false);
@@ -62,6 +64,9 @@ for (const locale of ['en', 'zh-CN']) {
     app.get('reader-open').click();
     app.main.dispatchEvent(new app.w.Event('pointerdown', { bubbles: true }));
     assert.equal(app.get('reader-workspace').hidden, true);
+    app.get('reader-toggle').click();
+    assert.equal(app.get('reader-annotations').hidden, true);
+    assert.equal(app.get('reader-toggle').getAttribute('aria-expanded'), 'false');
     app.get('reader-toggle').click();
     assert.equal(app.get('reader-annotations').hidden, false);
     assert.equal(app.get('reader-toggle').getAttribute('aria-expanded'), 'true');

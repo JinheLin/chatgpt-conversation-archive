@@ -80,10 +80,28 @@
     if (questionNames.length !== entries.length || entries.some((entry) => !named.has(entry.id))) {
       throw new Error(t("pdfQuestionMismatch"));
     }
+    const headingIds = new Set();
+    for (const entry of entries) {
+      if (entry.headings !== undefined && !Array.isArray(entry.headings)) throw new Error(t("pdfHeadingMismatch"));
+      for (const heading of entry.headings || []) {
+        if (!/^answer-heading-[1-9]\d*-[1-9]\d*$/.test(heading?.id) ||
+            typeof heading.title !== "string" || !heading.title.trim() || headingIds.has(heading.id)) {
+          throw new Error(t("pdfHeadingMismatch"));
+        }
+        headingIds.add(heading.id);
+      }
+    }
+    const headingNames = [...named.keys()].filter((key) => /^answer-heading-\d+-\d+$/.test(key));
+    if (headingNames.length !== headingIds.size || [...headingIds].some((id) => !named.has(id))) {
+      throw new Error(t("pdfHeadingMismatch"));
+    }
     const pageRefs = new Set(pdf.getPages().map((page) => page.ref.toString()));
     const targets = entries.map((entry, index) => ({
       title: `${t("questionLabel", index + 1)} · ${entry.title}`,
-      dest: destinationArray(pdf, named.get(entry.id), pageRefs)
+      dest: destinationArray(pdf, named.get(entry.id), pageRefs),
+      children: (entry.headings || []).map((heading) => ({
+        title: heading.title, dest: destinationArray(pdf, named.get(heading.id), pageRefs)
+      }))
     }));
     // Chrome may omit the unreferenced index anchor; its bookmark then uses page 1.
     const indexDest = named.has("question-index")
@@ -93,21 +111,27 @@
 
     const root = pdf.context.obj({ Type: name("Outlines") });
     const rootRef = pdf.context.register(root);
-    const items = targets.map((target) => pdf.context.obj({
-      Title: PDFHexString.fromText(target.title), Parent: rootRef, Dest: target.dest
-    }));
-    const refs = items.map((item) => pdf.context.register(item));
-    items.forEach((item, index) => {
-      if (index) item.set(name("Prev"), refs[index - 1]);
-      if (index + 1 < refs.length) item.set(name("Next"), refs[index + 1]);
-    });
-    root.set(name("First"), refs[0]);
-    root.set(name("Last"), refs.at(-1));
-    root.set(name("Count"), PDFNumber.of(items.length));
+    function writeLevel(parent, parentRef, entries) {
+      const items = entries.map((entry) => pdf.context.obj({
+        Title: PDFHexString.fromText(entry.title), Parent: parentRef, Dest: entry.dest
+      }));
+      const refs = items.map((item) => pdf.context.register(item));
+      let count = items.length;
+      items.forEach((item, index) => {
+        if (index) item.set(name("Prev"), refs[index - 1]);
+        if (index + 1 < refs.length) item.set(name("Next"), refs[index + 1]);
+        if (entries[index].children?.length) count += writeLevel(item, refs[index], entries[index].children);
+      });
+      parent.set(name("First"), refs[0]);
+      parent.set(name("Last"), refs.at(-1));
+      parent.set(name("Count"), PDFNumber.of(count));
+      return count;
+    }
+    writeLevel(root, rootRef, targets);
     pdf.catalog.set(name("Outlines"), rootRef);
     pdf.catalog.set(name("PageMode"), name("UseOutlines"));
     const output = await pdf.save({ useObjectStreams: false });
-    return { bytes: output, questions: entries.length, pages: pdf.getPageCount() };
+    return { bytes: output, questions: entries.length, headings: headingIds.size, pages: pdf.getPageCount() };
   }
 
   globalThis.ChatGPTPdfOutline = { add, MAX_BYTES };

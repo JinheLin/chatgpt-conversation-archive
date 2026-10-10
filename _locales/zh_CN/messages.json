@@ -730,5 +730,8 @@
         "content": "$1"
       }
     }
+  },
+  "pdfHeadingMismatch": {
+    "message": "PDF 中的回答标题跳转目标与当前预览不一致。请重新导出当前对话的全部页面后再试。"
   }
 }

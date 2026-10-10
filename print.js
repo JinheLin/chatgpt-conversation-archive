@@ -391,11 +391,17 @@
   }
   function pdfMetadata() {
     if (!payload) throw new Error(t("readFirst"));
+    const links = [...main.querySelectorAll(".pdf-toc li a")];
+    const questions = links.filter((link) => /^#question-\d+$/.test(link.getAttribute("href")))
+      .map((link) => ({ id: link.getAttribute("href").slice(1), title: link.textContent, headings: [] }));
+    const byId = new Map(questions.map((entry) => [entry.id, entry]));
+    for (const link of links) {
+      if (!/^#answer-heading-\d+-\d+$/.test(link.getAttribute("href"))) continue;
+      byId.get(link.dataset.questionId)?.headings.push({ id: link.getAttribute("href").slice(1), title: link.textContent });
+    }
     return {
       sourceUrl: payload.sourceUrl,
-      questions: [...main.querySelectorAll(".pdf-toc li a")].map((link) => ({
-        id: link.getAttribute("href").slice(1), title: link.textContent
-      }))
+      questions
     };
   }
   document.getElementById("save-pdf").addEventListener("click", async () => {

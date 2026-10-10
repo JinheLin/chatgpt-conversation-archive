@@ -95,6 +95,34 @@
     if (text !== undefined) node.textContent = text;
     return node;
   }
+  function indexAnswerHeadings(body, questionItem, question, messageIndex) {
+    if (!questionItem) return;
+    // Markdown headings at the body root describe the answer itself. Headings
+    // inside quotes, lists or layout diagrams are not answer sections.
+    const headings = [...body.querySelectorAll("h1, h2, h3, h4, h5, h6")]
+      .filter((heading) => heading.parentElement === body);
+    if (!headings.length) return;
+    const level = headings.reduce((level, heading) => Math.min(level, Number(heading.tagName.slice(1))), 6);
+    let list = questionItem.querySelector(".pdf-toc-headings");
+    for (const [index, heading] of headings.filter((node) => Number(node.tagName.slice(1)) === level).entries()) {
+      const label = heading.cloneNode(true);
+      for (const citation of label.querySelectorAll(".pdf-citation")) citation.remove();
+      for (const math of label.querySelectorAll(".katex")) {
+        const source = math.querySelector('annotation[encoding="application/x-tex"]')?.textContent;
+        math.replaceWith(document.createTextNode(source || math.textContent));
+      }
+      const title = label.textContent.replace(/\s+/g, " ").trim();
+      if (!title) continue;
+      heading.id = `answer-heading-${messageIndex + 1}-${index + 1}`;
+      heading.classList.add("pdf-answer-heading");
+      if (!list) { list = el("ul", "pdf-toc-headings"); questionItem.appendChild(list); }
+      const item = el("li");
+      const link = el("a", "", title);
+      link.setAttribute("href", `#${heading.id}`);
+      link.dataset.questionId = `question-${question}`;
+      item.appendChild(link); list.appendChild(item);
+    }
+  }
   const yieldToPage = () => new Promise((resolve) => setTimeout(resolve, 0));
   async function render(payload, main, { onProgress = () => {}, isCancelled = () => false } = {}) {
     if (!payload.completeness?.verified || payload.messages.length !== payload.completeness.count) {
@@ -119,6 +147,7 @@
     nav.appendChild(list);
     main.appendChild(nav);
     let question = 0;
+    let questionItem = null;
     const problems = [];
     onProgress({ completed: 0, total: payload.messages.length });
     await yieldToPage();
@@ -130,6 +159,7 @@
         question++;
         section.id = `question-${question}`;
         const item = el("li");
+        questionItem = item;
         const link = el("a", "", plainQuestion(message.text, question));
         link.setAttribute("href", `#${section.id}`);
         item.appendChild(link);
@@ -143,6 +173,7 @@
       const sources = (message.sources || []).filter((source) => /^https?:\/\//.test(source.url));
       body.innerHTML = md.render(preserveDiagrams(message.text), { archiveSourcesId: sources.length ? sourceId : null });
       section.appendChild(body);
+      if (message.role === "assistant") indexAnswerHeadings(body, questionItem, question, index);
       for (const asset of message.assets || []) {
         if (asset.dataUrl) {
           const figure = el("figure");

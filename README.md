@@ -63,6 +63,12 @@ After updating local files, click **Reload** on the extension card in `chrome://
 - **Export** offers HTML and PDF plus the **A4 landscape** and **Mobile reading** checkboxes. They are mutually exclusive; leave both unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
 
+## Answer headings in navigation (v3.4)
+
+The preview sidebar, offline HTML index and PDF bookmarks now share a **Question → Answer heading** hierarchy. Each answer contributes only its highest heading level: `#` headings if present, otherwise `##`, or the shallowest level it uses. Deeper subsections stay in the body. Headings within quotes, lists, code examples and layout diagrams are excluded. Multiple answers below one question share its heading list, and repeated titles have separate destinations.
+
+Inline formatting remains intact in the body; navigation labels use plain text without citation controls or duplicated math text. Existing local snapshots build the new index when reopened, without fetching the conversation again. Regenerate an exported PDF or HTML to include the new navigation. Long printed indexes can continue across pages.
+
 ## Managing local conversations (v3.3)
 
 Open **Conversation list** to see each conversation's local data size and the total for all saved conversations. Sizes include the saved transcript, embedded assets and annotation records, and update when data changes in this or another reader tab. They are estimates of serialized UTF-8 data, rather than physical disk usage; database indexes, browser overhead and disk compression may change the actual footprint. Deleted annotation records still contribute to the estimate until their conversation is removed.
@@ -90,7 +96,7 @@ The index printed at the beginning is a page of clickable links. The sidebar dir
 
 Chrome may display a debugging notice while rendering. The extension attaches only to its own export tab and disconnects as soon as the PDF data has been read, including on errors. It does not attach to ChatGPT or unrelated tabs. If direct export fails, close DevTools on the export tab and retry; browser policy or another debugger can prevent the connection. The failure reveals alternative controls for manual printing and adding bookmarks.
 
-When using the fallback **Add PDF sidebar index**, keep the same conversation loaded. The extension checks the original conversation link, every question destination and the referenced pages. Save **all pages** with Chrome's built-in **Save as PDF**, rather than a system PDF printer that may remove destinations. Older exports also work if their conversation link and question destinations are intact. If you edited or regenerated that conversation after exporting, save a fresh PDF first. Encrypted files and PDFs over 100 MiB are not supported.
+When using the fallback **Add PDF sidebar index**, keep the same conversation loaded. The extension checks the original conversation link, every question and answer-heading destination, and the referenced pages. Save **all pages** with Chrome's built-in **Save as PDF**, rather than a system PDF printer that may remove destinations. Older exports work only if all destinations required by the current preview are intact. If the preview includes answer headings, a PDF generated before v3.4 must be exported again to include those targets. If you edited or regenerated that conversation after exporting, save a fresh PDF first. Encrypted files and PDFs over 100 MiB are not supported.
 
 ## How it handles lazy loading
 
@@ -202,6 +208,8 @@ Version 3's reader is checked with automated DOM and IndexedDB fixtures, includi
 Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 
 Native bookmark insertion was separately validated on a 122-page Chrome PDF with 17 questions. An independent PDF reader confirmed all bookmark pages and vertical positions; all page content streams remained unchanged, and the first two rendered pages matched the original exactly. Direct PDF tests mock Chrome's debugger API to check target restrictions, A4 options, stream handling, cleanup, bookmark/download sequencing and UI restoration on failure. The direct export flow has not yet been verified through an actual Chrome debugger session.
+
+Heading navigation (v3.4): automated tests cover heading levels, repeated titles, multiple answers, Setext syntax, quotes/code exclusions, HTML preservation and nested PDF bookmarks. Isolated Chrome rendering of a synthetic 2-question, 40-heading conversation produced a 9-page A4 PDF and a 17-page mobile PDF, each with 43 bookmarks including the index. Every heading bookmark points to a page containing that heading, text stays inside page bounds, and the final passage is retained. Representative pages and the preview sidebar were visually checked; clicking a heading left it visible below the reading toolbar. The samples are not published.
 
 ## Contributing and reporting issues
 

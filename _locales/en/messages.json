@@ -730,5 +730,8 @@
         "content": "$1"
       }
     }
+  },
+  "pdfHeadingMismatch": {
+    "message": "PDF answer heading destinations do not match the current preview. Export all pages of the current conversation again, then retry."
   }
 }

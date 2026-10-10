@@ -116,6 +116,10 @@
 .pdf-toc ol { padding-left: 1.5em; }
 .pdf-toc li { margin-bottom: .6em; break-inside: avoid; }
 .pdf-toc a { color: #176b58; overflow-wrap: anywhere; text-decoration: none; }
+.pdf-toc > ol > li { break-inside: auto; }
+.pdf-toc > ol > li > a { display: block; break-after: avoid; }
+.pdf-toc .pdf-toc-headings { margin: .4em 0 .8em; padding-left: 1.3em; font-size: .92em; }
+.pdf-toc-headings li { margin-bottom: .35em; }
 .preview-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: start; gap: 24px; max-width: calc(297mm + 264px); margin: 20px auto 32px; padding: 0 20px; }
 .preview-layout[hidden], .preview-sidebar[hidden] { display: none; }
 .preview-sidebar { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border: 1px solid #d8e4de; border-radius: 8px; background: #fff; }
@@ -127,6 +131,10 @@
 .preview-toc a { display: block; color: #47534d; text-decoration: none; overflow-wrap: anywhere; }
 .preview-toc a:hover, .preview-toc a:focus-visible { color: #176b58; text-decoration: underline; }
 .preview-toc a:focus-visible { outline: 2px solid #176b58; outline-offset: 3px; }
+.preview-toc .pdf-toc-headings { margin: 6px 0 12px; padding-left: 1.2em; font-size: 12px; }
+.preview-toc .pdf-toc-headings li { margin-bottom: 6px; }
+.preview-toc .pdf-toc-headings a { color: #62686e; }
+.preview-toc .pdf-toc-headings a:hover, .preview-toc .pdf-toc-headings a:focus-visible { color: #176b58; }
 .preview-layout > .pdf-document { margin: 0 auto; min-width: 0; }
 @media screen { .preview-layout > .pdf-document > .pdf-toc { display: none; } }
 @media screen and (max-width: 900px) {
@@ -312,6 +320,7 @@
   .export-format-options .hint { margin: 5px 0 0; font-size: 11px; line-height: 1.55; }
   .preview-sidebar, .reader-annotations { top: calc(var(--reader-bar-height) + 16px); max-height: calc(100vh - var(--reader-bar-height) - 32px); }
   .pdf-message { scroll-margin-top: calc(var(--reader-bar-height) + 20px); }
+  .pdf-answer-heading { scroll-margin-top: calc(var(--reader-bar-height) + 20px); }
   .reader-panel-hint { color: #62686e; margin: 0 0 12px; font-size: 12px; }
   #reader-status { padding: 8px 10px; background: #edf6f2; border-radius: 5px; font-size: 12px; }
   #reader-status[data-level="error"] { background: #fff0ed; }

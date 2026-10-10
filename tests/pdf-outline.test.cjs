@@ -12,6 +12,9 @@ const metadata = { sourceUrl, questions: [
   { id: 'question-1', title: '第一问：SST 实现有什么不同？' },
   { id: 'question-2', title: 'How does MVCC work?' }
 ] };
+const nestedMetadata = { sourceUrl, questions: metadata.questions.map((entry, index) => ({ ...entry, headings: index === 0 ? [
+  { id: 'answer-heading-2-1', title: '共同标题' }, { id: 'answer-heading-2-2', title: 'SST 布局' }
+] : [{ id: 'answer-heading-4-1', title: '共同标题' }] })) };
 
 function exporter(locale = 'zh-CN') {
   const context = vm.createContext({ PDFLib, URL });
@@ -22,7 +25,7 @@ function exporter(locale = 'zh-CN') {
   return context.ChatGPTPdfOutline;
 }
 
-async function fixture({ tree = false, missingIndex = false, wrongSource = false, missingQuestion = false, badPage = false } = {}) {
+async function fixture({ tree = false, missingIndex = false, wrongSource = false, missingQuestion = false, badPage = false, headings = false, missingHeading = false, badHeadingPage = false } = {}) {
   const pdf = await PDFDocument.create();
   pdf.setCreator('Test fixture');
   const first = pdf.addPage([595, 842]);
@@ -39,6 +42,12 @@ async function fixture({ tree = false, missingIndex = false, wrongSource = false
   ]);
   if (!missingIndex) pairs.set('question-index', pdf.context.obj([first.ref, name('XYZ'), 40, 780, null]));
   if (missingQuestion) pairs.delete('question-2');
+  if (headings) {
+    pairs.set('answer-heading-2-1', pdf.context.obj([first.ref, name('XYZ'), 40, 500, null]));
+    pairs.set('answer-heading-2-2', pdf.context.obj([second.ref, name('XYZ'), 40, 700, null]));
+    pairs.set('answer-heading-4-1', pdf.context.obj([badHeadingPage ? pdf.context.nextRef() : second.ref, name('XYZ'), 40, 200, null]));
+  }
+  if (missingHeading) pairs.delete('answer-heading-2-2');
   if (tree) {
     const leaf = pdf.context.obj({ Names: [...pairs].flatMap(([key, value]) => [PDFHexString.fromText(key), value]) });
     pdf.catalog.set(name('Names'), pdf.context.obj({ Dests: { Kids: [pdf.context.register(leaf)] } }));
@@ -84,7 +93,52 @@ for (const tree of [false, true]) {
     assert.equal(ref, undefined);
     assert.equal(root.get(name('Last')).toString(), previous.toString());
   });
+  test(`answer headings form child bookmarks with distinct exact destinations and intact PDF content (${tree ? 'name tree' : 'Chrome Dests'})`, async () => {
+    const input = await fixture({ tree, headings: true });
+    const before = await PDFDocument.load(input.bytes);
+    const result = await exporter().add(input.bytes, nestedMetadata);
+    const output = await PDFDocument.load(result.bytes);
+    assert.equal(result.questions, 2); assert.equal(result.headings, 3);
+    assert.deepEqual(streams(output), streams(before));
+    const root = output.catalog.lookup(name('Outlines'), PDFDict);
+    assert.equal(root.lookup(name('Count'), PDFNumber).asNumber(), 6);
+    const index = root.lookup(name('First'), PDFDict);
+    const firstRef = index.get(name('Next')), first = output.context.lookup(firstRef, PDFDict);
+    const secondRef = first.get(name('Next')), second = output.context.lookup(secondRef, PDFDict);
+    assert.equal(second.get(name('Next')), undefined);
+    assert.equal(first.lookup(name('Count'), PDFNumber).asNumber(), 2);
+    assert.equal(second.lookup(name('Count'), PDFNumber).asNumber(), 1);
+    for (const [parent, parentRef, expected] of [[first, firstRef, [['共同标题', 0, 500], ['SST 布局', 1, 700]]], [second, secondRef, [['共同标题', 1, 200]]]]) {
+      let ref = parent.get(name('First')), previous;
+      for (const [title, page, y] of expected) {
+        const child = output.context.lookup(ref, PDFDict);
+        assert.equal(child.lookup(name('Title'), PDFHexString).decodeText(), title);
+        assert.equal(child.get(name('Parent')).toString(), parentRef.toString());
+        assert.equal(child.get(name('Prev'))?.toString(), previous?.toString());
+        const dest = child.lookup(name('Dest'), PDFArray);
+        assert.equal(dest.get(0).toString(), output.getPage(page).ref.toString());
+        assert.equal(dest.lookup(3, PDFNumber).asNumber(), y);
+        previous = ref; ref = child.get(name('Next'));
+      }
+      assert.equal(ref, undefined);
+      assert.equal(parent.get(name('Last')).toString(), previous.toString());
+    }
+  });
 }
+
+test('missing, extra or invalid answer heading targets and duplicate metadata fail without producing misleading bookmarks', async () => {
+  for (const options of [{}, { headings: true, missingHeading: true }]) {
+    const input = await fixture(options);
+    await assert.rejects(exporter().add(input.bytes, nestedMetadata), /回答标题跳转目标/);
+  }
+  const input = await fixture({ headings: true });
+  await assert.rejects(exporter().add(input.bytes, metadata), /回答标题跳转目标/);
+  for (const headings of [[{ id: 'question-1', title: 'Wrong kind' }], [nestedMetadata.questions[0].headings[0], nestedMetadata.questions[0].headings[0]], {}, [{ id: 'answer-heading-2-1', title: '' }]]) {
+    await assert.rejects(exporter().add(input.bytes, { ...nestedMetadata, questions: [{ ...nestedMetadata.questions[0], headings }, nestedMetadata.questions[1]] }), /回答标题跳转目标/);
+  }
+  const bad = await fixture({ headings: true, badHeadingPage: true });
+  await assert.rejects(exporter().add(bad.bytes, nestedMetadata), /页面跳转目标无效/);
+});
 
 test('hidden return links can omit the index destination; bookmark falls back to the first page', async () => {
   const input = await fixture({ missingIndex: true });

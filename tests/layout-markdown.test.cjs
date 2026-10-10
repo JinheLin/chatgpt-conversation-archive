@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { test } = require('node:test');
 const markdownit = require('../vendor/markdown-it.min.js');
 const { installI18n } = require('./helpers/i18n.cjs');
+const { fixture, payload, waitFor } = require('./helpers/reader.cjs');
 const project = path.resolve(__dirname, '..');
 
 function renderer() {
@@ -317,6 +318,7 @@ test('new component spellings and range expressions remain literal in code examp
   const { render } = renderer();
   for (const component of ['<Link url="https://example.com" title="Label"/>', '<Cite refs={["turn1search0"]}/>',
     '<Box gap=1><Caption>Literal</Caption></Box>', '<Chart content={{"chartType":"bar"}}/>',
+    '<Entity category="software" value="RocksDB Secondary" disambig="Example description"/>',
     '<box>{#each Array.from({length:16},(_,i)=>i) as i}<text>{i}</text>{/each}</box>']) {
     for (const input of [`\`\`\`xml\n${component}\n\`\`\``, `    ${component}`, `\`${component}\``, component.replace(/</g, '\\<')]) {
       const html = render(input);
@@ -324,6 +326,67 @@ test('new component spellings and range expressions remain literal in code examp
       assert.doesNotMatch(html, /class="(?:archive-layout|archive-link|archive-chart|pdf-citation)/);
     }
   }
+});
+
+test('entity components display their name within headings, bold text, links, tables and layouts', () => {
+  const { render } = renderer();
+  const entity = '<Entity category="software" value="RocksDB Secondary" disambig="Example description"/>';
+  assert.equal(render(entity), '<p>RocksDB Secondary</p>\n');
+  assert.equal(render('**' + entity + '**'), '<p><strong>RocksDB Secondary</strong></p>\n');
+  assert.match(render('## ' + entity), /<h2>RocksDB Secondary<\/h2>/);
+  assert.match(render('Before ' + entity + ' after.'), /<p>Before RocksDB Secondary after\.<\/p>/);
+  assert.match(render('[' + entity + '](https://example.com)'), />RocksDB Secondary<\/a>/);
+  assert.match(render('| Project |\n| - |\n| ' + entity + ' |'), /<td>RocksDB Secondary<\/td>/);
+  assert.match(render('<box><text>Before ' + entity + ' after.</text></box>'), />Before RocksDB Secondary after\./);
+  for (const source of ['<entity value="SlateDB" category="software"/>',
+    "<ENTITY\ncategory='software'\nvalue='SlateDB'\ndisambig='Example description'\n/>",
+    '<Entity category="software" value={"SlateDB"}/>']) {
+    assert.equal(render(source), '<p>SlateDB</p>\n');
+  }
+  assert.equal(render('<Entity value="A &amp; B &quot;quoted&quot;"/>'), '<p>A &amp; B &quot;quoted&quot;</p>\n');
+});
+
+test('entity names remain plain text and missing or executable values retain readable source', () => {
+  const { render } = renderer();
+  assert.equal(render('<Entity value="**Literal name**" disambig="Hidden description" onclick="evil()" style="color:red"/>'),
+    '<p>**Literal name**</p>\n');
+  const html = render('<Entity value="&lt;img src=x onerror=evil()&gt;"/>');
+  assert.match(html, /&lt;img/);
+  assert.doesNotMatch(html, /<img\b/);
+  for (const source of ['<Entity category="software"/>', '<Entity value=""/>',
+    '<Entity value={globalThis.executed=true}/>', '<Entity value="Name">Original text</Entity>']) {
+    assert.match(render(source), /&lt;Entity/);
+  }
+});
+
+test('saved reader, heading navigation and offline HTML retain entity names and code examples', async t => {
+  const entity = '<Entity category="software" value="RocksDB Secondary" disambig="Example description"/>';
+  const second = '<Entity category="software" value="SlateDB" disambig="Another description"/>';
+  const data = payload('Compare ' + entity, [
+    '## 一、' + entity, '**' + entity + '**', 'Surrounding paragraph.',
+    '## 二、' + second, '**' + second + '** Checkpoints',
+    '[Documentation](https://example.com/docs)', '```xml\n' + entity + '\n```'
+  ].join('\n\n'));
+  const original = JSON.stringify(data);
+  const app = fixture({ initial: data.sourceUrl }); t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(data); await app.start();
+  const check = root => {
+    const body = root.querySelector('.pdf-assistant .pdf-message-body');
+    assert.deepEqual([...body.querySelectorAll('h2')].map(node => node.textContent), ['一、RocksDB Secondary', '二、SlateDB']);
+    assert.deepEqual([...body.querySelectorAll('strong')].map(node => node.textContent), ['RocksDB Secondary', 'SlateDB']);
+    assert.equal(body.querySelector('code').textContent.trim(), entity);
+    assert.equal(body.querySelector('a').getAttribute('href'), 'https://example.com/docs');
+    assert.deepEqual([...root.querySelectorAll('.pdf-toc-headings a')].map(node => node.textContent), ['一、RocksDB Secondary', '二、SlateDB']);
+    assert.doesNotMatch(root.querySelector('.pdf-toc').textContent, /Entity|category=|disambig=/);
+  };
+  check(app.main);
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  check(new app.w.DOMParser().parseFromString(html, 'text/html'));
+  assert.equal(JSON.stringify(data), original);
+  assert.equal(app.requests.length, 0);
 });
 
 test('range loops and array membership accept only bounded data operations', () => {

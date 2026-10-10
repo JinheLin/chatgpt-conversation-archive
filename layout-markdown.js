@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
-    "table", "table-row", "table-cell", "link", "chart"]);
+    "table", "table-row", "table-cell", "link", "chart", "entity"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
@@ -238,6 +238,7 @@
       if (depth > MAX_DEPTH || ++count > MAX_NODES) return null;
       const open = readTag(source, pos);
       if (!open || open.closing) return null;
+      if (open.name === "entity" && !open.selfClosing) return null;
       if (inSvg ? !svgNames.has(open.name) : !layoutNames.has(open.name) && open.name !== "svg") return null;
       const node = { ...open, svg: inSvg || open.name === "svg", children: [] };
       if (open.selfClosing) return node;
@@ -432,6 +433,11 @@
         if (!result || result.value === undefined || result.value === null) delete attrs[key];
         else attrs[key] = String(result.value);
       }
+      if (node.name === "entity") {
+        if (typeof attrs.value !== "string" || !attrs.value.trim()) throw new Error("Missing entity name");
+        // Keep the visible name as plain text, inheriting surrounding formatting.
+        return md.utils.escapeHtml(md.utils.unescapeAll(attrs.value));
+      }
       if (node.name === "link") {
         const url = md.normalizeLink(md.utils.unescapeAll(attrs.url || attrs.href || ""));
         const label = attrs.title ? md.utils.escapeHtml(md.utils.unescapeAll(attrs.title)) :
@@ -482,7 +488,7 @@
       const offset = state.bMarks[start] + state.tShift[start];
       if (state.src[offset] !== "<") return false;
       const node = parse(state.src.slice(0, state.eMarks[end - 1]), offset);
-      if (!node) return false;
+      if (!node || node.name === "entity") return false;
       let last = start;
       while (last < end && state.eMarks[last] < node.end) last++;
       if (last >= end || state.src.slice(node.end, state.eMarks[last]).trim()) return false;

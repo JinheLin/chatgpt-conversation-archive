@@ -68,6 +68,16 @@
         // Keep a failed comment draft so it can be copied or retried.
       } finally { busy = false; save.disabled = false; }
     }
+    function sortNotes(loaded, restored) {
+      const messages = new Map([...main.querySelectorAll(".pdf-message[data-message-id]")]
+        .map((section, index) => [section.dataset.messageId, index]));
+      // Use restored offsets, since edits can move a quote from its saved position.
+      // Missing quotes retain their saved offset; missing messages sort last.
+      return [...loaded].sort((a, b) =>
+        (messages.get(a.messageId) ?? Number.MAX_SAFE_INTEGER) - (messages.get(b.messageId) ?? Number.MAX_SAFE_INTEGER) ||
+        (restored.get(a.id)?.start ?? a.anchor.start) - (restored.get(b.id)?.start ?? b.anchor.start) ||
+        a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+    }
     function renderList() {
       list.replaceChildren();
       get("reader-annotations-title").textContent = t("readerAnnotationsCount", notes.length);
@@ -82,7 +92,7 @@
         jumpButton.type = "button";
         jumpButton.addEventListener("click", () => jump(note.id));
         card.appendChild(jumpButton);
-        if (positions.get(note.id) === "unresolved") card.appendChild(element("p", "reader-unresolved", t("readerUnresolved")));
+        if (!positions.get(note.id)) card.appendChild(element("p", "reader-unresolved", t("readerUnresolved")));
         if (note.comment) card.appendChild(element("p", "reader-comment-text", note.comment));
         card.appendChild(element("time", "reader-note-date", new Date(note.updatedAt).toLocaleString(language)));
         const controls = element("div", "reader-note-controls");
@@ -105,7 +115,7 @@
       if (mine !== revision || current !== key) return;
       const restored = await anchors.apply(main, loaded, { isCancelled: () => mine !== revision || current !== key });
       if (!restored || mine !== revision) return;
-      notes = loaded; positions = restored; renderList();
+      notes = sortNotes(loaded, restored); positions = restored; renderList();
     }
     function unload() {
       revision++; hideSelection(); closeEditor();
@@ -122,7 +132,7 @@
       try {
         await refresh();
         if (mine + 1 !== revision || key !== conversationKey) return;
-        const unresolved = [...positions.values()].filter((value) => value === "unresolved").length;
+        const unresolved = [...positions.values()].filter((value) => !value).length;
         // The list already shows saved notes; successful restoration needs no separate message.
         report(unresolved ? t("readerRestoredUnresolved", notes.length, unresolved) : "");
         if (unresolved) openPanel();

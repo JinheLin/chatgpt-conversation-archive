@@ -115,7 +115,8 @@
       for (const annotation of group) {
         const position = entries ? await locate(entries.text, annotation.anchor, digest) : null;
         if (isCancelled()) return null;
-        results.set(annotation.id, position ? "resolved" : "unresolved");
+        // Return current offsets so the reader can order relocated annotations.
+        results.set(annotation.id, position);
         if (position) located.push({ ...position, id: annotation.id, comment: annotation.comment });
       }
       if (body) paint(body, entries, located);

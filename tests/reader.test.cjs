@@ -2,6 +2,14 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { fixture, setup, select, waitFor, payload, IDBFactory } = require('./helpers/reader.cjs');
 const plain = (value) => JSON.parse(JSON.stringify(value));
+async function saveQuote(app, id, messageId, exact, createdAt = '2026-10-09T00:00:00.000Z') {
+  const section = [...app.main.querySelectorAll('.pdf-message')].find(node => node.dataset.messageId === messageId);
+  const text = app.w.ChatGPTReaderAnchor.index(section.querySelector('.pdf-message-body')).text;
+  const start = text.indexOf(exact);
+  assert.ok(start >= 0);
+  return app.w.ChatGPTReaderStore.saveAnnotation({ id, conversationKey: 'c:test-conversation', messageId,
+    anchor: await app.w.ChatGPTReaderAnchor.quote(text, start, start + exact.length), comment: '', createdAt, updatedAt: createdAt });
+}
 
 test('quote anchors restore unchanged text, relocate unique quotes and refuse ambiguous duplicates', async (t) => {
   const app = fixture(); t.after(() => app.dom.window.close());
@@ -37,7 +45,7 @@ test('cross-format and overlapping highlights preserve paragraph, table and code
     { id: 'd', messageId: 'assistant-1', anchor: await anchors.quote(before, before.indexOf('abc'), before.indexOf('abc') + 10), comment: '' }
   ];
   const result = await anchors.apply(app.main, notes);
-  assert.ok([...result.values()].every((value) => value === 'resolved'));
+  assert.ok([...result.values()].every((value) => value && value.end > value.start));
   assert.equal(body.textContent, before);
   assert.equal(body.querySelectorAll('p').length, shape[0]);
   assert.equal(body.querySelectorAll('table').length, shape[1]);
@@ -103,6 +111,66 @@ test('highlights and comments survive closing the reader and reopening the same 
   reopened.get('reader-annotation-list').querySelectorAll('.reader-note-controls button')[1].click();
   await waitFor(async () => (await reopened.w.ChatGPTReaderStore.getAnnotations('c:test-conversation')).length === 0);
   await waitFor(() => reopened.main.querySelectorAll('mark').length === 0);
+});
+
+test('annotation cards follow message and text position, use creation time for ties and retain order after editing and reopening', async (t) => {
+  const data = payload('First question', 'Alpha passage followed by **Omega passage**.');
+  data.messages.push({ id: 'user-2', role: 'user', text: 'Second question' },
+    { id: 'assistant-2', role: 'assistant', text: 'Last response' });
+  Object.assign(data.completeness, { count: 4, questions: 2, lastMessageId: 'assistant-2' });
+  const app = await setup({ payload: data }); t.after(() => app.w.close());
+  await saveQuote(app, 'z-last', 'assistant-2', 'Last response', '2026-10-09T00:00:00.000Z');
+  await saveQuote(app, 'a-omega', 'assistant-1', 'Omega passage', '2026-10-09T00:00:01.000Z');
+  await saveQuote(app, 'a-alpha-newer', 'assistant-1', 'Alpha passage', '2026-10-09T00:00:03.000Z');
+  const older = await saveQuote(app, 'z-alpha-older', 'assistant-1', 'Alpha passage', '2026-10-09T00:00:02.000Z');
+  await saveQuote(app, 'a-second-question', 'user-2', 'Second question', '2026-10-09T00:00:04.000Z');
+  await saveQuote(app, 'z-first-question', 'user-1', 'First question', '2026-10-09T00:00:05.000Z');
+  const expected = ['z-first-question', 'z-alpha-older', 'a-alpha-newer', 'a-omega', 'a-second-question', 'z-last'];
+  const order = app => [...app.get('reader-annotation-list').children].map(node => node.dataset.annotationId);
+  await app.reader.refresh();
+  assert.deepEqual(order(app), expected);
+  await app.w.ChatGPTReaderStore.saveAnnotation({ ...older, comment: 'Edited later' }, older.updatedAt);
+  await app.reader.refresh();
+  assert.deepEqual(order(app), expected);
+  app.get('reader-annotation-list').querySelector('.reader-quote').click();
+  assert.equal(app.main.querySelector('.pdf-user mark').dataset.scrolled, 'true');
+  const reopened = await setup({ factory: app.factory, payload: data }); t.after(() => reopened.w.close());
+  assert.deepEqual(order(reopened), expected);
+});
+
+test('annotation order follows relocated quotes after a message changes rather than stale saved offsets', async (t) => {
+  const app = await setup({ payload: payload('Question', 'Alpha passage. ' + 'Context. '.repeat(20) + 'Omega passage.') });
+  t.after(() => app.w.close());
+  await saveQuote(app, 'alpha', 'assistant-1', 'Alpha passage');
+  await saveQuote(app, 'omega', 'assistant-1', 'Omega passage');
+  await app.reader.refresh();
+  const changed = payload('Question', 'Omega passage. ' + 'New context. '.repeat(25) + 'Alpha passage.');
+  await app.w.ChatGPTPdfExporter.render(changed, app.main);
+  await app.w.ChatGPTReaderStore.saveConversation(changed);
+  await app.reader.load('c:test-conversation');
+  const order = app => [...app.get('reader-annotation-list').children].map(node => node.dataset.annotationId);
+  assert.deepEqual(order(app), ['omega', 'alpha']);
+  assert.deepEqual([...app.main.querySelectorAll('mark')].map(node => node.textContent), ['Omega passage', 'Alpha passage']);
+  const saved = await app.w.ChatGPTReaderStore.getAnnotations('c:test-conversation');
+  assert.ok(saved.find(note => note.id === 'alpha').anchor.start < saved.find(note => note.id === 'omega').anchor.start);
+  const reopened = await setup({ factory: app.factory, payload: changed }); t.after(() => reopened.w.close());
+  assert.deepEqual(order(reopened), ['omega', 'alpha']);
+});
+
+test('unresolved annotations retain their saved position and annotations for missing messages remain at the end', async (t) => {
+  const app = await setup({ payload: payload('First question', 'Alpha passage followed by Omega passage.') });
+  t.after(() => app.w.close());
+  await saveQuote(app, 'missing-message', 'user-1', 'First question');
+  await saveQuote(app, 'missing-quote', 'assistant-1', 'Alpha passage');
+  await saveQuote(app, 'resolved', 'assistant-1', 'Omega passage');
+  const changed = payload('Replacement question', 'Changed passage followed by Omega passage.');
+  changed.messages[0].id = changed.completeness.firstMessageId = 'user-replacement';
+  await app.w.ChatGPTPdfExporter.render(changed, app.main);
+  await app.reader.load('c:test-conversation');
+  const cards = [...app.get('reader-annotation-list').children];
+  assert.deepEqual(cards.map(node => node.dataset.annotationId), ['missing-quote', 'resolved', 'missing-message']);
+  assert.equal(cards.filter(node => node.querySelector('.reader-unresolved')).length, 2);
+  assert.equal(app.main.querySelector('mark').textContent, 'Omega passage');
 });
 
 test('changed messages preserve unresolved annotations and do not put them on a different message', async (t) => {

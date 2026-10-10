@@ -97,22 +97,10 @@
   }
   function indexAnswerHeadings(body, questionItem, question, messageIndex) {
     if (!questionItem) return;
-    // Markdown headings at the body root describe the answer itself. Headings
-    // inside quotes, lists or layout diagrams are not answer sections.
-    const headings = [...body.querySelectorAll("h1, h2, h3, h4, h5, h6")]
-      .filter((heading) => heading.parentElement === body);
+    const headings = globalThis.ChatGPTAnswerHeadings.select(body);
     if (!headings.length) return;
-    const level = headings.reduce((level, heading) => Math.min(level, Number(heading.tagName.slice(1))), 6);
     let list = questionItem.querySelector(".pdf-toc-headings");
-    for (const [index, heading] of headings.filter((node) => Number(node.tagName.slice(1)) === level).entries()) {
-      const label = heading.cloneNode(true);
-      for (const citation of label.querySelectorAll(".pdf-citation")) citation.remove();
-      for (const math of label.querySelectorAll(".katex")) {
-        const source = math.querySelector('annotation[encoding="application/x-tex"]')?.textContent;
-        math.replaceWith(document.createTextNode(source || math.textContent));
-      }
-      const title = label.textContent.replace(/\s+/g, " ").trim();
-      if (!title) continue;
+    for (const [index, { node: heading, title }] of headings.entries()) {
       heading.id = `answer-heading-${messageIndex + 1}-${index + 1}`;
       heading.classList.add("pdf-answer-heading");
       if (!list) { list = el("ul", "pdf-toc-headings"); questionItem.appendChild(list); }

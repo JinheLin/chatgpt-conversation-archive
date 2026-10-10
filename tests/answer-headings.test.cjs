@@ -121,3 +121,98 @@ test('direct and fallback PDF export group answer headings below question metada
     assert.equal(metadata.questions[1].headings[0].id, 'answer-heading-5-1');
   }
 });
+
+test('numbered Chinese chapters replace the answer title and exclude decimal subsections', async t => {
+  const app = fixture(); t.after(() => app.w.close());
+  const data = payload('Question', [
+    '# 全文总标题', '开场说明。', '## 一、技术演进', '正文。', '## 二、共享存储',
+    '### 2.1 页面版本', '### 2.2 恢复过程', '## 三、存储分层', '## 四、总体评价', '## 最后：阅读建议'
+  ].join('\n\n'));
+  await app.w.ChatGPTPdfExporter.render(data, app.main);
+  const links = [...app.main.querySelectorAll('.pdf-toc-headings a')];
+  assert.deepEqual(links.map(a => a.textContent), ['一、技术演进', '二、共享存储', '三、存储分层', '四、总体评价', '最后：阅读建议']);
+  assert.equal(app.main.querySelector('.pdf-assistant h1').id, '');
+  assert.equal(app.main.querySelector('.pdf-assistant h3').id, '');
+  for (const link of links) assert.equal(app.w.document.getElementById(link.hash.slice(1)).tagName, 'H2');
+});
+
+test('a standalone answer title or title/subtitle is skipped even without numbering', async t => {
+  const app = fixture(); t.after(() => app.w.close());
+  for (const source of ['# 总标题\n\n## 背景\n\n### 子问题\n\n## 实现\n\n## 总结',
+    '# 总标题\n\n## 副标题\n\n### 背景\n\n#### 子问题\n\n### 实现\n\n### 总结']) {
+    await app.w.ChatGPTPdfExporter.render(payload('Question', source), app.main);
+    assert.deepEqual([...app.main.querySelectorAll('.pdf-toc-headings a')].map(a => a.textContent), ['背景', '实现', '总结']);
+  }
+});
+
+test('common numbering forms support Chinese, Arabic, parentheses, chapters and Roman numerals', async t => {
+  const app = fixture(); t.after(() => app.w.close());
+  for (const titles of [['一、背景', '二、实现'], ['十、背景', '十一、实现'], ['1. Background', '2. Implementation'],
+    ['１．背景', '２．实现'], ['1、背景', '2、实现'], ['（一）背景', '（二）实现'], ['1) Background', '2) Implementation'],
+    ['第一章 背景', '第二章 实现'], ['Chapter 1: Background', 'Chapter 2: Implementation'], ['Part I: Background', 'Part II: Implementation'],
+    ['I. Background', 'II. Implementation']]) {
+    await app.w.ChatGPTPdfExporter.render(payload('Question', '# Overall title\n\n' + titles.map(title => '## ' + title).join('\n\n')), app.main);
+    assert.deepEqual([...app.main.querySelectorAll('.pdf-toc-headings a')].map(a => a.textContent), titles);
+  }
+});
+
+test('consistent chapter numbering survives mixed Markdown levels and bold or plain paragraph headings', async t => {
+  const app = fixture(); t.after(() => app.w.close());
+  for (const source of [
+    '# 总标题\n\n## 一、背景\n\n### 二、实现\n\n## 三、总结',
+    '# 总标题\n\n**一、背景**\n\n普通正文。\n\n### 1.1 子问题\n\n二、实现\n\n普通正文。\n\n**三、总结**',
+    '**（一）背景**\n\n普通正文。\n\n**（二）实现**',
+    '一、背景\n\n普通正文。\n\n二、实现'
+  ]) {
+    await app.w.ChatGPTPdfExporter.render(payload('Question', source), app.main);
+    const links = [...app.main.querySelectorAll('.pdf-toc-headings a')];
+    assert.ok(links.length >= 2);
+    assert.deepEqual(links.map(a => a.textContent), source.includes('（一）') ? ['（一）背景', '（二）实现'] :
+      source.includes('三、') ? ['一、背景', '二、实现', '三、总结'] : ['一、背景', '二、实现']);
+    for (const link of links) assert.ok(app.w.document.getElementById(link.hash.slice(1)));
+    const body = app.main.querySelector('.pdf-assistant .pdf-message-body');
+    const before = body.innerHTML;
+    app.w.ChatGPTAnswerHeadings.select(body);
+    assert.equal(body.innerHTML, before); // Selection changes neither text nor annotation anchors.
+  }
+});
+
+test('numbered code, lists, quotations, diagram text and short bold statements do not become chapters', async t => {
+  const app = fixture(); t.after(() => app.w.close());
+  const source = ['# 总标题', '## 背景', '一、普通内部要点', '二、普通内部要点', '## 实现',
+    '**独立粗体强调句**', '> ## 一、引用\n> ## 二、引用',
+    '1. **First list item**\n2. **Second list item**', '```text\n一、代码\n二、代码\n```',
+    '<box><text>一、图形</text><text>二、图形</text></box>',
+    '一、这是一段很长的正文，' + '它不应该成为目录。'.repeat(20), '二、这也是很长的正文，' + '它不应该成为目录。'.repeat(20)
+  ].join('\n\n');
+  await app.w.ChatGPTPdfExporter.render(payload('Question', source), app.main);
+  assert.deepEqual([...app.main.querySelectorAll('.pdf-toc-headings a')].map(a => a.textContent), ['背景', '实现']);
+  assert.ok(app.main.querySelector('.pdf-assistant pre code').textContent.includes('一、代码'));
+  await app.w.ChatGPTPdfExporter.render(payload('Question', '`一、代码`\n\n`二、代码`\n\n**`三、代码`**'), app.main);
+  assert.equal(app.main.querySelectorAll('.pdf-toc-headings a').length, 0);
+});
+
+test('chapter selection is shared by the offline index and direct and fallback PDF metadata', async t => {
+  const data = payload('Question', '# 总标题\n\n## 一、背景\n\n### 1.1 子问题\n\n## 二、实现');
+  const app = fixture({ initial: data.sourceUrl }); t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(data); await app.start();
+  const sidebar = app.get('preview-sidebar');
+  assert.deepEqual([...sidebar.querySelectorAll('.pdf-toc-headings a')].map(a => a.textContent), ['一、背景', '二、实现']);
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const text = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  const html = new app.w.DOMParser().parseFromString(text, 'text/html');
+  assert.deepEqual([...html.querySelectorAll('.pdf-toc-headings a')].map(a => a.textContent), ['一、背景', '二、实现']);
+  const calls = [];
+  app.w.ChatGPTPdfCapture = { capture: async () => new Uint8Array([1]) };
+  app.w.ChatGPTPdfOutline = { MAX_BYTES: 100000, add: async (bytes, metadata) => {
+    calls.push(metadata); return { bytes: new Uint8Array([2]), questions: 1, headings: 2, pages: 2 };
+  } };
+  app.get('save-pdf').click(); await waitFor(() => app.downloads.length === 2 && !app.get('save-pdf').disabled);
+  const file = app.get('pdf-outline-file');
+  Object.defineProperty(file, 'files', { value: [{ size: 1, name: 'Fixture.pdf', arrayBuffer: async () => new ArrayBuffer(1) }] });
+  file.dispatchEvent(new app.w.Event('change')); await waitFor(() => app.downloads.length === 3);
+  assert.equal(calls.length, 2);
+  for (const metadata of calls) assert.deepEqual(Array.from(metadata.questions[0].headings, h => h.title), ['一、背景', '二、实现']);
+});

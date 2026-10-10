@@ -7,9 +7,9 @@
 
   function install(md) {
     md.inline.ruler.before("html_inline", "archive_citation", (state, silent) => {
-      if (!state.src.startsWith("<cite", state.pos)) return false;
+      if (!/^<cite\b/i.test(state.src.slice(state.pos, state.pos + 6))) return false;
       const input = state.src.slice(state.pos, Math.min(state.posMax, state.pos + 14000));
-      const match = /^<cite\s+refs\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}\s*\/>/.exec(input);
+      const match = /^<cite\s+refs\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}\s*\/>/i.exec(input);
       if (!match) return false;
       let refs;
       try { refs = JSON.parse(match[1]); } catch (_) { return false; }
@@ -57,7 +57,7 @@
       if (env.archiveHideCitations) return "";
       const id = env.archiveSourcesId;
       if (typeof id === "string" && /^sources-\d+$/.test(id)) {
-        if (tokens[index].meta.insideLink) return `<span class="pdf-citation">[${md.utils.escapeHtml(t("sourcesLabel"))}]</span>`;
+        if (tokens[index].meta.insideLink || env.archiveInsideLink) return `<span class="pdf-citation">[${md.utils.escapeHtml(t("sourcesLabel"))}]</span>`;
         return `<a class="pdf-citation" href="#${id}">[${md.utils.escapeHtml(t("sourcesLabel"))}]</a>`;
       }
       return `<span class="pdf-citation pdf-citation-unavailable">[${md.utils.escapeHtml(t("citationUnavailable"))}]</span>`;

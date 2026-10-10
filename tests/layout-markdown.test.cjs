@@ -12,7 +12,7 @@ function renderer() {
   const context = vm.createContext({ markdownit: options => (md = markdownit(options)),
     katex: require('../vendor/katex.min.js') });
   installI18n(context);
-  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'export.js']) {
+  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'chart-markdown.js', 'export.js']) {
     vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context);
   }
   return { md, render: source => md.render(context.ChatGPTPdfExporter.preserveDiagrams(source)) };
@@ -81,7 +81,7 @@ test('only fixed layout tags and bounded presentation values become HTML', () =>
 test('unknown and malformed markup keeps its content and ordinary Markdown is unchanged', () => {
   const { render } = renderer();
   for (const source of ['<box>unfinished', '<box><text>mismatched</box>',
-    '<box padding=3>unquoted</box>', '<unknown>content</unknown>']) {
+    '<box padding=word>unquoted</box>', '<unknown>content</unknown>']) {
     const html = render(source);
     assert.match(html, /&lt;/);
     assert.match(html, /unfinished|mismatched|unquoted|content/);
@@ -273,4 +273,78 @@ test('excessive loop expansion falls back to readable source instead of dropping
   const html = render(`<box>{#each ${values} as i}{#each ${values} as j}<text>{i} {j}</text>{/each}{/each}</box>`);
   assert.match(html, /^<pre><code>&lt;box&gt;/);
   assert.match(html, /\{#each/);
+});
+
+test('mixed components retain links, nested captions, range diagrams and segmented corners', () => {
+  const { render } = renderer();
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/component-layout.md'), 'utf8');
+  for (const input of [source, source.replace(/<(\/?)(box|row|caption|text|title)\b/g, (_, slash, name) => `<${slash}${name.toUpperCase()}`)]) {
+    const html = render(input);
+    assert.match(html, /href="https:\/\/example.com\/paper.pdf"[^>]*>Read PDF<\/a>/);
+    assert.match(html, /href="https:\/\/example.com\/doi"[^>]*>DOI<\/a>/);
+    assert.match(html, /archive-layout-caption[^>]*>Keep the nested description/);
+    assert.match(html, /--archive-layout-padding:12px;--archive-layout-gap:4px/);
+    assert.match(html, /border-top-left-radius:4px;border-bottom-left-radius:4px/);
+    assert.match(html, /border-top-right-radius:4px;border-bottom-right-radius:4px/);
+    assert.match(html, /flex:1.5 1 0/);
+    assert.match(html, /height:38px/);
+    assert.equal((html.match(/height:16px/g) || []).length, 16);
+    assert.equal((html.match(/background-color:#377eb8;border-radius:2px/g) || []).length, 3);
+    assert.equal((html.match(/archive-chart-bar"/g) || []).length, 9);
+    assert.match(html, /Final passage/);
+    assert.doesNotMatch(html, /&lt;\/?(?:box|row|caption|link|cite|chart)\b|\{#each|\.includes|<pre>/i);
+  }
+});
+
+test('component links decode labels and URLs, reject unsafe destinations and avoid nested anchors', () => {
+  const { render } = renderer();
+  const html = render('<Link\n title="A &amp; B &quot;quoted&quot;"\n url="https://example.com/path?a=1&amp;b=2"/>');
+  assert.match(html, /href="https:\/\/example.com\/path\?a=1&amp;b=2"/);
+  assert.match(html, />A &amp; B &quot;quoted&quot;<\/a>/);
+  assert.match(render('<link url="https://example.com"/>'), />https:\/\/example.com<\/a>/);
+  assert.match(render('<Link url="https://example.com">**Label**</Link>'), /<strong>Label<\/strong><\/a>/);
+  for (const url of ['javascript:alert(1)', 'data:text/html,evil', 'file:///secret', '//evil.example']) {
+    const unsafe = render(`<Link url="${url}" title="Keep label" onclick="evil()"/>`);
+    assert.match(unsafe, />Keep label<\/span>/);
+    assert.doesNotMatch(unsafe, /<a\b|href=|onclick=/);
+  }
+  const nested = render('[<box><Link url="https://inside.example" title="Inside"/></box>](https://outside.example)');
+  assert.equal((nested.match(/<a\b/g) || []).length, 1);
+  assert.match(nested, /<span class="archive-link">Inside<\/span>/);
+});
+
+test('new component spellings and range expressions remain literal in code examples', () => {
+  const { render } = renderer();
+  for (const component of ['<Link url="https://example.com" title="Label"/>', '<Cite refs={["turn1search0"]}/>',
+    '<Box gap=1><Caption>Literal</Caption></Box>', '<Chart content={{"chartType":"bar"}}/>',
+    '<box>{#each Array.from({length:16},(_,i)=>i) as i}<text>{i}</text>{/each}</box>']) {
+    for (const input of [`\`\`\`xml\n${component}\n\`\`\``, `    ${component}`, `\`${component}\``, component.replace(/</g, '\\<')]) {
+      const html = render(input);
+      assert.match(html, /&lt;/);
+      assert.doesNotMatch(html, /class="(?:archive-layout|archive-link|archive-chart|pdf-citation)/);
+    }
+  }
+});
+
+test('range loops and array membership accept only bounded data operations', () => {
+  const { render } = renderer();
+  assert.equal((render('<box>{#each Array.from({ length: 3 }, (_, n) => n) as x}<text>{x}</text>{/each}</box>').match(/archive-layout-text/g) || []).length, 3);
+  for (const input of ['Array.from({length:201},(_,i)=>i)', 'Array.from({length:16},(_,i)=>evil())',
+    'Array.from({length:16},(_,i)=>j)', 'Array.from({length:16,get x(){evil()}},(_,i)=>i)']) {
+    assert.match(render(`<box>{#each ${input} as i}<text>{i}</text>{/each}</box>`), /\{#each/);
+  }
+  const membership = render('<box>{#each [0,1] as i}<box background={[1].includes(i)?"#000":"#fff"}>{i}</box>{/each}</box>');
+  assert.match(membership, /background-color:#fff/);
+  assert.match(membership, /background-color:#000/);
+  for (const input of ['[1].map(evil)', '[1].constructor', '[1].includes(globalThis)', '[1].includes(0,evil())']) {
+    assert.doesNotMatch(render(`<box background={${input}}>safe</box>`), /background-color:/);
+  }
+});
+
+test('nested attribute objects are data only and unknown fields cannot inject CSS', () => {
+  const { render } = renderer();
+  const html = render('<box radius={{topLeft:"sm",bottomRight:"url(evil)",bad:"red;position:fixed"}} height="99999px" width="72px">safe</box>');
+  assert.match(html, /border-top-left-radius:4px;width:72px/);
+  assert.doesNotMatch(html, /position:|url\(|height:|bad:|border-bottom-right-radius/);
+  assert.doesNotMatch(render('<box radius={{topLeft:evil()}}>safe</box>'), /style=/);
 });

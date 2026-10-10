@@ -31,7 +31,7 @@ function renderer() {
     markdownit: require('../vendor/markdown-it.min.js'), katex: require('../vendor/katex.min.js')
   });
   installI18n(context);
-  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'page-layout.js', 'export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
+  for (const file of ['layout-markdown.js', 'citation-markdown.js', 'chart-markdown.js', 'page-layout.js', 'export.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   return { ...context.ChatGPTPdfExporter, main: new Node('main'), pre: text => { const node = new Node('pre'); node.textContent = text; return node; } };
 }
 const payload = {

@@ -176,11 +176,25 @@
 .pdf-message-body .archive-layout-svg { display: block; max-width: 100%; height: auto; overflow: visible; }
 .pdf-message-body .archive-layout-border { border: 1px solid #d8dcdf; }
 .pdf-message-body .archive-layout-surface-secondary { background: #f6f8fa; }
+.pdf-message-body .archive-layout-surface-tertiary { background: #e9edf1; }
 .pdf-message-body .archive-layout-secondary, .pdf-message-body .archive-layout-caption { color: #62686e; }
 .pdf-message-body .archive-layout-caption { font-size: 9pt; line-height: 1.5; }
 .pdf-message-body .archive-layout > p { margin: 0; }
 .pdf-message-body .archive-layout > :first-child { margin-top: 0; }
 .pdf-message-body .archive-layout > :last-child { margin-bottom: 0; }
+.pdf-message-body .archive-chart { display: block; margin: 1em 0; padding: 12px; border: 1px solid #d8dcdf; border-radius: 6px; }
+.pdf-message-body .archive-chart-title { display: block; font-size: 1em; font-weight: 600; color: #202124; }
+.pdf-message-body .archive-chart-description { display: block; margin-top: 4px; color: #62686e; font-size: .9em; }
+.pdf-message-body .archive-chart-group { display: block; margin-top: 14px; break-inside: avoid-page; }
+.pdf-message-body .archive-chart-category { display: block; margin-bottom: 4px; font-weight: 600; }
+.pdf-message-body .archive-chart-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) max-content; gap: 8px; align-items: center; margin: 4px 0; }
+.pdf-message-body .archive-chart-label { overflow-wrap: anywhere; }
+.pdf-message-body .archive-chart-track { display: block; background: #f0f2f4; height: 14px; }
+.pdf-message-body .archive-chart-bar { display: block; height: 100%; }
+.pdf-message-body .archive-chart-value { font-variant-numeric: tabular-nums; font-size: .9em; }
+.pdf-message-body span.archive-chart-table { display: table; width: 100%; border-collapse: collapse; }
+.pdf-message-body .archive-chart-table > [role="row"] { display: table-row; }
+.pdf-message-body .archive-chart-table :is([role="cell"], [role="columnheader"]) { display: table-cell; padding: .4em; border: 1px solid #ccd2d5; overflow-wrap: anywhere; }
 .pdf-document[data-landscape="true"] { width: min(297mm, 100%); }
 .pdf-offline .pdf-document { margin-top: 0; }
 @media (max-width: 700px) { .input-row { flex-direction: column; } .export-panel { margin: 10px; } }
@@ -194,6 +208,7 @@
   .pdf-message-body pre { overflow: visible; break-inside: avoid-page; page-break-inside: avoid; }
   .pdf-message-body .katex-display { break-inside: avoid; }
   .pdf-message-body .archive-layout { break-inside: avoid-page; page-break-inside: avoid; }
+  .pdf-message-body .archive-chart { break-inside: avoid-page; page-break-inside: avoid; }
 }
 
 /* A narrow page is re-typeset from the transcript, never resized from A4. */
@@ -222,6 +237,7 @@
 .pdf-document[data-page-layout="mobile"] .pdf-toc h2 { font-size: 15pt; }
 .pdf-document[data-page-layout="mobile"] .pdf-message-body :is(th, td, .archive-layout-table-cell) { padding: .3em; }
 .pdf-document[data-page-layout="mobile"] .pdf-message-body img { max-height: 162mm; object-fit: contain; }
+.pdf-document[data-page-layout="mobile"] .pdf-message-body .archive-chart-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) max-content; }
 @media print {
   .pdf-document[data-page-layout="mobile"] { width: auto; min-height: 0; padding: 0; }
   .pdf-document[data-page-layout="mobile"] .pdf-message-body pre:not([data-diagram="true"]) {

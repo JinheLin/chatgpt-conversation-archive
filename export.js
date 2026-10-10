@@ -71,7 +71,7 @@
       let j = i + 1;
       while (j < lines.length && lines[j].trim() && !/^\s*(`{3,}|~{3,})/.test(lines[j])) j++;
       const block = lines.slice(i, j).join("\n");
-      if (j - i >= 2 && !/<(?:box|grid|row|svg)\b/.test(block) &&
+      if (j - i >= 2 && !/<(?:box|grid|row|svg)\b/i.test(block) &&
           (/[┌┐└┘├┤┬┴┼│─]/.test(block) || /\+[-=]{3,}\+/.test(block))) {
         output.push("```text", block, "```");
       } else output.push(block);

@@ -24,12 +24,13 @@ const legacy = 'citeturn1search0turn1search1';
 test('new citation components, including wrapped refs, render as localized sources links', () => {
   for (const [locale, label] of [['en-US', 'Sources'], ['zh-CN', '来源']]) {
     const { render } = renderer(locale);
-    for (const citation of [component, '<cite refs=\n{["turn1search0",\n"turn1search1"]}/>']) {
+    for (const citation of [component, component.replace('cite', 'Cite'), component.replace('cite', 'CiTe'),
+      '<Cite refs=\n{["turn1search0",\n"turn1search1"]}/>']) {
       const html = render(`正文 **格式**。 ${citation} 后文。`);
       assert.match(html, /<strong>格式<\/strong>/);
       assert.ok(html.includes(`<a class="pdf-citation" href="#sources-34">[${label}]</a>`));
       assert.match(html, /后文。/);
-      assert.doesNotMatch(html, /&lt;cite|turn1search|refs=/);
+      assert.doesNotMatch(html, /&lt;cite|turn1search|refs=/i);
     }
   }
 });
@@ -48,7 +49,7 @@ test('legacy citations retain surrounding text, repeated citations and layout co
 
 test('fenced, indented and inline code keeps both citation formats literal', () => {
   const { render } = renderer();
-  for (const citation of [component, legacy]) {
+  for (const citation of [component, component.replace('cite', 'Cite'), legacy]) {
     for (const source of [`\`\`\`xml\n${citation}\n\`\`\``, `~~~xml\n${citation}\n~~~`,
       `    ${citation}`, `\`${citation}\``]) {
       const html = render(source);
@@ -78,6 +79,12 @@ test('citations in Markdown links never generate nested anchors', () => {
   const { render } = renderer();
   for (const citation of [component, legacy]) {
     const html = render(`[Text ${citation}](https://example.com)`);
+    assert.equal((html.match(/<a\b/g) || []).length, 1);
+    assert.match(html, /<span class="pdf-citation">\[Sources\]<\/span>/);
+  }
+  for (const source of [`[<text>${component}</text>](https://example.com)`,
+    `<Link url="https://example.com"><text>${component}</text></Link>`]) {
+    const html = render(source);
     assert.equal((html.match(/<a\b/g) || []).length, 1);
     assert.match(html, /<span class="pdf-citation">\[Sources\]<\/span>/);
   }

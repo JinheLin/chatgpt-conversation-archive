@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
-    "table", "table-row", "table-cell"]);
+    "table", "table-row", "table-cell", "link", "chart"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
@@ -11,7 +11,7 @@
 
   // Parse array/object data with quoted or bare keys. This is a literal reader,
   // not JavaScript: calls, spreads, getters and computed keys are never accepted.
-  function loopItems(source, start) {
+  function literalData(source, start) {
     let pos = start, count = 0;
     const end = Math.min(source.length, start + 100000);
     const whitespace = () => { while (pos < end && /\s/.test(source[pos])) pos++; };
@@ -79,50 +79,92 @@
       return value;
     }
     try {
-      const items = literal();
-      return Array.isArray(items) ? { items, end: pos } : null;
+      return { value: literal(), end: pos };
     } catch (_) { return null; }
   }
 
+  function loopItems(source, start) {
+    const data = literalData(source, start);
+    if (data && Array.isArray(data.value)) return { items: data.value, end: data.end };
+    // Recognize only this bounded identity range syntax, never execute a call.
+    const range = /^Array\.from\(\s*\{\s*length\s*:\s*(\d{1,3})\s*\}\s*,\s*\(\s*_\s*,\s*([a-zA-Z_]\w*)\s*\)\s*=>\s*\2\s*\)/.exec(source.slice(start));
+    if (!range || Number(range[1]) > 200) return null;
+    return { items: Array.from({ length: Number(range[1]) }, (_, index) => index), end: start + range[0].length };
+  }
+
+  function bracedValue(source, start) {
+    let depth = 0, quote = null;
+    for (let pos = start; pos < Math.min(source.length, start + 100000); pos++) {
+      const char = source[pos];
+      if (quote) {
+        if (char === "\\") pos++;
+        else if (char === quote) quote = null;
+      } else if (char === '"' || char === "'") quote = char;
+      else if (char === "{") { if (++depth > MAX_DEPTH) return null; }
+      else if (char === "}" && --depth === 0) return { content: source.slice(start + 1, pos), end: pos + 1 };
+    }
+    return null;
+  }
+
   function readTag(source, start) {
-    const match = /^<(\/?)([a-z][a-z-]*)\b/.exec(source.slice(start));
-    if (!match || !names.has(match[2])) return null;
+    const match = /^<(\/?)([a-z][a-z-]*)\b/i.exec(source.slice(start));
+    const name = match?.[2].toLowerCase();
+    if (!match || !names.has(name)) return null;
     let pos = start + match[0].length;
     const attrs = Object.create(null);
     const expressions = [];
     while (pos < source.length) {
       const tail = source.slice(pos);
       const close = /^\s*(\/?)>/.exec(tail);
-      if (close) return { name: match[2], closing: !!match[1], selfClosing: !!close[1], attrs, expressions, end: pos + close[0].length };
+      if (close) return { name, closing: !!match[1], selfClosing: !!close[1], attrs, expressions, end: pos + close[0].length };
       if (match[1]) return null;
-      const attr = /^\s+([a-zA-Z][a-zA-Z0-9-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|\{([^{}]*)\}))?(?=\s|\/?>)/.exec(tail);
+      const attr = /^\s+([a-zA-Z][a-zA-Z0-9-]*)(\s*=\s*)?/.exec(tail);
       if (!attr) return null;
-      attrs[attr[1]] = attr[2] ?? attr[3] ?? attr[4]?.trim() ?? "true";
-      if (attr[4] !== undefined) expressions.push(attr[1]);
       pos += attr[0].length;
+      let value = "true";
+      if (attr[2]) {
+        if (source[pos] === "{") {
+          const expression = bracedValue(source, pos);
+          if (!expression) return null;
+          value = expression.content.trim(); pos = expression.end;
+          expressions.push(attr[1]);
+        } else {
+          const literal = /^(?:"([^"]*)"|'([^']*)'|([+-]?(?:\d+(?:\.\d+)?|\.\d+)))/.exec(source.slice(pos));
+          if (!literal) return null;
+          value = literal[1] ?? literal[2] ?? literal[3]; pos += literal[0].length;
+        }
+      }
+      if (!/^(?:\s|\/?>)/.test(source.slice(pos)) || Object.hasOwn(attrs, attr[1])) return null;
+      attrs[attr[1]] = value;
     }
     return null;
   }
 
   function readEscape(source, start) {
-    if (!source.startsWith("<escape", start)) return null;
+    if (!/^<escape\b/i.test(source.slice(start, start + 8))) return null;
     const input = source.slice(start, start + 10000);
-    const open = /^<escape\s*>/.exec(input);
+    const open = /^<escape\s*>/i.exec(input);
     if (!open) return null;
-    const close = /<\/escape\s*>/.exec(input.slice(open[0].length));
+    const close = /<\/escape\s*>/i.exec(input.slice(open[0].length));
     return close && { content: input.slice(open[0].length, open[0].length + close.index),
       end: start + open[0].length + close.index + close[0].length };
   }
 
   // A data-only expression grammar: numbers, strings, loop data, arithmetic,
   // comparisons and ternaries. Only own literal fields and array indexes can be
-  // read; no calls, prototype access, assignment or JavaScript evaluation.
+  // read, plus membership in literal arrays; no arbitrary calls, prototype access,
+  // assignment or JavaScript evaluation.
   function valueOf(source, scope) {
     if (source.length > 1000) return null;
     const tokens = [];
     let pos = 0, cursor = 0;
     while (pos < source.length) {
       if (/\s/.test(source[pos])) { pos++; continue; }
+      if (source[pos] === "[" && (!tokens.length || /^(?:\(|\?|:|===|!==|==|!=|<=|>=|[+*/<>!\-])$/.test(tokens.at(-1)))) {
+        const data = literalData(source, pos);
+        if (!data || !Array.isArray(data.value)) return null;
+        tokens.push({ literal: data.value }); pos = data.end; continue;
+      }
       const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|[+*/<>()?\[\]:!.\-])/.exec(source.slice(pos));
       if (!token) return null;
       tokens.push(token[0]); pos += token[0].length;
@@ -132,7 +174,8 @@
       if (depth > MAX_DEPTH) throw new Error("Expression nesting limit");
       const token = tokens[cursor++];
       let value;
-      if (["-", "+", "!"].includes(token)) {
+      if (token && typeof token === "object") value = token.literal;
+      else if (["-", "+", "!"].includes(token)) {
         const operand = expression(5, depth + 1);
         if (token !== "!" && typeof operand !== "number") throw new Error("Numeric operand required");
         value = token === "!" ? !operand : token === "-" ? -operand : operand;
@@ -150,6 +193,15 @@
       while (["[", "."].includes(tokens[cursor])) {
         const access = tokens[cursor++];
         const key = access === "." ? tokens[cursor++] : expression(0, depth + 1);
+        // A single data operation on literal arrays, not arbitrary method calls.
+        if (access === "." && key === "includes" && Array.isArray(value) && tokens[cursor] === "(") {
+          cursor++;
+          const needle = expression(0, depth + 1);
+          if (tokens[cursor++] !== ")" || !value.every(item => item === null || ["string", "number", "boolean"].includes(typeof item))) {
+            throw new Error("Invalid literal membership test");
+          }
+          value = value.includes(needle); continue;
+        }
         if (access === "[" && tokens[cursor++] !== "]") throw new Error("Invalid index");
         const valid = Array.isArray(value) ? access === "[" && Number.isInteger(key) && key >= 0 :
           value && typeof value === "object" && typeof key === "string" && /^[a-zA-Z_]\w*$/.test(key) && !forbiddenFields.has(key);
@@ -274,18 +326,25 @@
     const styles = [];
     if (attrs.border === "true") classes.push("archive-layout-border");
     if (attrs.background === "surface-secondary") classes.push("archive-layout-surface-secondary");
+    else if (attrs.background === "surface-tertiary") classes.push("archive-layout-surface-tertiary");
     else if (safeColor(attrs.background)) styles.push(`background-color:${safeColor(attrs.background)}`);
     if (["secondary", "tertiary"].includes(attrs.color)) classes.push("archive-layout-secondary");
     else if (safeColor(attrs.color)) styles.push(`color:${safeColor(attrs.color)}`);
     const choices = {
-      radius: { none: "0", sm: "4px", md: "6px", lg: "8px", xl: "12px" },
+      radius: { none: "0", xs: "2px", sm: "4px", md: "6px", lg: "8px", xl: "12px" },
       align: { left: "left", start: "left", center: "center", right: "right", end: "right" },
       weight: { normal: "400", regular: "400", medium: "500", semibold: "600", bold: "700" },
-      size: { xs: ".8rem", sm: ".9rem", md: "1rem", lg: "1.125rem", xl: "1.25rem" }
+      size: { "2xs": ".7rem", xs: ".8rem", sm: ".9rem", md: "1rem", lg: "1.125rem", xl: "1.25rem" }
     };
     const properties = { radius: "border-radius", align: "text-align", weight: "font-weight", size: "font-size" };
     for (const [key, values] of Object.entries(choices)) {
-      if (Object.hasOwn(values, attrs[key])) styles.push(`${properties[key]}:${values[attrs[key]]}`);
+      if (typeof attrs[key] === "string" && Object.hasOwn(values, attrs[key])) styles.push(`${properties[key]}:${values[attrs[key]]}`);
+    }
+    if (attrs.radius && typeof attrs.radius === "object") {
+      const corners = { topLeft: "top-left", topRight: "top-right", bottomLeft: "bottom-left", bottomRight: "bottom-right" };
+      for (const [key, corner] of Object.entries(corners)) {
+        if (typeof attrs.radius[key] === "string" && Object.hasOwn(choices.radius, attrs.radius[key])) styles.push(`border-${corner}-radius:${choices.radius[attrs.radius[key]]}`);
+      }
     }
     if (Object.hasOwn(choices.align, attrs.textAlign)) styles.push(`text-align:${choices.align[attrs.textAlign]}`);
     if (node.name === "row") {
@@ -294,8 +353,10 @@
       if (Object.hasOwn(align, attrs.align)) styles.push(`align-items:${align[attrs.align]}`);
       if (Object.hasOwn(justify, attrs.justify)) styles.push(`justify-content:${justify[attrs.justify]}`);
     }
-    if (/^[0-6]$/.test(attrs.flex)) styles.push(`flex:${attrs.flex} 1 0`);
-    if (/^\d{1,4}$/.test(attrs.width) && Number(attrs.width) <= 2000) styles.push(`width:${attrs.width}px`);
+    if (/^\d(?:\.\d{1,2})?$/.test(attrs.flex) && Number(attrs.flex) <= 6) styles.push(`flex:${attrs.flex} 1 0`);
+    for (const key of ["width", "height"]) {
+      if (/^\d{1,4}(?:px)?$/.test(attrs[key]) && parseFloat(attrs[key]) <= 2000) styles.push(`${key}:${parseFloat(attrs[key])}px`);
+    }
     if (attrs.width === "100%") styles.push("width:100%");
     if (attrs.tabularNums === "true") styles.push("font-variant-numeric:tabular-nums");
     for (const key of ["padding", "gap"]) {
@@ -349,7 +410,7 @@
       return true;
     });
     md.renderer.rules.archive_escape = (tokens, index) => md.utils.escapeHtml(tokens[index].content);
-    function renderNode(node, env, inline, scope = Object.create(null), budget = { left: MAX_NODES }) {
+    function renderNode(node, env = {}, inline, scope = Object.create(null), budget = { left: MAX_NODES }) {
       if (--budget.left < 0) throw new Error("Layout expansion limit");
       if (node.name === "each") {
         return node.items.map((item, index) => {
@@ -360,9 +421,28 @@
       }
       const attrs = { ...node.attrs };
       for (const key of node.expressions) {
+        if (node.name === "chart" && key === "content") continue;
+        if (key === "radius") {
+          const data = literalData(attrs[key], 0);
+          if (data && data.end === attrs[key].length && data.value && typeof data.value === "object" && !Array.isArray(data.value)) {
+            attrs[key] = data.value; continue;
+          }
+        }
         const result = valueOf(attrs[key], scope);
         if (!result || result.value === undefined || result.value === null) delete attrs[key];
         else attrs[key] = String(result.value);
+      }
+      if (node.name === "link") {
+        const url = md.normalizeLink(md.utils.unescapeAll(attrs.url || attrs.href || ""));
+        const label = attrs.title ? md.utils.escapeHtml(md.utils.unescapeAll(attrs.title)) :
+          children(node, { ...env, archiveInsideLink: true }, true, scope, budget) || md.utils.escapeHtml(url);
+        if (env.archiveInsideLink || !/^https?:\/\//i.test(url) || !md.validateLink(url)) return `<span class="archive-link">${label}</span>`;
+        return `<a class="archive-link" href="${md.utils.escapeHtml(url)}" rel="noopener noreferrer">${label}</a>`;
+      }
+      if (node.name === "chart") {
+        const chart = globalThis.ChatGPTArchiveCharts?.render(attrs.content, inline);
+        if (!chart) throw new Error("Unsupported chart data");
+        return chart;
       }
       if (node.svg) return `<${node.name} ${svgPresentation(node, attrs)}>${children(node, env, inline, scope, budget)}</${node.name}>`;
       if (["table", "table-row", "table-cell"].includes(node.name)) {
@@ -375,7 +455,8 @@
       }
       const tag = inline ? "span" : "div";
       if (node.name === "icon") {
-        const symbols = { "arrow-down": "↓", "arrow-up": "↑", "arrow-right": "→", "arrow-left": "←", check: "✓" };
+        const symbols = { "arrow-down": "↓", "arrow-up": "↑", "arrow-right": "→", "arrow-left": "←", check: "✓",
+          "check-circle": "✓", clock: "◷", file: "▤", "hard-drive": "▰" };
         return `<${tag} ${presentation(node, attrs)}>${Object.hasOwn(symbols, attrs.name) ? symbols[attrs.name] : ""}</${tag}>`;
       }
       return `<${tag} ${presentation(node, attrs)}>${children(node, env, inline, scope, budget)}</${tag}>`;
@@ -418,13 +499,13 @@
       if (state.src[state.pos] !== "<") return false;
       const node = parse(state.src.slice(0, state.posMax), state.pos);
       if (!node) return false;
-      if (!silent) state.push("archive_layout", "", 0).meta = { node, inline: true };
+      if (!silent) state.push("archive_layout", "", 0).meta = { node, inline: true, insideLink: state.linkLevel > 0 };
       state.pos = node.end;
       return true;
     });
     md.renderer.rules.archive_layout = (tokens, index, options, env) => {
-      const { node, inline } = tokens[index].meta;
-      try { return renderNode(node, env, inline) + (inline ? "" : "\n"); }
+      const { node, inline, insideLink } = tokens[index].meta;
+      try { return renderNode(node, insideLink ? { ...env, archiveInsideLink: true } : env, inline) + (inline ? "" : "\n"); }
       catch (_) { return inline ? `<code>${escape(node.source)}</code>` : `<pre><code>${escape(node.source)}</code></pre>\n`; }
     };
   }

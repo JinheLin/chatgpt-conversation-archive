@@ -350,9 +350,6 @@
   "sourceHeading": {
     "message": "References"
   },
-  "citationUnavailable": {
-    "message": "Source details unavailable"
-  },
   "renderMismatch": {
     "message": "Rendered counts do not match the full message list. No file was generated."
   },

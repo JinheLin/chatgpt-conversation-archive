@@ -102,8 +102,8 @@ test('full export connects inline citations to each message source list and keep
   assert.equal(sources.id, 'sources-2');
   assert.equal(sources.children[1].children[0].children[0].href, 'https://example.com/reference');
   const unresolved = sections[2].children.find(node => node.className === 'pdf-message-body');
-  assert.match(unresolved.html, /Source details unavailable/);
-  assert.doesNotMatch(unresolved.html, /href=|turn1search/);
+  assert.match(unresolved.html, /<p>Answer\s*<\/p>/);
+  assert.doesNotMatch(unresolved.html, /pdf-citation|href=|turn1search|Source details unavailable/);
   assert.equal(unresolved.children.length, 0);
   const toc = main.children.find(node => node.tag === 'nav');
   assert.equal(toc.children[1].children[0].children[0].textContent, 'Question');

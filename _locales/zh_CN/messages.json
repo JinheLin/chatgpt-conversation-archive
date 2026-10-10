@@ -350,9 +350,6 @@
   "sourceHeading": {
     "message": "引用来源"
   },
-  "citationUnavailable": {
-    "message": "来源信息不可用"
-  },
   "renderMismatch": {
     "message": "渲染数量与完整消息清单不一致，未生成文件。"
   },

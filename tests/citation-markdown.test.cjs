@@ -62,16 +62,16 @@ test('fenced, indented and inline code keeps both citation formats literal', () 
   assert.doesNotMatch(render(`\\${component}`), /pdf-citation/);
 });
 
-test('missing source details show an honest localized label and TOC labels omit citations', () => {
-  for (const [locale, label] of [['en-US', 'Source details unavailable'], ['zh-CN', '来源信息不可用']]) {
+test('missing source details and TOC labels omit citations while preserving surrounding text', () => {
+  for (const locale of ['en-US', 'zh-CN']) {
     const { render } = renderer(locale);
-    for (const citation of [component, legacy]) {
+    for (const citation of [component, component.replace('cite', 'Cite'), legacy]) {
       const html = render(`Before ${citation} after.`, {});
-      assert.ok(html.includes(`[${label}]`));
-      assert.doesNotMatch(html, /href=|turn1search|&lt;cite/);
+      assert.equal(html, '<p>Before  after.</p>\n');
+      assert.doesNotMatch(html, /pdf-citation|href=|turn1search|&lt;cite/i);
       assert.equal(render(`Before ${citation} after.`, { archiveHideCitations: true }), '<p>Before  after.</p>\n');
     }
-    assert.doesNotMatch(render(component, { archiveSourcesId: '" onclick="evil()' }), /href=|onclick=/);
+    assert.equal(render(component, { archiveSourcesId: '" onclick="evil()' }), '<p></p>\n');
   }
 });
 

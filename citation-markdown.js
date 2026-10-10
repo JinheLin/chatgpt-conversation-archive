@@ -60,7 +60,7 @@
         if (tokens[index].meta.insideLink || env.archiveInsideLink) return `<span class="pdf-citation">[${md.utils.escapeHtml(t("sourcesLabel"))}]</span>`;
         return `<a class="pdf-citation" href="#${id}">[${md.utils.escapeHtml(t("sourcesLabel"))}]</a>`;
       }
-      return `<span class="pdf-citation pdf-citation-unavailable">[${md.utils.escapeHtml(t("citationUnavailable"))}]</span>`;
+      return "";
     };
   }
   globalThis.ChatGPTPdfCitations = { install };

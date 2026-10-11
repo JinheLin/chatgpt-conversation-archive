@@ -1,12 +1,7 @@
 /* Opening a conversation and reading it are separate interface states. */
 (() => {
   "use strict";
-  function formatTimestamp(value) {
-    return new Date(value).toLocaleString(globalThis.ChatGPTPdfI18n.language, {
-      year: "numeric", month: "numeric", day: "numeric",
-      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
-    });
-  }
+  const { formatTimestamp } = globalThis.ChatGPTPdfI18n;
   function init({ document, isBusy }) {
     const { t } = globalThis.ChatGPTPdfI18n;
     const get = (id) => document.getElementById(id);

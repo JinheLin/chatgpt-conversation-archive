@@ -43,6 +43,7 @@
       if (!id || ids.has(id) || !["user", "assistant"].includes(message.role)) invalid();
       ids.add(id);
       const result = { id, role: message.role, text: string(message.text) };
+      if (message.createdAt != null) result.createdAt = date(message.createdAt);
       if (message.sources !== undefined) {
         if (!Array.isArray(message.sources) || message.sources.length > 10000) invalid();
         result.sources = message.sources.map((source) => {

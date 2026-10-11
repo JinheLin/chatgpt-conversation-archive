@@ -79,10 +79,16 @@
       const attachments = parts.filter((part) => typeof part === "object" && part !== null && typeof part.text !== "string");
       const files = Array.isArray(message.metadata?.attachments) ? message.metadata.attachments : [];
       if (!text.trim() && !attachments.length && !files.length) continue;
+      // create_time is the message's creation time in Unix seconds. Never use
+      // the export capture time or update_time as a substitute for missing data.
+      const created = typeof message.create_time === "number" && Number.isFinite(message.create_time) && message.create_time > 0
+        ? new Date(message.create_time * 1000) : null;
+      const createdAt = created && Number.isFinite(created.getTime()) ? created.toISOString() : null;
       messages.push({
         id: message.id || node.id,
         role,
         text,
+        ...(createdAt ? { createdAt } : {}),
         attachments,
         sources: sourceLinks(message.metadata),
         files

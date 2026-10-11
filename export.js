@@ -1,7 +1,7 @@
 /* Deterministic, offline renderer. Message HTML never executes conversation code. */
 (() => {
   "use strict";
-  const { t, language } = globalThis.ChatGPTPdfI18n;
+  const { t, language, formatTimestamp } = globalThis.ChatGPTPdfI18n;
   const md = globalThis.markdownit({ html: false, linkify: true, breaks: false, typographer: false });
   globalThis.ChatGPTArchiveLayout.install(md);
   globalThis.ChatGPTPdfCitations.install(md);
@@ -154,7 +154,15 @@
         list.appendChild(item);
       } else section.id = `message-${index + 1}`;
       section.dataset.messageId = message.id;
-      section.appendChild(el("h2", "pdf-role", message.role === "user" ? t("questionLabel", question) : t("answerLabel")));
+      const role = el("h2", "pdf-role", message.role === "user" ? t("questionLabel", question) : t("answerLabel"));
+      const created = typeof message.createdAt === "string" ? new Date(message.createdAt) : null;
+      if (created && Number.isFinite(created.getTime())) {
+        const time = el("time", "pdf-message-time", formatTimestamp(created));
+        time.dateTime = created.toISOString();
+        role.appendChild(document.createTextNode(" · "));
+        role.appendChild(time);
+      }
+      section.appendChild(role);
       const body = el("div", "pdf-message-body");
       // html:false and KaTeX trust:false; do not execute HTML from the transcript.
       const sourceId = `sources-${index + 1}`;

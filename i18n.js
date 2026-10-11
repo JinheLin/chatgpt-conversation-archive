@@ -18,6 +18,12 @@
     return message;
   }
   const language = t("documentLanguage");
+  function formatTimestamp(value) {
+    return new Date(value).toLocaleString(language, {
+      year: "numeric", month: "numeric", day: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+    });
+  }
   function loadCatalog() {
     if (!loading) loading = (async () => {
       const locale = language === "zh-CN" ? "zh_CN" : "en";
@@ -35,5 +41,5 @@
       node.textContent = t(node.getAttribute("data-i18n"));
     }
   }
-  globalThis.ChatGPTPdfI18n = { t, language, localizeDocument, loadCatalog };
+  globalThis.ChatGPTPdfI18n = { t, language, formatTimestamp, localizeDocument, loadCatalog };
 })();

@@ -56,12 +56,18 @@ After updating local files, click **Reload** on the extension card in `chrome://
 ## Reading interface (v3.1)
 
 - Before opening a conversation, the page shows the URL field and your local conversation list.
-- Local version timestamps in the toolbar and conversation list include seconds, using the browser’s local time zone.
+- Local version timestamps in the toolbar and conversation list show when the local snapshot was captured, including seconds, using the browser’s local time zone.
 - After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Update conversation**, **Annotations** and **Export**.
 - **Conversation list** shows the link field and local conversations. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
 - **Annotations** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
 - **Export** offers HTML and PDF plus the **A4 landscape** and **Mobile reading** checkboxes. They are mutually exclusive; leave both unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
+
+## Message timestamps (v3.6)
+
+Each question and answer shows its creation time beside the role label, in the browser's local time zone and precise to the second. These timestamps come from ChatGPT's message data and are preserved in local snapshots, JSON backups, offline HTML and PDFs. A message without a valid creation time has no timestamp; the snapshot capture time is never used as a substitute.
+
+After reloading the extension and refreshing the reader, click **Update conversation** once for conversations saved with an older version to retrieve their message times. Reopening an old snapshot alone cannot recover times that were not saved. Existing annotations remain in place.
 
 ## Answer sections in navigation (v3.5)
 
@@ -211,6 +217,8 @@ These are included in the repository; no installation is needed:
 ## Validation scope
 
 Version 3's reader is checked with automated DOM and IndexedDB fixtures, including close/reopen, changed text, local-only loading, clean HTML export and backup recovery. It has not yet received a visual check in a real Chrome extension tab. The following live-browser checks were performed on earlier export versions.
+
+Message timestamps (v3.6): tests cover creation-time normalization, missing/invalid values, legacy snapshots, backup recovery, offline reopening and English/Chinese HTML output. Isolated Chrome rendering checks desktop and mobile samples in the Asia/Shanghai time zone; timestamps remain visible under print CSS. The message-time change has not been verified against a live ChatGPT data response.
 
 Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 

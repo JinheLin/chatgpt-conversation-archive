@@ -239,7 +239,8 @@
         const meta = document.createElement("div"); meta.className = "reader-library-entry-meta";
         const read = document.createElement("span");
         read.className = "reader-library-entry-read";
-        read.textContent = t("readerReadProgress", Math.min(entry.readCount || 0, entry.count), entry.count);
+        const answers = Math.max(0, entry.count - (entry.questions || 0));
+        read.textContent = t("readerReadProgress", Math.min(entry.readCount || 0, answers), answers);
         meta.append(time, size, read); details.append(button, meta);
         const remove = document.createElement("button"); remove.type = "button";
         remove.className = "reader-library-delete"; remove.disabled = outputBusy;

@@ -79,11 +79,11 @@ After reloading the extension and refreshing the reader, click **Update conversa
 
 ## Read marks (v3.8)
 
-Each question and answer can be marked read or unread. The toolbar shows how many messages are read, and each local conversation shows the same count. In the preview sidebar, a question row has a separate mark for the question and for the answers that follow it until the next question. Clicking a sidebar title still jumps to that part of the conversation.
+Each answer can be marked read or unread. Questions are not tracked. The toolbar and local conversation list show how many answers are read. In the preview sidebar, a question row shows one mark for the answers that follow it until the next question. Clicking a sidebar title still jumps to that part of the conversation.
 
-**Mark as read through here** marks the current message and every message before it. **Unread only** hides questions whose question and answers are all read. Scrolling does not mark anything read.
+**Unread only** hides questions whose answers are all read. Scrolling does not mark anything read.
 
-If a message's text changes after it was marked read, the control shows **Content updated** until you mark it read again. A newly generated answer has a new message ID, so it starts unread. Read marks stay in this browser, are included in the JSON backup, and are omitted from HTML and PDF. Reload the extension and refresh an open reader after updating.
+If an answer's text changes after it was marked read, the control shows **Content updated** until you mark it read again. A newly generated answer has a new message ID, so it starts unread. Read marks stay in this browser, are included in the JSON backup, and are omitted from HTML and PDF. Reload the extension and refresh an open reader after updating.
 
 ## Answer sections in navigation (v3.5)
 
@@ -171,7 +171,7 @@ Rendering and navigation updates through **v3.5** also apply to saved local conv
 | `preview-navigation.js` | Preview sidebar with question links, separate from the exported document |
 | `reader-store.js` | IndexedDB snapshots, annotations, read state, cross-tab notifications and validated backup merging |
 | `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
-| `reader-reads.js` | Per-message read marks, sidebar status, unread filter and export removal |
+| `reader-reads.js` | Answer read marks, sidebar status, unread filter and export removal |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |

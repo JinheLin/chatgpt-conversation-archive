@@ -743,19 +743,12 @@
   "readerMarkUnread": {
     "message": "标为未读"
   },
-  "readerMarkThrough": {
-    "message": "标为已读至此"
-  },
   "readerMarkReadNamed": {
     "message": "标为已读：$arg1$",
     "placeholders": { "arg1": { "content": "$1" } }
   },
   "readerMarkUnreadNamed": {
     "message": "标为未读：$arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
-  },
-  "readerMarkThroughNamed": {
-    "message": "标为已读至此：$arg1$",
     "placeholders": { "arg1": { "content": "$1" } }
   },
   "readerMarkStaleNamed": {
@@ -775,10 +768,6 @@
   "readerShowAll": {
     "message": "显示全部"
   },
-  "readerQuestionStatus": {
-    "message": "问题：$arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
-  },
   "readerAnswerStatus": {
     "message": "回答：$arg1$",
     "placeholders": { "arg1": { "content": "$1" } }
@@ -797,6 +786,6 @@
     "placeholders": { "arg1": { "content": "$1" } }
   },
   "readerNoUnread": {
-    "message": "这篇对话中的问题和回答都已标为已读。"
+    "message": "这篇对话中的回答都已标为已读。"
   }
 }

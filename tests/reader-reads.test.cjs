@@ -93,32 +93,29 @@ test('version 2 databases upgrade in place and keep saved conversations', async 
   assert.equal((await seeded.w.ChatGPTReaderStore.getReads(key))[0].messageId, 'assistant-1');
 });
 
-test('reader controls mark questions and answers, filter the sidebar and stay out of HTML', async (t) => {
+test('reader controls mark answers, filter the sidebar and stay out of HTML', async (t) => {
   const factory = new IDBFactory();
   const data = thread();
   const app = fixture({ factory, initial: data.sourceUrl });
   t.after(() => app.w.close());
   await app.w.ChatGPTReaderStore.saveConversation(data);
   await app.start();
-  assert.equal(userToggle(app).disabled, false);
-  assert.equal(userToggle(app).dataset.state, 'unread');
-  assert.match(app.get('reader-meta').textContent, /0\/3 read/);
+  assert.equal(userToggle(app), null);
+  assert.equal(app.main.querySelector('.reader-read-through'), null);
+  assert.equal(answerToggle(app).disabled, false);
+  assert.equal(answerToggle(app).dataset.state, 'unread');
+  assert.equal(answerToggle(app).textContent, 'Mark as read');
+  assert.match(app.get('reader-meta').textContent, /0\/1 read/);
   assert.equal(app.main.querySelector('.pdf-toc .reader-read-toc'), null);
-  assert.equal(app.get('preview-sidebar').querySelectorAll('.reader-read-dot').length, 3);
-  userToggle(app).click();
-  await waitFor(() => userToggle(app).dataset.state === 'read');
-  assert.equal(userToggle(app).textContent, 'Mark as unread');
-  assert.match(app.get('reader-meta').textContent, /1\/3 read/);
-  await waitFor(() => app.get('reader-library-list').textContent.includes('1/3 read'));
-  app.main.querySelector('.pdf-assistant .reader-read-through').click();
-  await waitFor(() => answerToggle(app).dataset.state === 'read' && userToggle(app).dataset.state === 'read');
-  assert.equal(app.main.querySelectorAll('.pdf-user .reader-read-toggle')[1].dataset.state, 'unread');
+  assert.equal(app.get('preview-sidebar').querySelectorAll('.reader-read-dot').length, 1);
+  answerToggle(app).click();
+  await waitFor(() => answerToggle(app).dataset.state === 'read');
+  assert.equal(answerToggle(app).textContent, 'Mark as unread');
+  assert.match(app.get('reader-meta').textContent, /1\/1 read/);
+  await waitFor(() => app.get('reader-library-list').textContent.includes('1/1 read'));
   const dots = () => [...app.get('preview-sidebar').querySelectorAll('.preview-toc > ol > li')];
   assert.equal(dots()[0].querySelector('.reader-read-dot').dataset.state, 'read');
-  assert.equal(dots()[0].querySelectorAll('.reader-read-dot')[1].dataset.state, 'read');
-  assert.equal(dots()[1].querySelector('.reader-read-dot').dataset.state, 'unread');
-  app.main.querySelectorAll('.pdf-user .reader-read-through')[1].click();
-  await waitFor(() => app.get('reader-meta').textContent.includes('3/3 read'));
+  assert.equal(dots()[1].querySelector('.reader-read-dot'), null);
   app.get('preview-sidebar').querySelector('.reader-read-filter-toggle').click();
   assert.equal(app.get('preview-sidebar').querySelector('.reader-read-filter-toggle').textContent, 'Show all');
   assert.equal(dots().every((item) => item.hidden), true);
@@ -128,7 +125,7 @@ test('reader controls mark questions and answers, filter the sidebar and stay ou
   const reopened = fixture({ factory, initial: data.sourceUrl });
   t.after(() => reopened.w.close());
   await reopened.start();
-  assert.equal(reopened.main.querySelectorAll('.reader-read-toggle[data-state="read"]').length, 3);
+  assert.equal(reopened.main.querySelectorAll('.reader-read-toggle[data-state="read"]').length, 1);
   app.get('save-html').click();
   await waitFor(() => app.downloads.length === 1);
   const html = await new Promise((resolve, reject) => {
@@ -145,17 +142,17 @@ test('reader controls mark questions and answers, filter the sidebar and stay ou
     /\.reader-read-controls, \.reader-read-filter, \.reader-read-toc, \.reader-read-state \{ display: none !important; \}/);
 });
 
-test('changed message text stays marked read until it is confirmed, and answer marks cover every answer', async (t) => {
+test('changed message text stays marked read until it is confirmed, and one sidebar mark covers every following answer', async (t) => {
   const app = fixture({ locale: 'zh-CN', initial: payload().sourceUrl });
   t.after(() => app.w.close());
   const store = app.w.ChatGPTReaderStore;
   const original = payload('第一问', '原来的回答');
   await store.saveConversation(original);
   await app.start();
-  assert.equal(userToggle(app).textContent, '标为已读');
-  assert.match(app.get('reader-meta').textContent, /已读 0\/2/);
-  userToggle(app).click();
-  await waitFor(() => userToggle(app).dataset.state === 'read');
+  assert.equal(userToggle(app), null);
+  assert.equal(app.main.querySelector('.reader-read-through'), null);
+  assert.equal(answerToggle(app).textContent, '标为已读');
+  assert.match(app.get('reader-meta').textContent, /已读 0\/1/);
   answerToggle(app).click();
   await waitFor(() => answerToggle(app).dataset.state === 'read');
   const changed = payload('第一问', '更新后的回答');
@@ -165,7 +162,6 @@ test('changed message text stays marked read until it is confirmed, and answer m
   app.get('reader-library-list').querySelector('.reader-library-open').click();
   await waitFor(() => answerToggle(app)?.dataset.state === 'stale' && !app.get('start-export').disabled);
   assert.ok(app.main.querySelector('.pdf-assistant .reader-read-state'));
-  assert.equal(userToggle(app).dataset.state, 'read');
   app.get('preview-sidebar').querySelector('.reader-read-filter-toggle').click();
   assert.equal(app.get('preview-sidebar').querySelector('.preview-toc > ol > li').hidden, false);
   answerToggle(app).click();
@@ -181,10 +177,11 @@ test('changed message text stays marked read until it is confirmed, and answer m
   app.get('reader-open').click();
   app.get('reader-library-list').querySelector('.reader-library-open').click();
   await waitFor(() => app.main.querySelectorAll('.pdf-assistant').length === 2 && !app.get('start-export').disabled);
-  app.get('preview-sidebar').querySelectorAll('.reader-read-dot')[1].click();
+  assert.equal(app.get('preview-sidebar').querySelectorAll('.reader-read-dot').length, 1);
+  app.get('preview-sidebar').querySelector('.reader-read-dot').click();
   await waitFor(() => [...app.main.querySelectorAll('.pdf-assistant .reader-read-toggle')].every((node) => node.dataset.state === 'read'));
-  assert.equal(userToggle(app).dataset.state, 'unread');
-  assert.match(app.get('reader-meta').textContent, /已读 2\/3/);
+  assert.equal(userToggle(app), null);
+  assert.match(app.get('reader-meta').textContent, /已读 2\/2/);
 });
 
 test('another reader tab receives read marks without refreshing annotations', async (t) => {
@@ -204,8 +201,8 @@ test('another reader tab receives read marks without refreshing annotations', as
   await first.start();
   await second.start();
   assert.equal(second.main.querySelectorAll('mark').length, 0);
-  userToggle(first).click();
-  await waitFor(() => userToggle(second).dataset.state === 'read');
+  answerToggle(first).click();
+  await waitFor(() => answerToggle(second).dataset.state === 'read');
   assert.equal(second.main.querySelectorAll('mark').length, 0);
-  assert.match(second.get('reader-meta').textContent, /1\/2 read/);
+  assert.match(second.get('reader-meta').textContent, /1\/1 read/);
 });

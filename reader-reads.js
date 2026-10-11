@@ -1,4 +1,4 @@
-/* Per-message read marks stay in the reader. HTML export removes them; print CSS hides them. */
+/* Answer read marks stay in the reader. HTML export removes them; print CSS hides them. */
 (() => {
   "use strict";
   function clear(root) {
@@ -30,9 +30,8 @@
     function statusText(state) {
       return t(state === "read" ? "readerStatusRead" : state === "stale" ? "readerStatusStale" : "readerStatusUnread");
     }
-    function labelFor(section) {
-      if (section.classList.contains("pdf-user")) return t("questionLabel", section.id.replace(/^question-/, ""));
-      return t("answerLabel");
+    function answers() {
+      return messages.filter((message) => message.role === "assistant");
     }
     function button(className, text, focus, messageIds) {
       const node = element("button", className, text);
@@ -54,10 +53,10 @@
     function paintMessages() {
       clear(main);
       if (!enabled) return;
-      for (const section of main.querySelectorAll(".pdf-message[data-message-id]")) {
+      for (const section of main.querySelectorAll(".pdf-assistant[data-message-id]")) {
         const id = section.dataset.messageId;
         const state = status(id);
-        const label = labelFor(section);
+        const label = t("answerLabel");
         const controls = element("div", "reader-read-controls");
         const toggle = button("reader-read-toggle", state === "read" ? t("readerMarkUnread") : t("readerMarkRead"), `toggle:${id}`, [id]);
         toggle.dataset.state = state;
@@ -65,10 +64,7 @@
         toggle.setAttribute("aria-pressed", String(state === "read"));
         toggle.setAttribute("aria-label", state === "stale" ? t("readerMarkStaleNamed", label) :
           t(state === "read" ? "readerMarkUnreadNamed" : "readerMarkReadNamed", label));
-        const through = button("reader-read-through", t("readerMarkThrough"), `through:${id}`, [id]);
-        through.dataset.action = "through";
-        through.setAttribute("aria-label", t("readerMarkThroughNamed", label));
-        controls.append(toggle, through);
+        controls.append(toggle);
         if (state === "stale") controls.append(element("span", "reader-read-state", t("readerReadStale")));
         section.querySelector(".pdf-role")?.insertAdjacentElement("afterend", controls);
       }
@@ -105,28 +101,19 @@
         const turn = anchor ? grouped.get(anchor) : null;
         item.hidden = false;
         if (!turn?.question) continue;
-        const questionState = status(turn.question);
         const answerStates = turn.answers.map((id) => status(id));
-        const answerState = !answerStates.length ? null :
-          answerStates.includes("unread") ? "unread" : answerStates.includes("stale") ? "stale" : "read";
-        const marks = element("span", "reader-read-toc");
-        const question = button("reader-read-dot", questionState === "read" ? "✓" : questionState === "stale" ? "!" : "○",
-          `question:${turn.question}`, [turn.question]);
-        question.dataset.state = questionState;
-        question.dataset.action = "toggle";
-        question.setAttribute("aria-label", t("readerQuestionStatus", statusText(questionState)));
-        marks.append(question);
-        if (answerState) {
+        const answerState = answerStates.includes("unread") ? "unread" : answerStates.includes("stale") ? "stale" : "read";
+        if (turn.answers.length) {
+          const marks = element("span", "reader-read-toc");
           const answer = button("reader-read-dot", answerState === "read" ? "✓" : answerState === "stale" ? "!" : "○",
             `answers:${turn.answers.join("\n")}`, turn.answers);
           answer.dataset.state = answerState;
           answer.dataset.action = "group";
           answer.setAttribute("aria-label", t("readerAnswerStatus", statusText(answerState)));
           marks.append(answer);
+          link.before(marks);
         }
-        link.before(marks);
-        const done = questionState === "read" && (answerState === null || answerState === "read");
-        item.hidden = unreadOnly && done;
+        item.hidden = unreadOnly && answerState === "read";
         if (!item.hidden) visible += 1;
       }
       if (unreadOnly && visible === 0 && nav.querySelector(":scope > ol > li")) {
@@ -135,9 +122,10 @@
     }
     function paintMeta() {
       const meta = document.getElementById("reader-meta");
-      if (!meta?.dataset.readBase || !messages.length) return;
-      const count = messages.filter((message) => byId().get(message.id)?.read).length;
-      meta.textContent = `${meta.dataset.readBase} · ${t("readerReadProgress", count, messages.length)}`;
+      const tracked = answers();
+      if (!meta?.dataset.readBase || !tracked.length) return;
+      const count = tracked.filter((message) => byId().get(message.id)?.read).length;
+      meta.textContent = `${meta.dataset.readBase} · ${t("readerReadProgress", count, tracked.length)}`;
     }
     function paint() {
       const token = focused();
@@ -175,11 +163,6 @@
       const markRead = ids.some((id) => status(id) !== "read");
       void commit(entriesFor(ids, markRead));
     }
-    function through(id) {
-      const index = messages.findIndex((message) => message.id === id);
-      if (index < 0) return;
-      void commit(entriesFor(messages.slice(0, index + 1).map((message) => message.id), true));
-    }
     function onClick(event) {
       const control = event.target.closest?.("[data-read-focus]");
       if (!control || control.disabled) return;
@@ -190,9 +173,8 @@
         return;
       }
       if (control.closest(".reader-read-controls")) event.preventDefault();
-      const ids = idsFrom(control);
-      if (control.dataset.action === "through") through(ids[0]);
-      else if (ids.length) toggle(ids);
+      const ids = idsFrom(control).filter((id) => answers().some((message) => message.id === id));
+      if (ids.length) toggle(ids);
     }
     main.addEventListener("click", onClick);
     sidebar.addEventListener("click", onClick);
@@ -203,11 +185,11 @@
       messages = nextMessages;
       records = [];
       unreadOnly = false;
-      hashes = new Map(await Promise.all(nextMessages.map(async (message) => [message.id, await hash(message.text)])));
+      hashes = new Map(await Promise.all(nextMessages.filter((message) => message.role === "assistant").map(async (message) => [message.id, await hash(message.text)])));
       if (mine !== revision) return;
       if (!writable) { paint(); return; }
       try {
-        await store.pruneReads(conversationKey, nextMessages.map((message) => message.id), false);
+        await store.pruneReads(conversationKey, [...hashes.keys()], false);
         if (mine !== revision) return;
         records = await store.getReads(conversationKey);
       } catch (error) {

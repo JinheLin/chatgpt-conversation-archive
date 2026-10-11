@@ -134,7 +134,7 @@
     if (opening) return opening;
     opening = new Promise((resolve, reject) => {
       if (!globalThis.indexedDB) return reject(new Error(t("readerStorageUnavailable")));
-      const request = indexedDB.open("chatgpt-conversation-reader", 3);
+      const request = indexedDB.open("chatgpt-conversation-reader", 4);
       let failed = false;
       const fail = () => { failed = true; reject(new Error(t("readerStorageUnavailable"))); };
       request.onerror = fail;
@@ -146,7 +146,7 @@
           ? tx.objectStore("conversations") : db.createObjectStore("conversations", { keyPath: "key" });
         if (conversations.indexNames.contains("summary")) conversations.deleteIndex("summary");
         conversations.createIndex("summary",
-          ["savedAt", "payload.title", "payload.sourceUrl", "payload.capturedAt", "payload.completeness.count", "key", "byteSize"]);
+          ["savedAt", "payload.title", "payload.sourceUrl", "payload.capturedAt", "payload.completeness.count", "payload.completeness.questions", "key", "byteSize"]);
         const annotations = db.objectStoreNames.contains("annotations")
           ? tx.objectStore("annotations") : db.createObjectStore("annotations", { keyPath: "id" });
         if (!annotations.indexNames.contains("conversationKey")) annotations.createIndex("conversationKey", "conversationKey");
@@ -217,8 +217,8 @@
       tx.objectStore("conversations").index("summary").openKeyCursor().onsuccess = (event) => {
         const cursor = event.target.result;
         if (!cursor) { finish(); return; }
-        const [savedAt, title, sourceUrl, capturedAt, count, key, bytes] = cursor.key;
-        result.push({ key, title, sourceUrl, capturedAt, savedAt, count, bytes });
+        const [savedAt, title, sourceUrl, capturedAt, count, questions, key, bytes] = cursor.key;
+        result.push({ key, title, sourceUrl, capturedAt, savedAt, count, questions, bytes });
         cursor.continue();
       };
     });
@@ -231,7 +231,7 @@
     const payload = cleanPayload(value), key = keyFor(payload.sourceUrl);
     const entry = { key, payload, savedAt: new Date().toISOString() };
     entry.byteSize = storageBytes(entry);
-    const messageIds = new Set(payload.messages.map((message) => message.id));
+    const messageIds = new Set(payload.messages.filter((message) => message.role === "assistant").map((message) => message.id));
     await transaction(["conversations", "reads"], "readwrite", (tx) => {
       const store = tx.objectStore("conversations");
       store.get(key).onsuccess = (event) => {

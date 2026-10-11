@@ -743,19 +743,12 @@
   "readerMarkUnread": {
     "message": "Mark as unread"
   },
-  "readerMarkThrough": {
-    "message": "Mark as read through here"
-  },
   "readerMarkReadNamed": {
     "message": "Mark as read: $arg1$",
     "placeholders": { "arg1": { "content": "$1" } }
   },
   "readerMarkUnreadNamed": {
     "message": "Mark as unread: $arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
-  },
-  "readerMarkThroughNamed": {
-    "message": "Mark as read through here: $arg1$",
     "placeholders": { "arg1": { "content": "$1" } }
   },
   "readerMarkStaleNamed": {
@@ -775,10 +768,6 @@
   "readerShowAll": {
     "message": "Show all"
   },
-  "readerQuestionStatus": {
-    "message": "Question: $arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
-  },
   "readerAnswerStatus": {
     "message": "Answers: $arg1$",
     "placeholders": { "arg1": { "content": "$1" } }
@@ -797,6 +786,6 @@
     "placeholders": { "arg1": { "content": "$1" } }
   },
   "readerNoUnread": {
-    "message": "Every question and answer in this conversation is marked read."
+    "message": "Every answer in this conversation is marked read."
   }
 }

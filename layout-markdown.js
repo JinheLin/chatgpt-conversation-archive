@@ -366,6 +366,12 @@
     return rgb && rgb.slice(1, 4).every(channel => Number(channel) <= 255) ? value : null;
   }
 
+  function imagePixels(value, minimum = 1) {
+    const match = /^(\d{1,3})(?:px)?$/.exec(value || "");
+    const pixels = match && Number(match[1]);
+    return pixels >= minimum && pixels <= 500 ? pixels : null;
+  }
+
   function presentation(node, attrs) {
     const classes = ["archive-layout", `archive-layout-${node.name}`];
     if (node.name === "icon" && attrs.inline === "true") classes.push("archive-layout-inline");
@@ -510,15 +516,16 @@
         // embedded pixels are available; never search for a replacement image.
         const label = md.utils.unescapeAll(attrs.alt || attrs.query || globalThis.ChatGPTPdfI18n.t("conversationImage"));
         const src = attrs.src || attrs.url || "";
+        const height = imagePixels(attrs.maxHeight);
+        const width = imagePixels(attrs.maxWidth, 40);
         if (/^data:image\/(?:png|jpeg|gif|webp);base64,[a-zA-Z0-9+/=]+$/i.test(src)) {
-          const height = /^\d{1,3}$/.test(attrs.maxHeight) && Number(attrs.maxHeight) > 0 && Number(attrs.maxHeight) <= 500
-            ? ` style="max-height:${attrs.maxHeight}px;object-fit:contain"` : "";
-          return `<img class="archive-async-image" src="${escape(src)}" alt="${escape(label)}"${height}>`;
+          const styles = [];
+          if (height) styles.push(`max-height:${height}px`, "object-fit:contain");
+          if (width) styles.push(`max-width:min(100%,${width}px)`, "flex:none");
+          return `<img class="archive-async-image" src="${escape(src)}" alt="${escape(label)}"${styles.length ? ` style="${styles.join(";")}"` : ""}>`;
         }
         const warning = globalThis.ChatGPTPdfI18n.t("imageNotEmbedded", label);
-        const width = /^\d{1,3}$/.test(attrs.maxWidth) && Number(attrs.maxWidth) >= 40 && Number(attrs.maxWidth) <= 500
-          ? ` style="width:${attrs.maxWidth}px;flex:none;max-width:100%"` : "";
-        return `<span class="pdf-asset-warning archive-image-unavailable"${width}>${escape(warning)}</span>`;
+        return `<span class="pdf-asset-warning archive-image-unavailable"${width ? ` style="width:${width}px;flex:none;max-width:100%"` : ""}>${escape(warning)}</span>`;
       }
       if (node.name === "link") {
         const url = md.normalizeLink(md.utils.unescapeAll(attrs.url || attrs.href || ""));
@@ -614,7 +621,9 @@
           continue;
         }
         if (child.name === "binding") { renderNode(child, env, inline, scope, budget); continue; }
-        const inlineChild = inlineContent || ["entity", "link", "asyncimage"].includes(child.name) ||
+        // Images are separate layout children; keeping one in a Markdown
+        // paragraph places its following prose beside the image baseline.
+        const inlineChild = inlineContent || ["entity", "link"].includes(child.name) ||
           child.name === "icon" && child.attrs.inline === "true";
         if (!node.svg && inlineChild) {
           const index = fragments.html.push(renderNode(child, env, true, scope, budget)) - 1;

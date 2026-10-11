@@ -43,7 +43,10 @@
 .pdf-message-body th { background: #f3f6f5; text-align: left; }
 .pdf-message-body img { max-width: 100%; height: auto; }
 .pdf-message-body .archive-image-unavailable { display: block; margin: .45em 0; color: #62686e; font-size: .9em; overflow-wrap: anywhere; }
-.pdf-message-body .archive-async-image { display: inline-block; vertical-align: middle; }
+.pdf-message-body .archive-async-image {
+  display: block; width: auto; height: auto; max-width: min(100%, 480px);
+  margin: .55em auto .75em; border-radius: 6px; object-fit: contain; align-self: center;
+}
 .pdf-message-body a, .pdf-meta a { color: #185e9d; text-decoration: underline; overflow-wrap: anywhere; }
 .pdf-status { color: #596168; }
 
@@ -171,6 +174,7 @@
   display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
 .pdf-message-body .archive-layout-row > .archive-layout-box { flex: 0 1 auto; }
+.pdf-message-body .archive-layout-row > .archive-async-image { margin: 0; align-self: auto; }
 .pdf-message-body .archive-layout-form, .pdf-message-body .archive-layout-radio-group {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px);
 }
@@ -227,6 +231,7 @@
   .pdf-message-body pre { overflow: visible; break-inside: avoid-page; page-break-inside: avoid; }
   .pdf-message-body .katex-display { break-inside: avoid; }
   .pdf-message-body .archive-layout { break-inside: avoid-page; page-break-inside: avoid; }
+  .pdf-message-body .archive-async-image { break-after: avoid-page; page-break-after: avoid; }
   .pdf-message-body .archive-chart { break-inside: avoid-page; page-break-inside: avoid; }
 }
 

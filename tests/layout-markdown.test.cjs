@@ -48,6 +48,28 @@ test('AsyncImage retains an honest description or embedded pixels without remote
   assert.match(render('`<AsyncImage query="example"/>`'), /&lt;AsyncImage/);
 });
 
+test('layout images keep following prose in its own paragraph and preserve thumbnail widths', () => {
+  const { render } = renderer();
+  const html = render('<box gap={2}><AsyncImage src="data:image/png;base64,aGVsbG8=" maxHeight={190}/>\nFor example:\n\n**2, 4, 6, 8, ?**</box>');
+  assert.match(html, /<img[^>]*>\s*<p>For example:<\/p>/);
+  assert.match(html, /<p><strong>2, 4, 6, 8, \?<\/strong><\/p>/);
+  const row = render('<row align=start><AsyncImage src="data:image/png;base64,aGVsbG8=" maxWidth="116px"/><box>Game description</box></row>');
+  assert.match(row, /max-width:min\(100%,116px\);flex:none/);
+  assert.match(row, /<img[^>]*><div class="archive-layout archive-layout-box"/);
+  assert.doesNotMatch(row, /<p><img/);
+});
+
+test('image pixel limits accept bounded numbers or px without allowing CSS injection', () => {
+  const { render } = renderer();
+  for (const width of ['116', '116px']) {
+    assert.match(render(`<AsyncImage src="data:image/png;base64,aGVsbG8=" maxWidth="${width}" maxHeight="190px"/>`), /max-height:190px;object-fit:contain;max-width:min\(100%,116px\)/);
+  }
+  for (const width of ['0', '-1', '999999px', '116px;position:fixed', '100%', 'calc(100vw)']) {
+    const html = render(`<AsyncImage src="data:image/png;base64,aGVsbG8=" maxWidth="${width}"/>`);
+    assert.doesNotMatch(html, /style=|position:fixed|calc\(/);
+  }
+});
+
 test('literal declarations and initial state expand named loops without running callbacks', () => {
   const { render } = renderer();
   const html = render('{@body const activities=[{day:"Monday",detail:"Count"},{day:"Tuesday",detail:"Compare"}]}\n\n{@body const [done,setDone]=DIL.useState([1])}\n\n<box>\n<text>{done.length}/2</text>\n{#each activities as a,i}\n<row align=start><checkbox checked={done.includes(i)} onChange={v=>globalThis.evil(v)}/><text>{a.day}: {a.detail}</text></row>\n{/each}\n</box>');

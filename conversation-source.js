@@ -198,8 +198,10 @@
         assetDone();
       }
       message.layoutImages = [];
+      message.imageSources = [];
       for (const [slot, entry] of layoutSlots[index].entries()) {
         const url = rendered.get(message.id)?.[slot];
+        if (url) message.imageSources.push({ slot, query: entry.query, url });
         try {
           const src = globalThis.ChatGPTConversationImages.valid(entry.src) ? entry.src :
             url ? await dataUrl(url, true) : null;

@@ -340,7 +340,17 @@
         if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
         payload = response.payload;
         if (store.keyFor(payload.sourceUrl) !== key) throw new Error(t("readerInvalidBackup"));
+        if (sourceTab && response.missingImages) {
+          await globalThis.ChatGPTImageResources?.capture(sourceTab, target.url, payload, {
+            isCancelled: () => mine !== generation,
+            onProgress: progress => {
+              if (mine === generation) showReadProgress({ stage: "assets", ...progress });
+            }
+          }).catch(() => {});
+          if (mine !== generation) return;
+        }
         globalThis.ChatGPTConversationImages?.preserve(payload, previous?.payload);
+        for (const message of payload.messages) delete message.imageSources;
       }
       const problems = await globalThis.ChatGPTPdfExporter.render(payload, main, {
         isCancelled: () => mine !== generation,

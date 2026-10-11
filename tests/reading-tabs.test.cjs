@@ -308,20 +308,21 @@ test('the landscape checkbox defaults to portrait and updates document width, pr
   }
 });
 
-test('mobile PDF exports all messages and bookmarks using the mobile profile and a separate filename', async () => {
+for (const [layout, control] of [['mobile', 'mobile-layout'], ['hanwang-n10', 'n10-layout']])
+test(layout + ' PDF exports all messages and bookmarks using the selected profile and a separate filename', async () => {
   let captured;
   const app = fixture([{ id: 20, url: conversationUrl }], Promise.resolve(response), {
     capture: async settings => { captured = settings; return new Uint8Array([1, 2, 3]); }
   });
   await app.start();
-  app.element('mobile-layout').checked = true;
-  await app.element('mobile-layout').handlers.change();
+  app.element(control).checked = true;
+  await app.element(control).handlers.change();
   await app.element('save-pdf').handlers.click();
-  assert.equal(captured.pageLayout, 'mobile');
-  assert.equal(app.element('pdf-document').dataset.pageLayout, 'mobile');
-  assert.deepEqual(app.downloads, ['Test conversation-mobile.pdf']);
+  assert.equal(captured.pageLayout, layout);
+  assert.equal(app.element('pdf-document').dataset.pageLayout, layout);
+  assert.deepEqual(app.downloads, ['Test conversation-' + layout + '.pdf']);
   assert.match(app.element('export-status').textContent, /1 question bookmarks and 2 pages/);
-  assert.equal(app.element('mobile-layout').disabled, false);
+  assert.equal(app.element(control).disabled, false);
 });
 
 test('PDF capture failure does not download an incomplete file and restores controls', async () => {

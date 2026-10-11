@@ -75,6 +75,21 @@ test('mobile capture uses the custom sheet, matching CSS margins and full-page s
   assert.equal(app.calls.at(-1).method, 'detach');
 });
 
+test('Hanwang N10 capture uses a 3:4 vector page and 10 mm margins, independently of screen resolution', async () => {
+  const app = fixture();
+  await app.api.capture({ pageLayout: 'hanwang-n10' });
+  const params = app.calls.find(call => call.method === 'Page.printToPDF').params;
+  assert.equal(params.paperWidth, 150 / 25.4);
+  assert.equal(params.paperHeight, 200 / 25.4);
+  assert.equal(params.paperWidth / params.paperHeight, 0.75);
+  for (const edge of ['Top', 'Right', 'Bottom', 'Left']) assert.equal(params['margin' + edge], 10 / 25.4);
+  assert.equal(params.landscape, false);
+  assert.equal(params.preferCSSPageSize, true);
+  assert.equal(params.scale, 1);
+  assert.equal(params.pageRanges, '');
+  assert.equal(app.calls.at(-1).method, 'detach');
+});
+
 for (const url of ['https://chatgpt.com/c/id', 'chrome-extension://other-extension/print.html', 'chrome-extension://our-extension/worker.js']) {
   test(`refuses to attach to an unrelated tab: ${url}`, async () => {
     const app = fixture({ tab: { id: 42, url } });

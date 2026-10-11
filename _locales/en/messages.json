@@ -674,6 +674,12 @@
   "mobileLayoutHint": {
     "message": "100 × 180 mm pages with larger text. Wide diagrams may need zooming."
   },
+  "n10Layout": {
+    "message": "Hanwang N10 (3:4)"
+  },
+  "n10LayoutHint": {
+    "message": "150 × 200 mm pages, 10 mm margins and 12 pt body text."
+  },
   "readerLibraryTotalSize": {
     "message": "Total local data: approximately $arg1$",
     "placeholders": {

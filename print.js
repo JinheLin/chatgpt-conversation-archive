@@ -30,6 +30,8 @@
   pdfFallback.hidden = true;
   const pageLayout = document.getElementById("page-layout");
   const mobileLayout = document.getElementById("mobile-layout");
+  const n10Layout = document.getElementById("n10-layout");
+  const layoutControls = [pageLayout, mobileLayout, n10Layout];
   let outputBusy = false;
   const workspace = globalThis.ChatGPTReaderWorkspace.init({ document, isBusy: () => outputBusy });
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
@@ -38,7 +40,7 @@
     items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
     isBusy: () => outputBusy
   });
-  const outputControls = [input, startButton, pageLayout, mobileLayout,
+  const outputControls = [input, startButton, ...layoutControls,
     ...["reader-open", "reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
@@ -49,12 +51,13 @@
     for (const control of document.getElementById("reader-library-list").querySelectorAll("button")) control.disabled = value;
   }
   function updatePageLayout() {
-    const layout = mobileLayout.checked ? "mobile" : pageLayout.checked ? "landscape" : "portrait";
+    const layout = n10Layout.checked ? "hanwang-n10" : mobileLayout.checked ? "mobile" : pageLayout.checked ? "landscape" : "portrait";
     const profile = globalThis.ChatGPTPageLayout.resolve(layout);
     document.getElementById("page-direction").textContent = globalThis.ChatGPTPageLayout.css(layout);
     main.dataset.landscape = String(profile.landscape);
     main.dataset.pageLayout = layout;
     document.getElementById("mobile-layout-hint").hidden = layout !== "mobile";
+    document.getElementById("n10-layout-hint").hidden = layout !== "hanwang-n10";
     return layout;
   }
   updatePageLayout();
@@ -377,17 +380,16 @@
     setOutputBusy(false);
     cancelButton.hidden = true;
   });
-  async function changeLayout(control, other) {
+  async function changeLayout(control) {
     if (outputBusy) return;
-    if (control.checked) other.checked = false;
+    if (control.checked) for (const other of layoutControls) if (other !== control) other.checked = false;
     setOutputBusy(true);
     try {
       await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
     } catch (error) { report(error.message, true); }
     finally { setOutputBusy(false); }
   }
-  pageLayout.addEventListener("change", () => changeLayout(pageLayout, mobileLayout));
-  mobileLayout.addEventListener("change", () => changeLayout(mobileLayout, pageLayout));
+  for (const control of layoutControls) control.addEventListener("change", () => changeLayout(control));
   document.getElementById("print-again").addEventListener("click", async () => {
     if (outputBusy) return;
     await document.fonts.ready;
@@ -431,7 +433,8 @@
       const bytes = await globalThis.ChatGPTPdfCapture.capture({ pageLayout: layout });
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(bytes, metadata);
-      const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}${layout === "mobile" ? "-mobile" : ""}.pdf`;
+      const suffix = ["mobile", "hanwang-n10"].includes(layout) ? `-${layout}` : "";
+      const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}${suffix}.pdf`;
       download(new Blob([result.bytes], { type: "application/pdf" }), filename);
       report(t("directPdfSaved", result.questions, result.pages), false, false, true);
     } catch (error) {

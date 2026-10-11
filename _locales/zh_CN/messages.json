@@ -674,6 +674,12 @@
   "mobileLayoutHint": {
     "message": "100 × 180 mm 窄幅页面，正文大字排版。宽图表可能需要放大。"
   },
+  "n10Layout": {
+    "message": "汉王 N10（3:4）"
+  },
+  "n10LayoutHint": {
+    "message": "150 × 200 mm 页面，10 mm 页边距，正文 12 pt。"
+  },
   "readerLibraryTotalSize": {
     "message": "本地数据总大小：约 $arg1$",
     "placeholders": {

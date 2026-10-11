@@ -45,10 +45,11 @@ test('mobile and landscape are mutually exclusive; toggling updates preview, pri
   assert.equal(app.main.dataset.pageLayout, 'portrait');
 });
 
-test('mobile code keeps readable type and original text; diagrams fit page width and height without wrapping', async (t) => {
+for (const layout of ['mobile', 'hanwang-n10']) test(layout + ' code keeps readable type and original text; diagrams fit page width and height without wrapping', async (t) => {
   const app = fixture(); t.after(() => app.w.close());
   const ordinary = 'const value = "' + 'x'.repeat(180) + '";\nconsole.log(value);';
-  const diagram = '+--------------------------------------------+\n| wide text diagram                          |\n+--------------------------------------------+';
+  const border = '+' + '-'.repeat(68) + '+';
+  const diagram = border + '\n|' + ' wide text diagram '.padEnd(68) + '|\n' + border;
   const tall = Array.from({ length: 100 }, () => '| tall diagram |').join('\n');
   app.main.innerHTML = '<pre><code class="language-js"></code></pre><pre><code class="language-text"></code></pre><pre><code class="language-text"></code></pre>';
   const blocks = [...app.main.querySelectorAll('pre')];
@@ -56,7 +57,7 @@ test('mobile code keeps readable type and original text; diagrams fit page width
   app.w.HTMLCanvasElement.prototype.getContext = () => ({ measureText: text => ({ width: text.length * 8 }) });
   app.w.eval(fs.readFileSync(path.join(__dirname, '..', 'export.js'), 'utf8'));
   const progress = [];
-  await app.w.ChatGPTPdfExporter.fitCode(app.main, 'mobile', { onProgress: event => progress.push(event.completed) });
+  await app.w.ChatGPTPdfExporter.fitCode(app.main, layout, { onProgress: event => progress.push(event.completed) });
   assert.equal(blocks[0].style.fontSize, '10.5pt');
   assert.equal(blocks[0].dataset.diagram, 'false');
   for (const block of blocks.slice(1)) {

@@ -46,12 +46,20 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ## Mobile reading PDF (v3.2)
 
-1. Open a conversation, then open **Export** and check **Mobile reading**. This clears **A4 landscape**; checking landscape clears the mobile setting. Leave both unchecked for A4 portrait.
+1. Open a conversation, then open **Export** and check **Mobile reading**. This clears the other layout checkboxes. The layout choices are mutually exclusive; leave all unchecked for A4 portrait.
 2. The preview changes to narrow pages. Choose **PDF** to download a separate `-mobile.pdf` file, then transfer it to your phone.
 3. Mobile pages are 100 × 180 mm, with 6 mm side margins, 7 mm top/bottom margins, 13 pt body text and 14 pt questions. The selected layout also applies to standalone HTML.
 4. Regular code stays at 10.5 pt, wraps visually without rewriting the source text, and can continue across pages. Text/ASCII diagrams preserve spacing and fit the page width and height. Very wide or tall diagrams can still need zooming.
 5. Tables that fit on one page stay together. Tables or individual rows taller than a page may span pages; browser pagination cannot keep an arbitrarily large table intact on a small sheet. Native question bookmarks and the opening index are retained; bookmark UI depends on your phone's PDF reader.
 6. Use direct **PDF** export for the custom page size. The alternative print dialog may override it with the selected printer paper size.
+
+## Hanwang N10 PDF (v3.7)
+
+1. Open a conversation, then choose **Export → Hanwang N10 (3:4)**. This clears **A4 landscape** and **Mobile reading**. Uncheck it to return to A4 portrait.
+2. Choose **PDF** to download `Conversation title-hanwang-n10.pdf` and transfer it to the reader.
+3. The page is **150 × 200 mm**, a **3:4 portrait** ratio, with **10 mm margins**, **12 pt body text** and **13 pt questions**. The preview and offline HTML use the same layout.
+4. The PDF retains vector text, math and the question/answer-section bookmarks. It is not rasterized to the screen's pixel resolution. Ordinary code uses 10.5 pt and wraps without changing the source; long code may continue across pages. Text diagrams keep their spacing and fit the available page width and height.
+5. Tables that fit on one page stay together; oversized tables or rows can still span pages. Very large diagrams may need zooming. Use direct **PDF** export to retain the custom dimensions; manual printing can override them.
 
 ## Reading interface (v3.1)
 
@@ -60,7 +68,7 @@ After updating local files, click **Reload** on the extension card in `chrome://
 - After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Update conversation**, **Annotations** and **Export**.
 - **Conversation list** shows the link field and local conversations. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
 - **Annotations** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
-- **Export** offers HTML and PDF plus the **A4 landscape** and **Mobile reading** checkboxes. They are mutually exclusive; leave both unchecked for A4 portrait. The format setting applies to the preview and both exports.
+- **Export** offers HTML and PDF plus the **A4 landscape**, **Mobile reading** and **Hanwang N10 (3:4)** checkboxes. They are mutually exclusive; leave all unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
 
 ## Message timestamps (v3.6)
@@ -219,6 +227,8 @@ These are included in the repository; no installation is needed:
 Version 3's reader is checked with automated DOM and IndexedDB fixtures, including close/reopen, changed text, local-only loading, clean HTML export and backup recovery. It has not yet received a visual check in a real Chrome extension tab. The following live-browser checks were performed on earlier export versions.
 
 Message timestamps (v3.6): tests cover creation-time normalization, missing/invalid values, legacy snapshots, backup recovery, offline reopening and English/Chinese HTML output. Isolated Chrome rendering checks desktop and mobile samples in the Asia/Shanghai time zone; timestamps remain visible under print CSS. The message-time change has not been verified against a live ChatGPT data response.
+
+Hanwang N10 layout (v3.7): 44 related tests pass, covering layout exclusivity, localization, HTML export, readable code and PDF capture settings. An isolated Chrome instance produced an 8-page sample at the nominal 150 × 200 mm size (within 0.1 mm after Chrome rounding), with 7 native bookmarks, an intact eight-row table, all 65 code lines and the final passage. Extracted text stays inside every page; the menu, index, body, table, math, code and text diagram were visually checked. Reading on a physical N10 has not been verified; temporary QA files are excluded from the project.
 
 Validated in a Chrome profile signed in to ChatGPT with a long technical conversation: 40 messages, 13 questions, and a 228-page A4 PDF, including text diagrams, tables, two file attachments, and internal PDF index links. The private conversation and exported files are not published with this project.
 

@@ -239,11 +239,11 @@
     if (isCancelled()) throw new Error(t("cancelled"));
     const page = globalThis.ChatGPTPageLayout.resolve(layout);
     const size = globalThis.ChatGPTPageLayout.contentSize(layout);
-    const mobile = page.id === "mobile";
-    const padding = mobile ? 4 * 96 / 25.4 + 2 : 26;
+    const readingPage = ["mobile", "hanwang-n10"].includes(page.id);
+    const padding = readingPage ? 4 * 96 / 25.4 + 2 : 26;
     const width = size.width * 96 / 25.4 - padding;
     const height = size.height * 96 / 25.4 - padding;
-    const base = mobile ? 10.5 : 10;
+    const base = readingPage ? 10.5 : 10;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     const blocks = [...main.querySelectorAll("pre")];
@@ -260,9 +260,9 @@
     let sliceStart = performance.now();
     for (const [index, pre] of blocks.entries()) {
       if (isCancelled()) throw new Error(t("cancelled"));
-      // Ordinary mobile code wraps without modifying the source text. Diagrams
+      // Ordinary reading-page code wraps without modifying the source text. Diagrams
       // stay intact and fit both dimensions of one page, including tall blocks.
-      if (mobile && pre.dataset.diagram !== "true") {
+      if (readingPage && pre.dataset.diagram !== "true") {
         sizes.push(`${base}pt`);
         onProgress({ completed: index + 1, total: blocks.length });
         continue;
@@ -282,7 +282,7 @@
           sliceStart = performance.now();
         }
       }
-      const heightScale = mobile ? height / (pre.textContent.split("\n").length * base * 96 / 72 * 1.35) : 1;
+      const heightScale = readingPage ? height / (pre.textContent.split("\n").length * base * 96 / 72 * 1.35) : 1;
       sizes.push(`${base * Math.min(1, widest ? width / widest : 1, heightScale)}pt`);
       onProgress({ completed: index + 1, total: blocks.length });
     }

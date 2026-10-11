@@ -224,13 +224,13 @@
 .pdf-document[data-page-layout="mobile"] .pdf-message-body h2 { font-size: 16pt; }
 .pdf-document[data-page-layout="mobile"] .pdf-message-body :is(h3, h4, h5, h6) { font-size: 14pt; }
 .pdf-document[data-page-layout="mobile"] .pdf-message-body :is(code, kbd, samp, table, .archive-layout-table) { font-size: 10.5pt; }
-.pdf-document[data-page-layout="mobile"] .pdf-message-body pre {
+.pdf-document:is([data-page-layout="mobile"], [data-page-layout="hanwang-n10"]) .pdf-message-body pre {
   padding: 2mm; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal;
 }
-.pdf-document[data-page-layout="mobile"] .pdf-message-body pre code {
+.pdf-document:is([data-page-layout="mobile"], [data-page-layout="hanwang-n10"]) .pdf-message-body pre code {
   font-size: inherit; white-space: inherit; overflow-wrap: inherit;
 }
-.pdf-document[data-page-layout="mobile"] .pdf-message-body pre[data-diagram="true"] {
+.pdf-document:is([data-page-layout="mobile"], [data-page-layout="hanwang-n10"]) .pdf-message-body pre[data-diagram="true"] {
   white-space: pre; overflow-wrap: normal;
 }
 .pdf-document[data-page-layout="mobile"] .pdf-toc { padding: .7em; font-size: 11pt; }
@@ -238,9 +238,26 @@
 .pdf-document[data-page-layout="mobile"] .pdf-message-body :is(th, td, .archive-layout-table-cell) { padding: .3em; }
 .pdf-document[data-page-layout="mobile"] .pdf-message-body img { max-height: 162mm; object-fit: contain; }
 .pdf-document[data-page-layout="mobile"] .pdf-message-body .archive-chart-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) max-content; }
+
+/* Hanwang N10: a 3:4 portrait page, with text laid out for an e-reader. */
+.pdf-document[data-page-layout="hanwang-n10"] {
+  width: min(150mm, 100%); min-height: 200mm; padding: 10mm;
+  font-size: 12pt; line-height: 1.6;
+}
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-title { font-size: 20pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-meta { font-size: 9.5pt; margin-bottom: 1.2em; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-role { font-size: 9.5pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-user .pdf-message-body { font-size: 13pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-message-body h1 { font-size: 18pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-message-body h2 { font-size: 16pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-message-body :is(h3, h4, h5, h6) { font-size: 13pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-message-body :is(code, kbd, samp, table, .archive-layout-table) { font-size: 10.5pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-toc { padding: .7em; font-size: 10.5pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-toc h2 { font-size: 14pt; }
+.pdf-document[data-page-layout="hanwang-n10"] .pdf-message-body img { max-height: 176mm; object-fit: contain; }
 @media print {
-  .pdf-document[data-page-layout="mobile"] { width: auto; min-height: 0; padding: 0; }
-  .pdf-document[data-page-layout="mobile"] .pdf-message-body pre:not([data-diagram="true"]) {
+  .pdf-document:is([data-page-layout="mobile"], [data-page-layout="hanwang-n10"]) { width: auto; min-height: 0; padding: 0; }
+  .pdf-document:is([data-page-layout="mobile"], [data-page-layout="hanwang-n10"]) .pdf-message-body pre:not([data-diagram="true"]) {
     break-inside: auto; page-break-inside: auto; orphans: 2; widows: 2;
   }
 }

@@ -83,7 +83,7 @@ Each answer can be marked read or unread. Questions are not tracked. The toolbar
 
 **Unread only** hides questions whose answers are all read. Scrolling does not mark anything read.
 
-If an answer's text changes after it was marked read, the control shows **Content updated** until you mark it read again. A newly generated answer has a new message ID, so it starts unread. Read marks stay in this browser, are included in the JSON backup, and are omitted from HTML and PDF. Reload the extension and refresh an open reader after updating.
+Each answer heading has an icon: an open circle is unread and a check is read. If an answer's text changes after it was marked read, the icon becomes an exclamation mark until you mark it read again. A newly generated answer has a new message ID, so it starts unread. Read marks stay in this browser, are included in the JSON backup, and are omitted from HTML and PDF. Reload the extension and refresh an open reader after updating.
 
 ## Answer sections in navigation (v3.5)
 

@@ -41,6 +41,45 @@
       node.disabled = locked || busy || !enabled;
       return node;
     }
+    function svg(tag, attrs) {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+      return node;
+    }
+    function readIcon(state) {
+      const icon = svg("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true" });
+      if (state === "read") {
+        icon.append(
+          svg("circle", { cx: "8", cy: "8", r: "7", fill: "currentColor" }),
+          svg("path", { d: "M4.6 8.2 6.9 10.5 11.4 5.7", fill: "none", stroke: "#fff", "stroke-width": "1.6", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+      } else if (state === "stale") {
+        icon.append(
+          svg("circle", { cx: "8", cy: "8", r: "7", fill: "currentColor" }),
+          svg("path", { d: "M8 4.2v4.4", fill: "none", stroke: "#fff", "stroke-width": "1.6", "stroke-linecap": "round" }),
+          svg("circle", { cx: "8", cy: "11.4", r: ".9", fill: "#fff" }));
+      } else {
+        icon.append(svg("circle", { cx: "8", cy: "8", r: "5.5", fill: "none", stroke: "currentColor", "stroke-width": "1.6" }));
+      }
+      return icon;
+    }
+    function svg(tag, attrs) {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+      return node;
+    }
+    function readIcon(state) {
+      const icon = svg("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true" });
+      if (state === "unread") {
+        icon.append(svg("circle", { cx: "8", cy: "8", r: "5.5", fill: "none", stroke: "currentColor", "stroke-width": "1.5" }));
+      } else {
+        icon.append(svg("circle", { cx: "8", cy: "8", r: "7", fill: "currentColor" }));
+        icon.append(state === "stale"
+          ? svg("path", { d: "M8 4.2v4.3", fill: "none", stroke: "#fff", "stroke-width": "1.6", "stroke-linecap": "round" })
+          : svg("path", { d: "M4.6 8.2 6.9 10.5 11.4 5.7", fill: "none", stroke: "#fff", "stroke-width": "1.6", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+        if (state === "stale") icon.append(svg("circle", { cx: "8", cy: "11.3", r: ".9", fill: "#fff" }));
+      }
+      return icon;
+    }
     function focused() {
       const node = document.activeElement;
       return node?.dataset?.readFocus || "";
@@ -58,15 +97,17 @@
         const state = status(id);
         const label = t("answerLabel");
         const controls = element("div", "reader-read-controls");
-        const toggle = button("reader-read-toggle", state === "read" ? t("readerMarkUnread") : t("readerMarkRead"), `toggle:${id}`, [id]);
+        const toggle = button("reader-read-toggle", undefined, `toggle:${id}`, [id]);
+        const name = state === "stale" ? t("readerMarkStaleNamed", label) :
+          t(state === "read" ? "readerMarkUnreadNamed" : "readerMarkReadNamed", label);
         toggle.dataset.state = state;
         toggle.dataset.action = "toggle";
+        toggle.replaceChildren(readIcon(state));
         toggle.setAttribute("aria-pressed", String(state === "read"));
-        toggle.setAttribute("aria-label", state === "stale" ? t("readerMarkStaleNamed", label) :
-          t(state === "read" ? "readerMarkUnreadNamed" : "readerMarkReadNamed", label));
+        toggle.setAttribute("aria-label", name);
+        toggle.title = name;
         controls.append(toggle);
-        if (state === "stale") controls.append(element("span", "reader-read-state", t("readerReadStale")));
-        section.querySelector(".pdf-role")?.insertAdjacentElement("afterend", controls);
+        section.querySelector(".pdf-role")?.append(controls);
       }
     }
     function turns() {

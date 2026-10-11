@@ -14,7 +14,7 @@
 .pdf-title { margin: 0 0 .25em; font-size: 22pt; line-height: 1.25; overflow-wrap: anywhere; }
 .pdf-meta { margin: 0 0 2em; color: #62686e; font-size: 9pt; }
 .pdf-message { margin: 0 0 1.6em; padding-top: .7em; }
-.pdf-role { margin: 0 0 .55em; color: #176b58; font-size: 9pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.pdf-role { display: flex; align-items: center; gap: 8px; margin: 0 0 .55em; color: #176b58; font-size: 9pt; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .pdf-message-time { display: inline-block; color: #62686e; font-weight: 400; letter-spacing: normal; text-transform: none; white-space: nowrap; }
 .pdf-message-body > :first-child { margin-top: 0; }
 .pdf-message-body > :last-child { margin-bottom: 0; }
@@ -308,13 +308,17 @@
 }
 .reader-annotations button:disabled { opacity: .5; cursor: wait; }
 .reader-selection button:focus-visible, .reader-annotations button:focus-visible { outline: 2px solid #176b58; outline-offset: 2px; }
-.reader-read-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 .7em; }
+.reader-read-controls { display: inline-flex; align-items: center; margin: 0 0 0 6px; vertical-align: -3px; }
 .reader-read-controls button, .reader-read-filter button, .reader-read-toc button {
   border: 1px solid #d4ded8; border-radius: 999px; background: #fff; color: #47534d;
   font: 500 12px/1.4 system-ui, sans-serif; cursor: pointer; padding: 2px 8px;
 }
+.reader-read-controls button.reader-read-toggle { width: 22px; height: 22px; padding: 0; border: 0; background: transparent; color: #8aa097; }
+.reader-read-toggle svg { display: block; }
 .reader-read-controls button[data-state="read"], .reader-read-toc button[data-state="read"] { background: #edf6f2; color: #176b58; border-color: #b5c9c1; }
+.reader-read-controls button.reader-read-toggle[data-state="read"] { background: transparent; border: 0; color: #176b58; }
 .reader-read-controls button[data-state="stale"], .reader-read-toc button[data-state="stale"] { background: #fff6e8; color: #8a5a10; border-color: #ead3a4; }
+.reader-read-controls button.reader-read-toggle[data-state="stale"] { background: transparent; border: 0; color: #8a5a10; }
 .reader-read-state { color: #8a5a10; font-size: 12px; font-weight: 600; }
 .reader-read-toc { display: inline-flex; gap: 4px; }
 .reader-read-toc button { min-width: 1.8em; padding: 0 6px; }

@@ -168,6 +168,7 @@
       const sourceId = `sources-${index + 1}`;
       const sources = (message.sources || []).filter((source) => /^https?:\/\//.test(source.url));
       body.innerHTML = md.render(preserveDiagrams(message.text), { archiveSourcesId: sources.length ? sourceId : null });
+      for (const warning of body.querySelectorAll(".archive-image-unavailable")) problems.push(warning.textContent);
       section.appendChild(body);
       if (message.role === "assistant") indexAnswerHeadings(body, questionItem, question, index);
       for (const asset of message.assets || []) {

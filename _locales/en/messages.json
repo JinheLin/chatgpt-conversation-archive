@@ -787,5 +787,14 @@
   },
   "readerNoUnread": {
     "message": "Every answer in this conversation is marked read."
+  },
+  "staticExpandedContent": {
+    "message": "Expanded content from the interactive component"
+  },
+  "staticLayoutNotice": {
+    "message": "Interactive component shown as static reading content."
+  },
+  "staticControl": {
+    "message": "static control"
   }
 }

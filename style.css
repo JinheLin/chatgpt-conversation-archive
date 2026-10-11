@@ -42,6 +42,8 @@
 .pdf-message-body :is(th, td, .archive-layout-table-cell) { padding: .4em .55em; border: 1px solid #ccd2d5; vertical-align: top; overflow-wrap: anywhere; }
 .pdf-message-body th { background: #f3f6f5; text-align: left; }
 .pdf-message-body img { max-width: 100%; height: auto; }
+.pdf-message-body .archive-image-unavailable { display: block; margin: .45em 0; color: #62686e; font-size: .9em; overflow-wrap: anywhere; }
+.pdf-message-body .archive-async-image { display: inline-block; vertical-align: middle; }
 .pdf-message-body a, .pdf-meta a { color: #185e9d; text-decoration: underline; overflow-wrap: anywhere; }
 .pdf-status { color: #596168; }
 
@@ -168,7 +170,19 @@
 .pdf-message-body .archive-layout-row {
   display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
-.pdf-message-body .archive-layout-row > .archive-layout-box { flex: 1; }
+.pdf-message-body .archive-layout-row > .archive-layout-box { flex: 0 1 auto; }
+.pdf-message-body .archive-layout-form, .pdf-message-body .archive-layout-radio-group {
+  display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px);
+}
+.pdf-message-body .archive-layout-checkbox, .pdf-message-body .archive-layout-radio { display: block; }
+.pdf-message-body .archive-control-mark { margin-right: .5em; }
+.pdf-message-body .archive-layout-textarea {
+  padding: .6em; border: 1px solid #d8dcdf; border-radius: 4px; color: #62686e; white-space: pre-wrap;
+}
+.pdf-message-body .archive-layout-button { display: block; padding: .4em .6em; background: #f6f8fa; border-radius: 4px; }
+.pdf-message-body .archive-static-note { display: block; color: #62686e; font-size: .8em; font-weight: normal; }
+.pdf-message-body .archive-layout-button .archive-static-note { display: inline; }
+.pdf-message-body .archive-static-expanded { display: block; margin: .4em 0; }
 .pdf-message-body .archive-layout-table { display: table; }
 .pdf-message-body span.archive-layout-table { display: inline-table; }
 .pdf-message-body .archive-layout-table-row { display: table-row; }
@@ -176,6 +190,7 @@
 .pdf-message-body .archive-layout-title { display: block; font-size: 1.2em; font-weight: 600; }
 .pdf-message-body .archive-layout-badge { display: inline-block; flex: none; font-weight: 600; }
 .pdf-message-body .archive-layout-icon { display: block; text-align: center; font-size: 18pt; line-height: 1.2; }
+.pdf-message-body .archive-layout-icon.archive-layout-inline { display: inline-block; vertical-align: middle; }
 .pdf-message-body .archive-layout-divider { display: block; border-top: 1px solid #d8dcdf; }
 .pdf-message-body .archive-layout-svg { display: block; max-width: 100%; height: auto; overflow: visible; }
 .pdf-message-body .archive-layout-border { border: 1px solid #d8dcdf; }

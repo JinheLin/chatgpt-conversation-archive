@@ -2,7 +2,8 @@
 (() => {
   "use strict";
   const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
-    "table", "table-row", "table-cell", "link", "chart", "entity"]);
+    "table", "table-row", "table-cell", "link", "chart", "entity", "asyncimage",
+    "form", "checkbox", "radio-group", "radio", "textarea", "button"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
@@ -106,6 +107,21 @@
     return null;
   }
 
+  function readBinding(source, start) {
+    if (!source.startsWith("{@body", start)) return null;
+    const body = bracedValue(source, start);
+    if (!body) return null;
+    const declaration = /^@body\s+const\s+(?:([a-zA-Z_]\w*)\s*=\s*|\[\s*([a-zA-Z_]\w*)\s*,\s*[a-zA-Z_]\w*\s*\]\s*=\s*DIL\.useState\(\s*)/.exec(body.content);
+    if (!declaration) return null;
+    const binding = declaration[1] || declaration[2];
+    if (binding.length > 128 || forbiddenFields.has(binding)) return null;
+    const data = literalData(body.content, declaration[0].length);
+    const tail = data && body.content.slice(data.end);
+    if (!data || !(declaration[1] ? /^\s*;?\s*$/ : /^\s*\)\s*;?\s*$/).test(tail)) return null;
+    // Only literal initialization is read. DIL and setters are never called.
+    return { name: "binding", binding, value: data.value, end: body.end, children: [] };
+  }
+
   function readTag(source, start) {
     const match = /^<(\/?)([a-z][a-z-]*)\b/i.exec(source.slice(start));
     const name = match?.[2].toLowerCase();
@@ -129,7 +145,9 @@
           value = expression.content.trim(); pos = expression.end;
           expressions.push(attr[1]);
         } else {
-          const literal = /^(?:"([^"]*)"|'([^']*)'|([+-]?(?:\d+(?:\.\d+)?|\.\d+)))/.exec(source.slice(pos));
+          // Unquoted static tokens, such as align=start or radius=lg, are
+          // literals too. Presentation still accepts only its fixed values.
+          const literal = /^(?:"([^"]*)"|'([^']*)'|([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)?|[a-zA-Z_][a-zA-Z0-9_.:-]*))/.exec(source.slice(pos));
           if (!literal) return null;
           value = literal[1] ?? literal[2] ?? literal[3]; pos += literal[0].length;
         }
@@ -165,18 +183,18 @@
         if (!data || !Array.isArray(data.value)) return null;
         tokens.push({ literal: data.value }); pos = data.end; continue;
       }
-      const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|[+*/<>()?\[\]:!.\-])/.exec(source.slice(pos));
+      const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|&&|\|\||[+*/<>()?\[\]:!.\-])/.exec(source.slice(pos));
       if (!token) return null;
       tokens.push(token[0]); pos += token[0].length;
     }
-    const precedence = { "===": 1, "!==": 1, "==": 1, "!=": 1, "<": 2, ">": 2, "<=": 2, ">=": 2, "+": 3, "-": 3, "*": 4, "/": 4 };
+    const precedence = { "||": 1, "&&": 2, "===": 3, "!==": 3, "==": 3, "!=": 3, "<": 4, ">": 4, "<=": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6 };
     function expression(min = 0, depth = 0) {
       if (depth > MAX_DEPTH) throw new Error("Expression nesting limit");
       const token = tokens[cursor++];
       let value;
       if (token && typeof token === "object") value = token.literal;
       else if (["-", "+", "!"].includes(token)) {
-        const operand = expression(5, depth + 1);
+        const operand = expression(7, depth + 1);
         if (token !== "!" && typeof operand !== "number") throw new Error("Numeric operand required");
         value = token === "!" ? !operand : token === "-" ? -operand : operand;
       } else if (token === "(") {
@@ -193,6 +211,9 @@
       while (["[", "."].includes(tokens[cursor])) {
         const access = tokens[cursor++];
         const key = access === "." ? tokens[cursor++] : expression(0, depth + 1);
+        if (access === "." && key === "length" && (Array.isArray(value) || typeof value === "string")) {
+          value = value.length; continue;
+        }
         // A single data operation on literal arrays, not arbitrary method calls.
         if (access === "." && key === "includes" && Array.isArray(value) && tokens[cursor] === "(") {
           cursor++;
@@ -213,7 +234,8 @@
         if (["+", "-", "*", "/"].includes(op)) {
           if (typeof value !== "number" || typeof right !== "number") throw new Error("Numeric operands required");
           value = op === "+" ? value + right : op === "-" ? value - right : op === "*" ? value * right : value / right;
-        } else value = op === "<" ? value < right : op === ">" ? value > right : op === "<=" ? value <= right : op === ">=" ? value >= right :
+        } else if (op === "&&" || op === "||") value = op === "&&" ? value && right : value || right;
+        else value = op === "<" ? value < right : op === ">" ? value > right : op === "<=" ? value <= right : op === ">=" ? value >= right :
           ["===", "=="].includes(op) ? value === right : value !== right;
       }
       if (min === 0 && tokens[cursor] === "?") {
@@ -238,7 +260,7 @@
       if (depth > MAX_DEPTH || ++count > MAX_NODES) return null;
       const open = readTag(source, pos);
       if (!open || open.closing) return null;
-      if (open.name === "entity" && !open.selfClosing) return null;
+      if (["entity", "asyncimage"].includes(open.name) && !open.selfClosing) return null;
       if (inSvg ? !svgNames.has(open.name) : !layoutNames.has(open.name) && open.name !== "svg") return null;
       const node = { ...open, svg: inSvg || open.name === "svg", children: [] };
       if (open.selfClosing) return node;
@@ -251,11 +273,13 @@
       const open = /^\{#each\s+/.exec(source.slice(pos));
       if (!open) return null;
       const data = loopItems(source, pos + open[0].length);
-      if (!data) return null;
-      const binding = /^\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(data.end));
+      const reference = !data && /^([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*|\[[^\]\n]{1,128}\])*)/.exec(source.slice(pos + open[0].length));
+      if (!data && !reference) return null;
+      const end = data?.end || pos + open[0].length + reference[0].length;
+      const binding = /^\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(end));
       if (!binding) return null;
-      const content = childrenAt(data.end + binding[0].length, depth, inSvg, "each");
-      return content && { name: "each", svg: inSvg, items: data.items, variable: binding[1], index: binding[2], ...content };
+      const content = childrenAt(end + binding[0].length, depth, inSvg, "each");
+      return content && { name: "each", svg: inSvg, items: data?.items, reference: reference?.[0], variable: binding[1], index: binding[2], ...content };
     }
     function childrenAt(pos, depth, inSvg, closing) {
       let cursor = pos, textStart = cursor;
@@ -273,6 +297,25 @@
             close = source.indexOf(marker, close + marker.length);
           }
           if (close >= 0) { cursor = close + marker.length; continue; }
+        }
+        const initializer = readBinding(source, cursor);
+        if (initializer) {
+          if (++count > MAX_NODES) return null;
+          children.push(source.slice(textStart, cursor), initializer);
+          cursor = textStart = initializer.end; continue;
+        }
+        if (source.startsWith("{/if}", cursor)) {
+          if (closing !== "if") return null;
+          children.push(source.slice(textStart, cursor));
+          return { children, end: cursor + 5 };
+        }
+        const condition = /^\{#if\s+([^{}\n]{1,1000})\}/.exec(source.slice(cursor));
+        if (condition) {
+          if (depth >= MAX_DEPTH || ++count > MAX_NODES) return null;
+          const content = childrenAt(cursor + condition[0].length, depth + 1, inSvg, "if");
+          if (!content) return null;
+          children.push(source.slice(textStart, cursor), { name: "if", svg: inSvg, expression: condition[1], ...content });
+          cursor = textStart = content.end; continue;
         }
         if (source.startsWith("{/each}", cursor)) {
           if (closing !== "each") return null;
@@ -305,10 +348,11 @@
     // Rows and cells must remain inside their table, including through loops.
     // Reject malformed table trees instead of emitting HTML the browser repairs.
     function validTables(node, parent = null) {
-      if (parent === "table" && !["table-row", "each"].includes(node.name) ||
-          parent === "table-row" && !["table-cell", "each"].includes(node.name) ||
+      if (node.name === "if") node.tableContext = ["table", "table-row"].includes(parent);
+      if (parent === "table" && !["table-row", "each", "if", "binding"].includes(node.name) ||
+          parent === "table-row" && !["table-cell", "each", "if", "binding"].includes(node.name) ||
           node.name === "table-row" && parent !== "table" || node.name === "table-cell" && parent !== "table-row") return false;
-      const context = node.name === "each" ? parent : ["table", "table-row"].includes(node.name) ? node.name : null;
+      const context = ["each", "if"].includes(node.name) ? parent : ["table", "table-row"].includes(node.name) ? node.name : null;
       return node.children.every(child => typeof child === "string" ? !context || !child.trim() : validTables(child, context));
     }
     if (node && !validTables(node)) return null;
@@ -324,6 +368,7 @@
 
   function presentation(node, attrs) {
     const classes = ["archive-layout", `archive-layout-${node.name}`];
+    if (node.name === "icon" && attrs.inline === "true") classes.push("archive-layout-inline");
     const styles = [];
     if (attrs.border === "true") classes.push("archive-layout-border");
     if (attrs.background === "surface-secondary") classes.push("archive-layout-surface-secondary");
@@ -332,10 +377,10 @@
     if (["secondary", "tertiary"].includes(attrs.color)) classes.push("archive-layout-secondary");
     else if (safeColor(attrs.color)) styles.push(`color:${safeColor(attrs.color)}`);
     const choices = {
-      radius: { none: "0", xs: "2px", sm: "4px", md: "6px", lg: "8px", xl: "12px" },
+      radius: { none: "0", xs: "2px", sm: "4px", md: "6px", lg: "8px", xl: "12px", full: "9999px" },
       align: { left: "left", start: "left", center: "center", right: "right", end: "right" },
       weight: { normal: "400", regular: "400", medium: "500", semibold: "600", bold: "700" },
-      size: { "2xs": ".7rem", xs: ".8rem", sm: ".9rem", md: "1rem", lg: "1.125rem", xl: "1.25rem" }
+      size: { "2xs": ".7rem", xs: ".8rem", sm: ".9rem", md: "1rem", lg: "1.125rem", xl: "1.25rem", "2xl": "1.5rem" }
     };
     const properties = { radius: "border-radius", align: "text-align", weight: "font-weight", size: "font-size" };
     for (const [key, values] of Object.entries(choices)) {
@@ -361,10 +406,17 @@
     if (attrs.width === "100%") styles.push("width:100%");
     if (attrs.tabularNums === "true") styles.push("font-variant-numeric:tabular-nums");
     for (const key of ["padding", "gap"]) {
+      if (typeof attrs[key] !== "string") continue;
       if (/^\d{1,2}$/.test(attrs[key]) && Number(attrs[key]) <= 12) {
         styles.push(`--archive-layout-${key}:${Number(attrs[key]) * 4}px`);
       } else if (/^\d{1,2}(?:\.\d{1,2})?px$/.test(attrs[key]) && parseFloat(attrs[key]) <= 48) {
         styles.push(`--archive-layout-${key}:${parseFloat(attrs[key])}px`);
+      }
+    }
+    if (attrs.padding && typeof attrs.padding === "object") {
+      const { x, y } = attrs.padding;
+      if ([x, y].every(value => Number.isInteger(value) && value >= 0 && value <= 12)) {
+        styles.push(`--archive-layout-padding:${y * 4}px ${x * 4}px`);
       }
     }
     if (/^[1-6]$/.test(attrs.columns)) styles.push(`--archive-layout-columns:${attrs.columns}`);
@@ -413,17 +465,32 @@
     md.renderer.rules.archive_escape = (tokens, index) => md.utils.escapeHtml(tokens[index].content);
     function renderNode(node, env = {}, inline, scope = Object.create(null), budget = { left: MAX_NODES }) {
       if (--budget.left < 0) throw new Error("Layout expansion limit");
+      if (node.name === "binding") { scope[node.binding] = node.value; return ""; }
       if (node.name === "each") {
-        return node.items.map((item, index) => {
+        const items = node.items || valueOf(node.reference, scope)?.value;
+        if (!Array.isArray(items) || items.length > 200) throw new Error("Invalid loop data");
+        return items.map((item, index) => {
           const local = Object.assign(Object.create(null), scope, { [node.variable]: item });
           if (node.index) local[node.index] = index;
           return children(node, env, inline, local, budget);
         }).join("");
       }
+      if (node.name === "if") {
+        const result = valueOf(node.expression, scope);
+        if (!result) throw new Error("Unsupported conditional content");
+        const content = children(node, env, inline, Object.assign(Object.create(null), scope), budget);
+        // A static archive includes hidden hints and answers too. The label
+        // explains why content hidden in the initial interactive state is visible.
+        if (result.value || node.svg || node.tableContext) return content;
+        const tag = inline ? "span" : "div";
+        return `<${tag} class="archive-static-expanded"><span class="archive-static-note">${escape(globalThis.ChatGPTPdfI18n.t("staticExpandedContent"))}</span>${content}</${tag}>`;
+      }
+      scope = Object.assign(Object.create(null), scope);
       const attrs = { ...node.attrs };
       for (const key of node.expressions) {
+        if (/^on[A-Z]/.test(key)) { delete attrs[key]; continue; }
         if (node.name === "chart" && key === "content") continue;
-        if (key === "radius") {
+        if (["radius", "padding"].includes(key)) {
           const data = literalData(attrs[key], 0);
           if (data && data.end === attrs[key].length && data.value && typeof data.value === "object" && !Array.isArray(data.value)) {
             attrs[key] = data.value; continue;
@@ -437,6 +504,21 @@
         if (typeof attrs.value !== "string" || !attrs.value.trim()) throw new Error("Missing entity name");
         // Keep the visible name as plain text, inheriting surrounding formatting.
         return md.utils.escapeHtml(md.utils.unescapeAll(attrs.value));
+      }
+      if (node.name === "asyncimage") {
+        // A search query is not an image URL. Keep its description when no
+        // embedded pixels are available; never search for a replacement image.
+        const label = md.utils.unescapeAll(attrs.alt || attrs.query || globalThis.ChatGPTPdfI18n.t("conversationImage"));
+        const src = attrs.src || attrs.url || "";
+        if (/^data:image\/(?:png|jpeg|gif|webp);base64,[a-zA-Z0-9+/=]+$/i.test(src)) {
+          const height = /^\d{1,3}$/.test(attrs.maxHeight) && Number(attrs.maxHeight) > 0 && Number(attrs.maxHeight) <= 500
+            ? ` style="max-height:${attrs.maxHeight}px;object-fit:contain"` : "";
+          return `<img class="archive-async-image" src="${escape(src)}" alt="${escape(label)}"${height}>`;
+        }
+        const warning = globalThis.ChatGPTPdfI18n.t("imageNotEmbedded", label);
+        const width = /^\d{1,3}$/.test(attrs.maxWidth) && Number(attrs.maxWidth) >= 40 && Number(attrs.maxWidth) <= 500
+          ? ` style="width:${attrs.maxWidth}px;flex:none;max-width:100%"` : "";
+        return `<span class="pdf-asset-warning archive-image-unavailable"${width}>${escape(warning)}</span>`;
       }
       if (node.name === "link") {
         const url = md.normalizeLink(md.utils.unescapeAll(attrs.url || attrs.href || ""));
@@ -460,35 +542,115 @@
         return `<${tag} ${presentation(node, attrs)}${inline ? ` role="${roles[node.name]}"` : ""}>${content}</${tag}>`;
       }
       const tag = inline ? "span" : "div";
+      if (["checkbox", "radio"].includes(node.name)) {
+        const selected = node.name === "checkbox" ? attrs.checked === "true" : env.archiveRadioValue === attrs.value;
+        const symbol = node.name === "checkbox" ? selected ? "☑" : "☐" : selected ? "●" : "○";
+        return `<${tag} ${presentation(node, attrs)}><span class="archive-control-mark" aria-hidden="true">${symbol}</span>${children(node, env, true, scope, budget)}</${tag}>`;
+      }
+      if (node.name === "textarea") {
+        return `<${tag} ${presentation(node, attrs)}>${escape(md.utils.unescapeAll(attrs.value || attrs.placeholder || ""))}</${tag}>`;
+      }
+      if (["form", "radio-group"].includes(node.name)) {
+        const localEnv = node.name === "radio-group" ? { ...env, archiveRadioValue: attrs.value } : env;
+        const note = node.name === "form" ? `<span class="archive-static-note">${escape(globalThis.ChatGPTPdfI18n.t("staticLayoutNotice"))}</span>` : "";
+        return `<${tag} ${presentation(node, attrs)}>${note}${children(node, localEnv, inline, scope, budget)}</${tag}>`;
+      }
+      if (node.name === "button") {
+        return `<${tag} ${presentation(node, attrs)}>${children(node, env, true, scope, budget)}<span class="archive-static-note"> (${escape(globalThis.ChatGPTPdfI18n.t("staticControl"))})</span></${tag}>`;
+      }
       if (node.name === "icon") {
         const symbols = { "arrow-down": "↓", "arrow-up": "↑", "arrow-right": "→", "arrow-left": "←", check: "✓",
-          "check-circle": "✓", clock: "◷", file: "▤", "hard-drive": "▰" };
+          "check-circle": "✓", clock: "◷", file: "▤", "hard-drive": "▰", hash: "#", "arrow-left-right": "↔",
+          puzzle: "◇", lightbulb: "☼", "heart-handshake": "♡", "repeat-2": "↻", users: "♧" };
         return `<${tag} ${presentation(node, attrs)}>${Object.hasOwn(symbols, attrs.name) ? symbols[attrs.name] : ""}</${tag}>`;
       }
       return `<${tag} ${presentation(node, attrs)}>${children(node, env, inline, scope, budget)}</${tag}>`;
     }
+    let fragmentId = 0;
+    md.inline.ruler.before("html_inline", "archive_fragment_inline", (state, silent) => {
+      const marker = /^<archive-fragment key="(\d+)" index="(\d+)"\/>/.exec(state.src.slice(state.pos));
+      const fragments = state.env.archiveFragments;
+      if (!marker || fragments?.key !== marker[1] || !Object.hasOwn(fragments.html, marker[2])) return false;
+      if (!silent) {
+        const html = fragments.html[marker[2]];
+        state.push("archive_fragment", "", 0).meta = state.linkLevel > 0
+          ? html.replace(/<a\b[^>]*>/g, '<span class="archive-link">').replace(/<\/a>/g, "</span>") : html;
+      }
+      state.pos += marker[0].length;
+      return true;
+    });
+    // Fragment HTML comes only from renderNode, never from conversation HTML.
+    md.renderer.rules.archive_fragment = (tokens, index) => tokens[index].meta;
     function children(node, env, inline, scope, budget) {
-      const inlineContent = inline || ["text", "caption", "title", "badge"].includes(node.name);
-      return node.children.map(child => {
-        if (typeof child !== "string") return renderNode(child, env, inline, scope, budget);
-        if (!node.svg && !child.trim()) return "";
-        // Substitute only scoped loop data, escaped before Markdown or SVG rendering.
-        const source = node.svg ? md.utils.unescapeAll(child) : child;
-        const text = source.replace(/\{([^{}\n]+)\}/g, (original, expression) => {
+      const inlineContent = inline || ["text", "caption", "title", "badge", "checkbox", "radio", "button"].includes(node.name);
+      const fragments = { key: String(++fragmentId), html: [] };
+      let group = "";
+      const output = [];
+      const localEnv = () => ({ ...env, archiveFragments: fragments, archiveLayoutScope: Object.assign(Object.create(null), scope) });
+      function flush() {
+        if (!group.trim()) { group = ""; return; }
+        output.push(inlineContent ? md.renderInline(dedent(group), localEnv()) : md.render(dedent(group), localEnv()));
+        group = "";
+      }
+      function substitute(source) {
+        const replace = fragment => fragment.replace(/\{([^{}\n]+)\}/g, (original, expression) => {
           const result = Object.keys(scope).length && valueOf(expression, scope);
           if (!result || !["string", "number", "boolean"].includes(typeof result.value)) return original;
           return node.svg ? String(result.value) : escape(String(result.value).replace(/[\\`*_[\]{}()!#$~|]/g, "\\$&"));
         });
-        if (node.svg) return escape(text);
-        return inlineContent ? md.renderInline(text.includes("\n") ? dedent(text) : text, env) : md.render(dedent(text), env);
-      }).join("");
+        // Markdown code spans/blocks retain their original variable examples.
+        const protectedCode = /(`+)[\s\S]*?\1(?!`)|(~{3,})[^\n]*\n[\s\S]*?\2(?!~)|^(?: {4}|\t)[^\n]*$/gm;
+        let text = "", cursor = 0;
+        for (const match of node.svg ? [] : source.matchAll(protectedCode)) {
+          text += replace(source.slice(cursor, match.index)) + match[0];
+          cursor = match.index + match[0].length;
+        }
+        return text + replace(source.slice(cursor));
+      }
+      for (const child of node.children) {
+        if (typeof child === "string") {
+          if (node.svg) output.push(escape(substitute(md.utils.unescapeAll(child))));
+          else group += substitute(child.includes("\n") ? dedent(child) : child);
+          continue;
+        }
+        if (child.name === "binding") { renderNode(child, env, inline, scope, budget); continue; }
+        const inlineChild = inlineContent || ["entity", "link", "asyncimage"].includes(child.name) ||
+          child.name === "icon" && child.attrs.inline === "true";
+        if (!node.svg && inlineChild) {
+          const index = fragments.html.push(renderNode(child, env, true, scope, budget)) - 1;
+          group = group.replace(/(^|\n)[ \t]*$/, "$1");
+          group += `<archive-fragment key="${fragments.key}" index="${index}"/>`;
+        } else {
+          flush();
+          output.push(renderNode(child, env, inline, scope, budget));
+        }
+      }
+      flush();
+      return output.join("");
     }
+    md.block.ruler.before("fence", "archive_binding_block", (state, start, end, silent) => {
+      if (state.sCount[start] - state.blkIndent >= 4) return false;
+      const offset = state.bMarks[start] + state.tShift[start];
+      const node = readBinding(state.src, offset);
+      if (!node) return false;
+      let last = start;
+      while (last < end && state.eMarks[last] < node.end) last++;
+      if (last >= end || state.src.slice(node.end, state.eMarks[last]).trim()) return false;
+      if (!silent) {
+        state.env.archiveLayoutScope ||= Object.create(null);
+        state.env.archiveLayoutScope[node.binding] = node.value;
+        state.push("archive_binding", "", 0);
+        state.line = last + 1;
+      }
+      return true;
+    }, { alt: ["paragraph", "reference", "blockquote", "list"] });
+    md.renderer.rules.archive_binding = () => "";
     md.block.ruler.before("fence", "archive_layout_block", (state, start, end, silent) => {
       if (state.sCount[start] - state.blkIndent >= 4) return false;
       const offset = state.bMarks[start] + state.tShift[start];
       if (state.src[offset] !== "<") return false;
       const node = parse(state.src.slice(0, state.eMarks[end - 1]), offset);
-      if (!node || node.name === "entity") return false;
+      if (!node || ["entity", "asyncimage"].includes(node.name)) return false;
       let last = start;
       while (last < end && state.eMarks[last] < node.end) last++;
       if (last >= end || state.src.slice(node.end, state.eMarks[last]).trim()) return false;
@@ -496,7 +658,7 @@
         const token = state.push("archive_layout", "", 0);
         token.block = true;
         token.map = [start, last + 1];
-        token.meta = { node, inline: false };
+        token.meta = { node, inline: false, scope: { ...state.env.archiveLayoutScope } };
         state.line = last + 1;
       }
       return true;
@@ -505,13 +667,13 @@
       if (state.src[state.pos] !== "<") return false;
       const node = parse(state.src.slice(0, state.posMax), state.pos);
       if (!node) return false;
-      if (!silent) state.push("archive_layout", "", 0).meta = { node, inline: true, insideLink: state.linkLevel > 0 };
+      if (!silent) state.push("archive_layout", "", 0).meta = { node, inline: true, insideLink: state.linkLevel > 0, scope: { ...state.env.archiveLayoutScope } };
       state.pos = node.end;
       return true;
     });
     md.renderer.rules.archive_layout = (tokens, index, options, env) => {
-      const { node, inline, insideLink } = tokens[index].meta;
-      try { return renderNode(node, insideLink ? { ...env, archiveInsideLink: true } : env, inline) + (inline ? "" : "\n"); }
+      const { node, inline, insideLink, scope } = tokens[index].meta;
+      try { return renderNode(node, insideLink ? { ...env, archiveInsideLink: true } : env, inline, Object.assign(Object.create(null), scope)) + (inline ? "" : "\n"); }
       catch (_) { return inline ? `<code>${escape(node.source)}</code>` : `<pre><code>${escape(node.source)}</code></pre>\n`; }
     };
   }

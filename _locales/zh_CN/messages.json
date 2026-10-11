@@ -787,5 +787,14 @@
   },
   "readerNoUnread": {
     "message": "这篇对话中的回答都已标为已读。"
+  },
+  "staticExpandedContent": {
+    "message": "交互组件中的展开内容"
+  },
+  "staticLayoutNotice": {
+    "message": "交互组件以静态阅读内容展示。"
+  },
+  "staticControl": {
+    "message": "静态控件"
   }
 }

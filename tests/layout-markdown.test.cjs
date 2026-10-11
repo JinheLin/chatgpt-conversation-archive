@@ -19,6 +19,130 @@ function renderer() {
   return { md, render: source => md.render(context.ChatGPTPdfExporter.preserveDiagrams(source)) };
 }
 
+test('unquoted layout choices render nested prose and retain bounded styles', () => {
+  const { render } = renderer();
+  const html = render('<box gap={3}>\n  <row align=start gap={3}>\n    <box flex=1 radius=lg background=surface-secondary>\n      **First level**\n\n      Text with `1 + 2` and 中文.\n    </box>\n  </row>\n</box>');
+  assert.match(html, /align-items:flex-start/);
+  assert.match(html, /border-radius:8px/);
+  assert.match(html, /<strong>First level<\/strong>/);
+  assert.match(html, /<code>1 \+ 2<\/code>/);
+  assert.doesNotMatch(html, /&lt;box|&lt;row|<pre>/);
+  assert.doesNotMatch(render('<box align=unknown background=url:evil>safe</box>'), /style=/);
+});
+
+test('AsyncImage retains an honest description or embedded pixels without remote requests', () => {
+  const { render } = renderer();
+  const html = render('Before <AsyncImage query="wooden puzzle &lt;img&gt;" maxWidth={116}/> after.');
+  assert.match(html, /archive-image-unavailable/);
+  assert.match(html, /wooden puzzle &lt;img&gt;/);
+  assert.match(html, /width:116px/);
+  assert.doesNotMatch(html, /&lt;AsyncImage|<img\b/);
+  const image = render('<AsyncImage src="data:image/png;base64,aGVsbG8=" alt="diagram" maxHeight={190}/>');
+  assert.match(image, /<img class="archive-async-image"/);
+  assert.match(image, /alt="diagram" style="max-height:190px/);
+  for (const source of ['https://example.com/image.png', 'javascript:alert(1)', 'data:image/svg+xml;base64,aGVsbG8=']) {
+    const rejected = render(`<AsyncImage src="${source}" query="example"/>`);
+    assert.match(rejected, /archive-image-unavailable/);
+    assert.doesNotMatch(rejected, /<img|src=/);
+  }
+  assert.match(render('`<AsyncImage query="example"/>`'), /&lt;AsyncImage/);
+});
+
+test('literal declarations and initial state expand named loops without running callbacks', () => {
+  const { render } = renderer();
+  const html = render('{@body const activities=[{day:"Monday",detail:"Count"},{day:"Tuesday",detail:"Compare"}]}\n\n{@body const [done,setDone]=DIL.useState([1])}\n\n<box>\n<text>{done.length}/2</text>\n{#each activities as a,i}\n<row align=start><checkbox checked={done.includes(i)} onChange={v=>globalThis.evil(v)}/><text>{a.day}: {a.detail}</text></row>\n{/each}\n</box>');
+  assert.match(html, />1\/2<\/div>/);
+  assert.equal((html.match(/archive-layout-row/g) || []).length, 2);
+  assert.match(html, /Monday: Count/);
+  assert.match(html, /Tuesday: Compare/);
+  assert.match(html, /☐/);
+  assert.match(html, /☑/);
+  assert.doesNotMatch(html, /@body|#each|onChange|DIL|evil|<input|<form/);
+  assert.match(render('<box>{#each activities as a}<text>{a.day}</text>{/each}</box>'), /&lt;box/);
+});
+
+test('questionnaires show inert choices, selected radio and placeholders', () => {
+  const { render } = renderer();
+  const html = render('{@body const opts=["Counting","Shapes"]}\n\n{@body const [choice,setChoice]=DIL.useState("shapes")}\n\n<box><form onSubmit={()=>fetch("https://evil.example")}>\n{#each opts as o}<checkbox>{o}</checkbox>{/each}\n<radio-group value={choice} onChange={setChoice}><radio value="counting">Counting</radio><radio value="shapes">Shapes</radio></radio-group>\n<textarea rows={3} value="" placeholder="Describe an example" onChange={setChoice}/>\n<button submit>Analyze <icon name="arrow-right" inline/></button>\n</form></box>');
+  assert.match(html, /Interactive component shown as static reading content/);
+  assert.equal((html.match(/archive-layout-checkbox/g) || []).length, 2);
+  assert.match(html, /○<\/span>Counting/);
+  assert.match(html, /●<\/span>Shapes/);
+  assert.match(html, /Describe an example/);
+  assert.match(html, /Analyze .*→/);
+  assert.doesNotMatch(html, /<(?:input|textarea|button|form)\b|onSubmit|onChange|fetch\(|#each|@body/);
+});
+
+test('static games retain sequences, nested spacing and hidden hints and answers', () => {
+  const { render } = renderer();
+  const html = render('<box>\n{@body const [revealed,setRevealed]=DIL.useState(false)}\n<grid columns={5}>{#each [1,3,5,7,"?"] as n,i}<grid-item><box padding={{y:3,x:1}} background={i===4?"surface-tertiary":"surface-secondary"}><title>{revealed&&i===4?"9":n}</title></box></grid-item>{/each}</grid>\n<button onClick={()=>setRevealed(v=>!v)}>{revealed?"Hide answer":"Reveal answer"}</button>\n{#if revealed}<text>The next number is **9**.</text>{/if}\n</box>');
+  assert.equal((html.match(/archive-layout-grid-item/g) || []).length, 5);
+  assert.match(html, /--archive-layout-padding:12px 4px/);
+  assert.match(html, /archive-static-expanded/);
+  assert.match(html, /The next number is <strong>9<\/strong>/);
+  assert.match(html, /Reveal answer/);
+  assert.doesNotMatch(html, /@body|#if|#each|setRevealed|\{n\}|&lt;box/);
+  const reference = render('{@body const puzzles=[{seq:[2,4,"?"],answer:6}]}\n\n{@body const [index,setIndex]=DIL.useState(0)}\n\n<box>{#each puzzles[index].seq as n}<text>{n}</text>{/each}{#if false}<text>{puzzles[index].answer}</text>{/if}</box>');
+  assert.match(reference, />6<\/div>/);
+  assert.equal((reference.match(/archive-layout-text/g) || []).length, 4);
+  const table = render('<table>{#if false}<table-row><table-cell>Expanded row</table-cell></table-row>{/if}</table>');
+  assert.match(table, /<tbody><tr [^>]*><td [^>]*><p>Expanded row<\/p>/);
+  assert.doesNotMatch(table, /archive-static-expanded/);
+  const svg = render('<svg viewBox="0 0 20 20">{#if false}<text x="0" y="10">Hint</text>{/if}</svg>');
+  assert.match(svg, /<text x="0" y="10">Hint<\/text>/);
+  assert.doesNotMatch(svg, /archive-static-expanded/);
+});
+
+test('inline components preserve surrounding emphasis and links within block layouts', () => {
+  const { render } = renderer();
+  const html = render('<box><AsyncImage query="example"/>\n\n**<Entity value="Example project"/>**\n\n*<Link url="https://example.com" title="Docs"/>*\n\n[<Link url="https://inside.example" title="Inside"/>](https://outside.example)</box>');
+  assert.match(html, /<strong>Example project<\/strong>/);
+  assert.match(html, /<em><a class="archive-link"[^>]*>Docs<\/a><\/em>/);
+  assert.match(html, /href="https:\/\/outside.example"><span class="archive-link">Inside<\/span><\/a>/);
+  assert.equal((html.match(/<a\b/g) || []).length, 2);
+  assert.doesNotMatch(html, /<p>\*\*|archive-fragment/);
+  const nested = render('<grid columns={2}>\n  <grid-item>\n    <box gap={1}>\n      <AsyncImage query="example puzzle"/>\n      **<Entity value="Example game"/>**\n      Details.\n    </box>\n  </grid-item>\n</grid>');
+  assert.match(nested, /archive-image-unavailable/);
+  assert.match(nested, /<strong>Example game<\/strong>/);
+  assert.doesNotMatch(nested, /archive-fragment|<pre>/);
+});
+
+test('executable declarations and malformed state remain readable and never initialize data', () => {
+  const { render } = renderer();
+  for (const binding of ['{@body const opts=evil()}', '{@body const [state,setState]=DIL.useState(fetch("https://evil.example"))}',
+    '{@body const data={__proto__:"bad"}}', '{@body const data={get x(){return 1}}}', '{@body const data=[...other]}']) {
+    const html = render(binding + '\n\n<box>{#each data as n}<text>{n}</text>{/each}</box>');
+    assert.match(html, /@body/);
+    assert.match(html, /&lt;box/);
+  }
+  const html = render('<box>\n{@body const x=4}\n<text>{x}</text>\n\n```text\n{x}\n{@body const x=9}\n```\n\n`{x}`\n</box>');
+  assert.match(html, />4<\/div>/);
+  assert.match(html, /<code class="language-text">\{x\}\n\{@body const x=9\}/);
+  assert.match(html, /<code>\{x\}<\/code>/);
+  assert.match(render('```text\n{@body const x=4}\n<box>{x}</box>\n```'), /&lt;box&gt;\{x\}/);
+});
+
+test('saved reader and offline exports retain static forms and report unavailable images', async t => {
+  const value = payload('Example', '<box><form><checkbox>First option</checkbox><textarea placeholder="Example"/><button>Submit</button></form></box>\n\n<AsyncImage query="example puzzle"/>');
+  const app = fixture({ remote: value, initial: value.sourceUrl });
+  t.after(() => app.w.close());
+  const problems = await app.w.ChatGPTPdfExporter.render(value, app.main);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /example puzzle/);
+  assert.match(app.main.textContent, /First option/);
+  assert.equal(app.main.querySelectorAll('input, textarea, button, form').length, 0);
+  await app.w.ChatGPTReaderStore.saveConversation(value);
+  await app.start();
+  app.get('save-html').click();
+  await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  assert.match(html, /First option/);
+  assert.match(html, /archive-image-unavailable/);
+  assert.doesNotMatch(html, /&lt;AsyncImage|&lt;form/);
+});
+
 test('the SST diagram renders nested boxes, a two-column index, caption and Markdown', () => {
   const { render } = renderer();
   const source = fs.readFileSync(path.join(__dirname, 'fixtures/sst-layout.md'), 'utf8');
@@ -43,7 +167,7 @@ test('component content retains math, lists, links and adjacent inline whitespac
   const html = render('<box>\n- **first**\n- [second](https://example.com)\n\n<text>Hello <text>world</text> ! $x^2$</text>\n</box>');
   assert.match(html, /<ul>\n<li><strong>first<\/strong><\/li>/);
   assert.match(html, /href="https:\/\/example.com"/);
-  assert.match(html, /Hello <div[^>]*>world<\/div> ! /);
+  assert.match(html, /Hello <span[^>]*>world<\/span> ! /);
   assert.match(html, /class="katex"/);
   const inline = render('Before <box border><text>**middle**</text></box> after.');
   assert.match(inline, /<p>Before <span[^>]*><span[^>]*><strong>middle<\/strong><\/span><\/span> after\.<\/p>/);
@@ -82,10 +206,10 @@ test('only fixed layout tags and bounded presentation values become HTML', () =>
 test('unknown and malformed markup keeps its content and ordinary Markdown is unchanged', () => {
   const { render } = renderer();
   for (const source of ['<box>unfinished', '<box><text>mismatched</box>',
-    '<box padding=word>unquoted</box>', '<unknown>content</unknown>']) {
+    '<box padding=call()>malformed</box>', '<unknown>content</unknown>']) {
     const html = render(source);
     assert.match(html, /&lt;/);
-    assert.match(html, /unfinished|mismatched|unquoted|content/);
+    assert.match(html, /unfinished|mismatched|malformed|content/);
   }
   const plain = '# Heading\n\nA **bold** paragraph.\n\n| A | B |\n| - | - |\n| 1 | 2 |\n';
   assert.equal(render(plain), markdownit({ html: false, linkify: true }).render(plain));

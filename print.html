@@ -24,6 +24,7 @@
   <script src="preview-navigation.js" defer></script>
   <script src="reader-store.js" defer></script>
   <script src="reader-anchor.js" defer></script>
+  <script src="reader-reads.js" defer></script>
   <script src="reader.js" defer></script>
   <script src="reader-workspace.js" defer></script>
   <script src="print.js" defer></script>
@@ -55,7 +56,7 @@
                   <p class="hint" data-i18n="readerOrientationHint">Applies to the preview, HTML and PDF.</p>
                   <p id="mobile-layout-hint" class="hint" data-i18n="mobileLayoutHint" hidden>Narrow pages with larger text. Wide diagrams may need zooming.</p>
                   <p id="n10-layout-hint" class="hint" data-i18n="n10LayoutHint" hidden>150 × 200 mm pages, 10 mm margins and 12 pt body text.</p>
-                  <p class="hint" data-i18n="readerExportHint">Exports contain the original conversation. Back up highlights and comments separately.</p>
+                  <p class="hint" data-i18n="readerExportHint">Exports contain the original conversation. Back up highlights, comments and read status separately.</p>
                 </div>
               </div>
             </div>
@@ -80,12 +81,12 @@
     <details id="reader-library" class="reader-library" open>
       <summary id="reader-library-title" data-i18n="readerLibrary">Local conversations</summary>
       <p id="reader-library-size" class="reader-library-size"></p>
-      <p class="hint" data-i18n="readerLibrarySizeHint">Includes text, assets and annotations. Actual disk usage may differ.</p>
+      <p class="hint" data-i18n="readerLibrarySizeHint">Includes text, assets, annotations and read status. Actual disk usage may differ.</p>
       <div id="reader-library-list"></div>
     </details>
     <details id="reader-data-tools" class="reader-data-tools">
       <summary data-i18n="readerDataTools">Backup &amp; restore</summary>
-      <p class="hint" data-i18n="readerBackupHint">Save or restore all local conversations, highlights and comments.</p>
+      <p class="hint" data-i18n="readerBackupHint">Save or restore all local conversations, highlights, comments and read status.</p>
       <div class="reader-library-actions">
         <button id="reader-backup" class="button-secondary" type="button" data-i18n="readerBackup">Back up local data</button>
         <button id="reader-restore" class="button-secondary" type="button" data-i18n="readerRestore">Restore backup</button>

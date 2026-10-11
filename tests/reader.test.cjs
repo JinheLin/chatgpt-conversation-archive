@@ -280,7 +280,7 @@ test('HTML export keeps the original formatted document and excludes private ann
     reader.readAsText(app.downloads[0]);
   });
   const exported = new app.w.DOMParser().parseFromString(text, 'text/html');
-  assert.equal(exported.querySelectorAll('mark, script, #reader-annotations, #reader-selection').length, 0);
+  assert.equal(exported.querySelectorAll('mark, script, #reader-annotations, #reader-selection, .reader-read-controls, .reader-read-toc').length, 0);
   assert.equal(exported.querySelector('strong').textContent, 'important text');
   assert.equal(exported.querySelector('.pdf-toc a').getAttribute('href'), '#question-1');
   assert.ok(!exported.body.textContent.includes('A private comment only for the reader'));

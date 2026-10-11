@@ -21,6 +21,7 @@
       document.body.dataset.readerState = "opening";
       heading.textContent = t("exportHeading");
       heading.title = "";
+      delete meta.dataset.readBase;
       meta.hidden = true; current.hidden = true; toggle.hidden = true;
       showWorkspace(true);
     }
@@ -31,6 +32,7 @@
       heading.title = payload.title;
       meta.textContent = t("readerDocumentMeta", payload.completeness.questions, payload.messages.length,
         saved ? t("readerLocalVersion", formatTimestamp(payload.capturedAt)) : t("readerNotSaved"));
+      meta.dataset.readBase = meta.textContent;
       meta.hidden = false;
       const link = get("reader-current-link");
       link.href = payload.sourceUrl; link.textContent = t("originalLink");

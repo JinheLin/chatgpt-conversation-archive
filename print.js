@@ -13,6 +13,9 @@
   });
   const store = globalThis.ChatGPTReaderStore;
   const reader = globalThis.ChatGPTReader.init({ main, layout: document.getElementById("preview-layout"), store });
+  const reads = globalThis.ChatGPTReaderReads.init({
+    main, sidebar: document.getElementById("preview-sidebar"), store, report
+  });
   const status = document.getElementById("export-status");
   const readProgress = document.getElementById("read-progress");
   const progressLabel = document.getElementById("read-progress-label");
@@ -46,6 +49,7 @@
   function setOutputBusy(value) {
     outputBusy = value;
     reader.setLocked(value);
+    reads.setLocked(value);
     if (value) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
     for (const control of document.getElementById("reader-library-list").querySelectorAll("button")) control.disabled = value;
@@ -162,7 +166,7 @@
   async function deleteConversation(entry) {
     if (outputBusy) return;
     const current = payload && store.keyFor(payload.sourceUrl) === entry.key;
-    if (current && !reader.canLeave()) return;
+    if (current && (!reader.canLeave() || !reads.canLeave())) return;
     if (!globalThis.confirm(t("readerDeleteConversationConfirm", entry.title))) return;
     setOutputBusy(true);
     try {
@@ -180,6 +184,7 @@
       if (current) {
         generation++;
         reader.unload();
+        reads.unload();
         main.replaceChildren(); main.hidden = true;
         previewNavigation.clear();
         payload = null;
@@ -232,7 +237,10 @@
         size.dataset.bytes = String(entry.bytes);
         size.textContent = t("readerLibraryEntrySize", formatBytes(entry.bytes));
         const meta = document.createElement("div"); meta.className = "reader-library-entry-meta";
-        meta.append(time, size); details.append(button, meta);
+        const read = document.createElement("span");
+        read.className = "reader-library-entry-read";
+        read.textContent = t("readerReadProgress", Math.min(entry.readCount || 0, entry.count), entry.count);
+        meta.append(time, size, read); details.append(button, meta);
         const remove = document.createElement("button"); remove.type = "button";
         remove.className = "reader-library-delete"; remove.disabled = outputBusy;
         remove.textContent = t("readerDeleteConversation");
@@ -252,7 +260,7 @@
   }
   async function start(event, forceRemote = false) {
     event?.preventDefault();
-    if (outputBusy || !reader.canLeave()) return;
+    if (outputBusy || !reader.canLeave() || !reads.canLeave()) return;
     const mine = ++generation;
     setOutputBusy(true);
     cancelButton.hidden = false;
@@ -260,6 +268,7 @@
     pdfFallback.hidden = true;
     exportMenu.close();
     reader.unload();
+    reads.unload();
     main.hidden = true;
     previewNavigation.clear();
     payload = null;
@@ -345,6 +354,8 @@
       // Keep the confirmed 100% value, then remove the completed workflow from the reading view.
       readProgress.hidden = true;
       if (!storageProblem && !problems.length) workspace.clearNotice();
+      await reads.load(key, payload.messages, !storageProblem);
+      if (mine !== generation) return;
       if (sourceTab) {
         await chrome.tabs.remove(sourceTab).catch(() => {});
         sourceTab = null;
@@ -352,7 +363,7 @@
       await refreshLibrary();
     } catch (error) {
       if (mine === generation) {
-        main.hidden = true; previewNavigation.clear(); reader.unload(); payload = null;
+        main.hidden = true; previewNavigation.clear(); reader.unload(); reads.unload(); payload = null;
         workspace.opening();
         report(error.message || t("readFailed"), true);
       }
@@ -368,6 +379,7 @@
   cancelButton.addEventListener("click", async () => {
     generation++;
     reader.unload();
+    reads.unload();
     activeRead = null;
     main.hidden = true;
     previewNavigation.clear();
@@ -500,6 +512,7 @@
       exported.body.className = "pdf-print-page pdf-offline";
       const transcript = main.cloneNode(true);
       globalThis.ChatGPTReaderAnchor.clear(transcript);
+      globalThis.ChatGPTReaderReads.clear(transcript);
       exported.body.appendChild(transcript);
       download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`);
       report(t("htmlSaved"), false, false, true);
@@ -527,7 +540,7 @@
   backupFile.addEventListener("change", async () => {
     const file = backupFile.files?.[0];
     backupFile.value = "";
-    if (!file || outputBusy || !reader.canLeave()) return;
+    if (!file || outputBusy || !reader.canLeave() || !reads.canLeave()) return;
     setOutputBusy(true);
     let restored = false;
     const current = payload?.sourceUrl;

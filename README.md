@@ -77,6 +77,14 @@ Each question and answer shows its creation time beside the role label, in the b
 
 After reloading the extension and refreshing the reader, click **Update conversation** once for conversations saved with an older version to retrieve their message times. Reopening an old snapshot alone cannot recover times that were not saved. Existing annotations remain in place.
 
+## Read marks (v3.8)
+
+Each question and answer can be marked read or unread. The toolbar shows how many messages are read, and each local conversation shows the same count. In the preview sidebar, a question row has a separate mark for the question and for the answers that follow it until the next question. Clicking a sidebar title still jumps to that part of the conversation.
+
+**Mark as read through here** marks the current message and every message before it. **Unread only** hides questions whose question and answers are all read. Scrolling does not mark anything read.
+
+If a message's text changes after it was marked read, the control shows **Content updated** until you mark it read again. A newly generated answer has a new message ID, so it starts unread. Read marks stay in this browser, are included in the JSON backup, and are omitted from HTML and PDF. Reload the extension and refresh an open reader after updating.
+
 ## Answer sections in navigation (v3.5)
 
 The preview sidebar, offline HTML index and PDF bookmarks share a **Question → Answer section** hierarchy. Selection prefers a consistent sequence of main chapter titles, such as `一、二、三`, `1. / 2.`, parentheses, chapter labels or Roman numerals. These can be Markdown headings or short standalone numbered paragraphs, including bold titles. Unnumbered peer sections after the chapters, such as a final reading guide, are included. A standalone opening answer title is skipped when sections follow it. When numbering is absent or inconsistent, selection uses the outer heading level after that title. Deeper subsections remain in the body; quotes, lists, code examples and layout diagrams are excluded. Multiple answers below one question share the section list, and repeated titles have separate destinations.
@@ -85,9 +93,9 @@ Inline formatting remains intact in the body; navigation labels use plain text w
 
 ## Managing local conversations (v3.3)
 
-Open **Conversation list** to see each conversation's local data size and the total for all saved conversations. Sizes include the saved transcript, embedded assets and annotation records, and update when data changes in this or another reader tab. They are estimates of serialized UTF-8 data, rather than physical disk usage; database indexes, browser overhead and disk compression may change the actual footprint. Deleted annotation records still contribute to the estimate until their conversation is removed.
+Open **Conversation list** to see each conversation's local data size and the total for all saved conversations. Sizes include the saved transcript, embedded assets, annotation records and read status, and update when data changes in this or another reader tab. They are estimates of serialized UTF-8 data, rather than physical disk usage; database indexes, browser overhead and disk compression may change the actual footprint. Deleted annotation records still contribute to the estimate until their conversation is removed.
 
-Click **Delete** beside a conversation and confirm to remove its local snapshot, assets, highlights and comments together. The original ChatGPT conversation and downloaded files are unaffected. Deleting the conversation currently open returns you to the list; deleting another conversation preserves your reading position and comment draft. Unsaved comments require confirmation before deleting the current conversation. Opening its link again fetches a new copy; restoring a previous JSON backup can restore the deleted conversation and its saved annotations.
+Click **Delete** beside a conversation and confirm to remove its local snapshot, assets, highlights, comments and read status together. The original ChatGPT conversation and downloaded files are unaffected. Deleting the conversation currently open returns you to the list; deleting another conversation preserves your reading position and comment draft. Unsaved comments require confirmation before deleting the current conversation. Opening its link again fetches a new copy; restoring a previous JSON backup can restore the deleted conversation and its saved annotations.
 
 Existing local data and version 1 backups remain supported. The database upgrade adds size metadata once; subsequent list refreshes read small metadata indexes without loading full transcripts or assets.
 
@@ -98,11 +106,11 @@ Existing local data and version 1 backups remain supported. The database upgrade
 3. The **Annotations** panel opens by default when a conversation is loaded. Click **Annotations** to collapse or reopen it, or click a highlight. Entries follow their position in the current conversation, with creation time breaking ties at the same position. Unresolved quotes use their saved offset; entries whose message is missing appear last. Click a quoted passage in the panel to jump to it. Comments can be edited; **Delete** removes both the highlight and comment. Overlapping highlights preserve the original text and formatting.
 4. Reopen the same conversation URL, or choose **Conversation list → Local conversations** and select its title. The local snapshot and annotations open without accessing ChatGPT, so this works offline. Opening a conversation updates the reader's address, so refreshing reopens the selected conversation. Switching conversations clears the previous chapter fragment; updating the same conversation preserves it. Click **Update conversation** in the top toolbar when you want to fetch the currently selected remote branch using your ChatGPT login session.
 5. Annotations attach to a conversation and stable message ID, then use the selected quote, surrounding text, offsets and a message-text hash to find the passage. If a message was removed, regenerated or changed ambiguously, the annotation stays in the panel as **Original text changed**. It is not moved to a different message.
-6. Open **Conversation list → Backup & restore**. Use **Back up local data** to download a JSON file containing all saved conversations, assets and annotations. **Restore backup** validates the file and merges it atomically, keeping newer snapshots and annotation changes. Deletion records prevent an older backup from restoring deleted annotations. Backups up to 100 MiB are supported.
+6. Open **Conversation list → Backup & restore**. Use **Back up local data** to download a JSON file containing all saved conversations, assets, annotations and read status. **Restore backup** validates the file and merges it atomically, keeping newer snapshots, annotation changes and read marks. Deletion records prevent an older backup from restoring deleted annotations, and a newer unread mark is kept over an older read mark. Older backup files without read status still restore. Backups up to 100 MiB are supported.
 
-The left question index remains available while reading. On wide screens the annotation panel appears beside the document; in smaller windows it opens as a panel on the right. Reader controls and annotations are excluded from HTML/PDF exports, which keep the original conversation. Use the JSON backup for annotations; opening a standalone exported HTML file does not provide the extension reader's editing features.
+The left question index remains available while reading. On wide screens the annotation panel appears beside the document; in smaller windows it opens as a panel on the right. Reader controls, annotations and read marks are excluded from HTML/PDF exports, which keep the original conversation. Use the JSON backup for annotations and read marks; opening a standalone exported HTML file does not provide the extension reader's editing features.
 
-Data stays in this browser profile and extension installation; it is not synchronized across devices. Reloading the same installed extension preserves it. **Back up before uninstalling the extension, clearing its storage, changing the extension ID or moving an unpacked installation to a different folder.** The backup contains private conversation text and comments. Failed writes are reported, and a failed comment save keeps the draft available for retry or copying. Separate reader tabs synchronize saved annotations; conflicting edits keep the draft and report a conflict.
+Data stays in this browser profile and extension installation; it is not synchronized across devices. Reloading the same installed extension preserves it. **Back up before uninstalling the extension, clearing its storage, changing the extension ID or moving an unpacked installation to a different folder.** The backup contains private conversation text and comments. Failed writes are reported, and a failed comment save keeps the draft available for retry or copying. Separate reader tabs synchronize saved annotations and read marks; conflicting annotation edits keep the draft and report a conflict.
 
 ### PDF index versus sidebar bookmarks
 
@@ -161,8 +169,9 @@ Rendering and navigation updates through **v3.5** also apply to saved local conv
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
 | `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
 | `preview-navigation.js` | Preview sidebar with question links, separate from the exported document |
-| `reader-store.js` | IndexedDB snapshots, transactional annotation writes, cross-tab notifications and validated backup merging |
+| `reader-store.js` | IndexedDB snapshots, annotations, read state, cross-tab notifications and validated backup merging |
 | `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
+| `reader-reads.js` | Per-message read marks, sidebar status, unread filter and export removal |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |

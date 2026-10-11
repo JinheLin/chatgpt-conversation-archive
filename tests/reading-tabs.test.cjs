@@ -84,6 +84,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
       backup: async () => ({}), MAX_BACKUP_BYTES: 100 * 1024 * 1024
     },
     ChatGPTReader: { init: () => ({ canLeave: () => true, load: async () => {}, unload() {}, setLocked() {} }) },
+    ChatGPTReaderReads: { clear() {}, init: () => ({ canLeave: () => true, load: async () => {}, unload() {}, setLocked() {} }) },
     ChatGPTPdfPreviewNavigation: { init: ({ sidebar, layout }) => {
       const clear = () => { sidebar.hidden = layout.hidden = true; };
       clear();

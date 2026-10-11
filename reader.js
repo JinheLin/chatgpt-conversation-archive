@@ -210,8 +210,9 @@
     globalThis.addEventListener("beforeunload", (event) => {
       if (dirty() || busy) { event.preventDefault(); event.returnValue = ""; }
     });
-    store.subscribe((changedKey) => {
-      if (changedKey === key && !busy) void refresh().catch((error) => report(t("readerSaveFailed", error.message), true));
+    store.subscribe((changedKey, topic) => {
+      if (topic === "reads" || changedKey !== key || busy) return;
+      void refresh().catch((error) => report(t("readerSaveFailed", error.message), true));
     });
     unload();
     return { load, unload, refresh, canLeave: () => !busy && canLeave(),

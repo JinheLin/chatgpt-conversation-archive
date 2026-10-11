@@ -1,6 +1,6 @@
 {
   "extensionDescription": {
-    "message": "Read complete ChatGPT conversations with local highlights and comments, and export PDF or offline HTML."
+    "message": "Read complete ChatGPT conversations with local highlights, comments and read marks, and export PDF or offline HTML."
   },
   "actionTitle": {
     "message": "Open the ChatGPT conversation reader"
@@ -15,7 +15,7 @@
     "message": "ChatGPT conversation reader"
   },
   "exportDescription": {
-    "message": "Read complete conversations, save highlights and comments locally, and export HTML or PDF."
+    "message": "Read complete conversations, save highlights, comments and read marks locally, and export HTML or PDF."
   },
   "urlLabel": {
     "message": "ChatGPT conversation link"
@@ -598,7 +598,7 @@
     "message": "Reader backups are limited to 100 MiB."
   },
   "readerBackupSaved": {
-    "message": "Local conversations and annotations backed up. Keep this private file somewhere safe."
+    "message": "Local conversations, annotations and read status backed up. Keep this private file somewhere safe."
   },
   "readerBackupFailed": {
     "message": "Backup or restore failed: $arg1$",
@@ -629,7 +629,7 @@
     "message": "Backup & restore"
   },
   "readerBackupHint": {
-    "message": "Save or restore all local conversations, highlights and comments."
+    "message": "Save or restore all local conversations, highlights, comments and read status."
   },
   "readerLoginHint": {
     "message": "To read a private conversation, sign in to ChatGPT in this browser."
@@ -641,7 +641,7 @@
     "message": "Applies to the preview, HTML and PDF."
   },
   "readerExportHint": {
-    "message": "Exports contain the original conversation. Back up highlights and comments separately."
+    "message": "Exports contain the original conversation. Back up highlights, comments and read status separately."
   },
   "readerDocumentMeta": {
     "message": "$arg1$ questions · $arg2$ messages · $arg3$",
@@ -697,7 +697,7 @@
     }
   },
   "readerLibrarySizeHint": {
-    "message": "Includes text, assets and annotations. Actual disk usage may differ."
+    "message": "Includes text, assets, annotations and read status. Actual disk usage may differ."
   },
   "readerDeleteConversation": {
     "message": "Delete"
@@ -711,7 +711,7 @@
     }
   },
   "readerDeleteConversationConfirm": {
-    "message": "Delete “$arg1$” from local storage?\n\nIts saved conversation, highlights and comments will be removed. The original ChatGPT conversation and exported files will remain. You can restore it from a previous backup.",
+    "message": "Delete “$arg1$” from local storage?\n\nIts saved conversation, highlights and comments, and its read status, will be removed. The original ChatGPT conversation and exported files will remain. You can restore it from a previous backup.",
     "placeholders": {
       "arg1": {
         "content": "$1"
@@ -736,5 +736,67 @@
   },
   "pdfHeadingMismatch": {
     "message": "PDF answer heading destinations do not match the current preview. Export all pages of the current conversation again, then retry."
+  },
+  "readerMarkRead": {
+    "message": "Mark as read"
+  },
+  "readerMarkUnread": {
+    "message": "Mark as unread"
+  },
+  "readerMarkThrough": {
+    "message": "Mark as read through here"
+  },
+  "readerMarkReadNamed": {
+    "message": "Mark as read: $arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerMarkUnreadNamed": {
+    "message": "Mark as unread: $arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerMarkThroughNamed": {
+    "message": "Mark as read through here: $arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerMarkStaleNamed": {
+    "message": "Mark as read: $arg1$. Content has changed.",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerReadStale": {
+    "message": "Content updated"
+  },
+  "readerReadProgress": {
+    "message": "$arg1$/$arg2$ read",
+    "placeholders": { "arg1": { "content": "$1" }, "arg2": { "content": "$2" } }
+  },
+  "readerUnreadOnly": {
+    "message": "Unread only"
+  },
+  "readerShowAll": {
+    "message": "Show all"
+  },
+  "readerQuestionStatus": {
+    "message": "Question: $arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerAnswerStatus": {
+    "message": "Answers: $arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerStatusRead": {
+    "message": "Read"
+  },
+  "readerStatusUnread": {
+    "message": "Unread"
+  },
+  "readerStatusStale": {
+    "message": "Read, content updated"
+  },
+  "readerReadFailed": {
+    "message": "Could not save read status: $arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerNoUnread": {
+    "message": "Every question and answer in this conversation is marked read."
   }
 }

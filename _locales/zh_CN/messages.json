@@ -1,6 +1,6 @@
 {
   "extensionDescription": {
-    "message": "阅读完整 ChatGPT 对话，在本地保存划线和评论，并导出 PDF 或离线 HTML。"
+    "message": "阅读完整 ChatGPT 对话，在本地保存划线、评论和已读标记，并导出 PDF 或离线 HTML。"
   },
   "actionTitle": {
     "message": "打开 ChatGPT 对话阅读器"
@@ -15,7 +15,7 @@
     "message": "ChatGPT 对话阅读器"
   },
   "exportDescription": {
-    "message": "阅读完整对话，在本地保存划线和评论，并导出 HTML 或 PDF。"
+    "message": "阅读完整对话，在本地保存划线、评论和已读标记，并导出 HTML 或 PDF。"
   },
   "urlLabel": {
     "message": "ChatGPT 对话链接"
@@ -598,7 +598,7 @@
     "message": "阅读器备份文件不能超过 100 MiB。"
   },
   "readerBackupSaved": {
-    "message": "本地对话和批注已备份，请妥善保存这份私人文件。"
+    "message": "本地对话、批注和已读状态已备份，请妥善保存这份私人文件。"
   },
   "readerBackupFailed": {
     "message": "备份或恢复失败：$arg1$",
@@ -629,7 +629,7 @@
     "message": "备份与恢复"
   },
   "readerBackupHint": {
-    "message": "备份或恢复全部本地对话、划线和评论。"
+    "message": "备份或恢复全部本地对话、划线、评论和已读状态。"
   },
   "readerLoginHint": {
     "message": "读取私有对话前，请在此浏览器登录 ChatGPT。"
@@ -641,7 +641,7 @@
     "message": "同时调整预览、HTML 和 PDF 的宽度。"
   },
   "readerExportHint": {
-    "message": "导出原始对话；划线和评论请单独备份。"
+    "message": "导出原始对话；划线、评论和已读状态请单独备份。"
   },
   "readerDocumentMeta": {
     "message": "$arg1$ 个问题 · $arg2$ 条消息 · $arg3$",
@@ -697,7 +697,7 @@
     }
   },
   "readerLibrarySizeHint": {
-    "message": "含正文、附件和批注；实际磁盘占用可能不同。"
+    "message": "含正文、附件、批注和已读状态；实际磁盘占用可能不同。"
   },
   "readerDeleteConversation": {
     "message": "删除"
@@ -711,7 +711,7 @@
     }
   },
   "readerDeleteConversationConfirm": {
-    "message": "删除本地对话「$arg1$」？\n\n将清理该对话的本地快照、划线和评论。ChatGPT 原始对话及已导出的文件不受影响，可通过之前的备份恢复。",
+    "message": "删除本地对话「$arg1$」？\n\n将清理该对话的本地快照、划线、评论和已读状态。ChatGPT 原始对话及已导出的文件不受影响，可通过之前的备份恢复。",
     "placeholders": {
       "arg1": {
         "content": "$1"
@@ -736,5 +736,67 @@
   },
   "pdfHeadingMismatch": {
     "message": "PDF 中的回答标题跳转目标与当前预览不一致。请重新导出当前对话的全部页面后再试。"
+  },
+  "readerMarkRead": {
+    "message": "标为已读"
+  },
+  "readerMarkUnread": {
+    "message": "标为未读"
+  },
+  "readerMarkThrough": {
+    "message": "标为已读至此"
+  },
+  "readerMarkReadNamed": {
+    "message": "标为已读：$arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerMarkUnreadNamed": {
+    "message": "标为未读：$arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerMarkThroughNamed": {
+    "message": "标为已读至此：$arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerMarkStaleNamed": {
+    "message": "标为已读：$arg1$。内容已更新。",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerReadStale": {
+    "message": "内容已更新"
+  },
+  "readerReadProgress": {
+    "message": "已读 $arg1$/$arg2$",
+    "placeholders": { "arg1": { "content": "$1" }, "arg2": { "content": "$2" } }
+  },
+  "readerUnreadOnly": {
+    "message": "只看未读"
+  },
+  "readerShowAll": {
+    "message": "显示全部"
+  },
+  "readerQuestionStatus": {
+    "message": "问题：$arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerAnswerStatus": {
+    "message": "回答：$arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerStatusRead": {
+    "message": "已读"
+  },
+  "readerStatusUnread": {
+    "message": "未读"
+  },
+  "readerStatusStale": {
+    "message": "已读，内容已更新"
+  },
+  "readerReadFailed": {
+    "message": "无法保存已读状态：$arg1$",
+    "placeholders": { "arg1": { "content": "$1" } }
+  },
+  "readerNoUnread": {
+    "message": "这篇对话中的问题和回答都已标为已读。"
   }
 }

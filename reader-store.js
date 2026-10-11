@@ -1,4 +1,4 @@
-/* Local snapshots and annotations. No credentials, servers or sync storage. */
+/* Local snapshots, annotations and read state. No credentials, servers or sync storage. */
 (() => {
   "use strict";
   const { t } = globalThis.ChatGPTPdfI18n;
@@ -7,12 +7,12 @@
   const listeners = new Set();
   const channel = globalThis.BroadcastChannel ? new BroadcastChannel("chatgpt-reader-v1") : null;
   let opening;
-  function announce(key) {
-    for (const listener of listeners) listener(key);
-    channel?.postMessage({ key });
+  function announce(key, topic) {
+    for (const listener of listeners) listener(key, topic);
+    channel?.postMessage({ key, topic });
   }
   if (channel) channel.onmessage = (event) => {
-    if (typeof event.data?.key === "string") for (const listener of listeners) listener(event.data.key);
+    if (typeof event.data?.key === "string") for (const listener of listeners) listener(event.data.key, event.data.topic);
   };
   function keyFor(url) {
     const target = globalThis.ChatGPTPdfSource.parseUrl(url);
@@ -90,6 +90,15 @@
     if (value.deletedAt) result.deletedAt = date(value.deletedAt);
     return result;
   }
+  function cleanRead(value) {
+    if (!value || typeof value.read !== "boolean") invalid();
+    const result = {
+      conversationKey: string(value.conversationKey, 250), messageId: string(value.messageId, 200),
+      read: value.read, textHash: string(value.textHash, 64), updatedAt: date(value.updatedAt)
+    };
+    if (!result.conversationKey || !result.messageId || !/^[a-f0-9]{64}$/.test(result.textHash)) invalid();
+    return result;
+  }
   function validateBackup(value) {
     if (value?.format !== FORMAT || value.version !== 1 || !Array.isArray(value.conversations) ||
         !Array.isArray(value.annotations) || value.conversations.length > 10000 || value.annotations.length > 100000) invalid();
@@ -107,13 +116,25 @@
       ids.add(annotation.id);
       return annotation;
     });
-    return { conversations, annotations };
+    // Missing reads keep version 1 backups restorable. An explicit false beats an older true.
+    const readsInput = value.reads === undefined ? [] : value.reads;
+    if (!Array.isArray(readsInput) || readsInput.length > 1000000) invalid();
+    const readKeys = new Set();
+    const messageIds = new Map(conversations.map((entry) => [entry.key, new Set(entry.payload.messages.map((message) => message.id))]));
+    const reads = readsInput.map((entry) => {
+      const read = cleanRead(entry);
+      const identity = read.conversationKey + "\n" + read.messageId;
+      if (!messageIds.get(read.conversationKey)?.has(read.messageId) || readKeys.has(identity)) invalid();
+      readKeys.add(identity);
+      return read;
+    });
+    return { conversations, annotations, reads };
   }
   function open() {
     if (opening) return opening;
     opening = new Promise((resolve, reject) => {
       if (!globalThis.indexedDB) return reject(new Error(t("readerStorageUnavailable")));
-      const request = indexedDB.open("chatgpt-conversation-reader", 2);
+      const request = indexedDB.open("chatgpt-conversation-reader", 3);
       let failed = false;
       const fail = () => { failed = true; reject(new Error(t("readerStorageUnavailable"))); };
       request.onerror = fail;
@@ -129,10 +150,13 @@
         const annotations = db.objectStoreNames.contains("annotations")
           ? tx.objectStore("annotations") : db.createObjectStore("annotations", { keyPath: "id" });
         if (!annotations.indexNames.contains("conversationKey")) annotations.createIndex("conversationKey", "conversationKey");
-        annotations.createIndex("storageSize", ["conversationKey", "byteSize"]);
+        if (!annotations.indexNames.contains("storageSize")) annotations.createIndex("storageSize", ["conversationKey", "byteSize"]);
+        const reads = db.objectStoreNames.contains("reads")
+          ? tx.objectStore("reads") : db.createObjectStore("reads", { keyPath: ["conversationKey", "messageId"] });
+        if (!reads.indexNames.contains("conversationKey")) reads.createIndex("conversationKey", "conversationKey");
         // Existing snapshots are read once during the atomic schema upgrade.
         // Later library refreshes read metadata keys, never bodies or assets.
-        for (const store of [conversations, annotations]) {
+        for (const store of [conversations, annotations, reads]) {
           store.openCursor().onsuccess = (event) => {
             const cursor = event.target.result;
             if (!cursor) return;
@@ -169,38 +193,59 @@
     });
   }
   async function listConversations() {
-    const entries = await transaction(["conversations", "annotations"], "readonly", (tx, set) => {
+    const entries = await transaction(["conversations", "annotations", "reads"], "readonly", (tx, set) => {
       // Only small metadata keys are read; the library never loads message bodies or assets.
       const result = [];
-      const annotationSizes = new Map();
+      const annotationSizes = new Map(), readSizes = new Map(), readCounts = new Map();
+      let pending = 3;
+      const finish = () => { if (--pending === 0) set({ result, annotationSizes, readSizes, readCounts }); };
       tx.objectStore("annotations").index("storageSize").openKeyCursor().onsuccess = (event) => {
         const cursor = event.target.result;
-        if (!cursor) return;
+        if (!cursor) { finish(); return; }
         const [key, bytes] = cursor.key;
         annotationSizes.set(key, (annotationSizes.get(key) || 0) + bytes);
         cursor.continue();
       };
+      tx.objectStore("reads").openCursor().onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) { finish(); return; }
+        const value = cursor.value;
+        readSizes.set(value.conversationKey, (readSizes.get(value.conversationKey) || 0) + value.byteSize);
+        if (value.read === true) readCounts.set(value.conversationKey, (readCounts.get(value.conversationKey) || 0) + 1);
+        cursor.continue();
+      };
       tx.objectStore("conversations").index("summary").openKeyCursor().onsuccess = (event) => {
         const cursor = event.target.result;
-        if (!cursor) { set({ result, annotationSizes }); return; }
+        if (!cursor) { finish(); return; }
         const [savedAt, title, sourceUrl, capturedAt, count, key, bytes] = cursor.key;
         result.push({ key, title, sourceUrl, capturedAt, savedAt, count, bytes });
         cursor.continue();
       };
     });
     return entries.result.map((entry) => ({ ...entry,
-      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0)
+      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0) + (entries.readSizes.get(entry.key) || 0),
+      readCount: entries.readCounts.get(entry.key) || 0
     })).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
   }
   async function saveConversation(value) {
     const payload = cleanPayload(value), key = keyFor(payload.sourceUrl);
     const entry = { key, payload, savedAt: new Date().toISOString() };
     entry.byteSize = storageBytes(entry);
-    await transaction(["conversations"], "readwrite", (tx) => {
+    const messageIds = new Set(payload.messages.map((message) => message.id));
+    await transaction(["conversations", "reads"], "readwrite", (tx) => {
       const store = tx.objectStore("conversations");
       store.get(key).onsuccess = (event) => {
         const previous = event.target.result;
-        if (!previous || payload.capturedAt >= previous.payload.capturedAt) store.put(entry);
+        if (!previous || payload.capturedAt >= previous.payload.capturedAt) {
+          store.put(entry);
+          const reads = tx.objectStore("reads");
+          reads.index("conversationKey").openCursor(key).onsuccess = (cursorEvent) => {
+            const cursor = cursorEvent.target.result;
+            if (!cursor) return;
+            if (!messageIds.has(cursor.value.messageId)) reads.delete(cursor.primaryKey);
+            cursor.continue();
+          };
+        }
       };
     });
     announce(key);
@@ -239,28 +284,89 @@
   }
   async function deleteConversation(key) {
     if (typeof key !== "string" || !key) invalid();
-    await transaction(["conversations", "annotations"], "readwrite", (tx) => {
+    await transaction(["conversations", "annotations", "reads"], "readwrite", (tx) => {
       tx.objectStore("conversations").delete(key);
-      const annotations = tx.objectStore("annotations");
-      annotations.index("conversationKey").openKeyCursor(key).onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (!cursor) return;
-        annotations.delete(cursor.primaryKey); cursor.continue();
-      };
+      for (const name of ["annotations", "reads"]) {
+        const records = tx.objectStore(name);
+        records.index("conversationKey").openKeyCursor(key).onsuccess = (event) => {
+          const cursor = event.target.result;
+          if (!cursor) return;
+          records.delete(cursor.primaryKey); cursor.continue();
+        };
+      }
     });
     announce(key);
   }
+  async function getReads(key) {
+    if (typeof key !== "string" || !key) invalid();
+    return transaction(["reads"], "readonly", (tx, set) => {
+      tx.objectStore("reads").index("conversationKey").getAll(key).onsuccess = (event) => set(event.target.result);
+    });
+  }
+  async function setReads(values) {
+    if (!Array.isArray(values) || !values.length || values.length > 100000) invalid();
+    const prepared = values.map((value) => {
+      const entry = cleanRead({ ...value, updatedAt: value.updatedAt || new Date().toISOString() });
+      return entry;
+    });
+    const key = prepared[0].conversationKey;
+    const ids = new Set();
+    for (const entry of prepared) {
+      if (entry.conversationKey !== key || ids.has(entry.messageId)) invalid();
+      ids.add(entry.messageId);
+    }
+    const saved = await transaction(["conversations", "reads"], "readwrite", (tx, set, fail) => {
+      tx.objectStore("conversations").get(key).onsuccess = (event) => {
+        const snapshot = event.target.result;
+        if (!snapshot) { fail(new Error(t("readerSnapshotRequired"))); return; }
+        const messages = new Set(snapshot.payload.messages.map((message) => message.id));
+        if (prepared.some((entry) => !messages.has(entry.messageId))) { fail(new Error(t("readerSnapshotRequired"))); return; }
+        const store = tx.objectStore("reads");
+        let pending = prepared.length;
+        const results = new Array(prepared.length);
+        prepared.forEach((entry, index) => {
+          store.get([entry.conversationKey, entry.messageId]).onsuccess = (got) => {
+            const previous = got.target.result;
+            const next = { ...entry };
+            next.updatedAt = new Date(Math.max(Date.now(), Date.parse(previous?.updatedAt || 0) + 1)).toISOString();
+            next.byteSize = storageBytes(next);
+            store.put(next);
+            results[index] = next;
+            if (--pending === 0) set(results);
+          };
+        });
+      };
+    });
+    announce(key, "reads");
+    return saved;
+  }
+  async function pruneReads(key, messageIds, announceChange = true) {
+    if (typeof key !== "string" || !key || !Array.isArray(messageIds) || messageIds.length > 100000) invalid();
+    const ids = new Set(messageIds);
+    const removed = await transaction(["reads"], "readwrite", (tx, set) => {
+      let count = 0;
+      tx.objectStore("reads").index("conversationKey").openCursor(key).onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor) { set(count); return; }
+        if (!ids.has(cursor.value.messageId)) { tx.objectStore("reads").delete(cursor.primaryKey); count += 1; }
+        cursor.continue();
+      };
+    });
+    if (removed && announceChange) announce(key, "reads");
+    return removed;
+  }
   async function backup() {
-    return transaction(["conversations", "annotations"], "readonly", (tx, set) => {
+    return transaction(["conversations", "annotations", "reads"], "readonly", (tx, set) => {
       const result = { format: FORMAT, version: 1, createdAt: new Date().toISOString() };
       tx.objectStore("conversations").getAll().onsuccess = (event) => { result.conversations = event.target.result; set(result); };
       tx.objectStore("annotations").getAll().onsuccess = (event) => { result.annotations = event.target.result; set(result); };
+      tx.objectStore("reads").getAll().onsuccess = (event) => { result.reads = event.target.result; set(result); };
     });
   }
   async function restore(value) {
     const data = validateBackup(value);
-    await transaction(["conversations", "annotations"], "readwrite", (tx, set, fail) => {
-      const conversations = tx.objectStore("conversations"), annotations = tx.objectStore("annotations");
+    await transaction(["conversations", "annotations", "reads"], "readwrite", (tx, set, fail) => {
+      const conversations = tx.objectStore("conversations"), annotations = tx.objectStore("annotations"), reads = tx.objectStore("reads");
       for (const entry of data.conversations) {
         entry.byteSize = storageBytes(entry);
         conversations.get(entry.key).onsuccess = (event) => {
@@ -277,11 +383,18 @@
           if (!old || entry.updatedAt > old.updatedAt) annotations.put(entry);
         };
       }
+      for (const entry of data.reads) {
+        entry.byteSize = storageBytes(entry);
+        reads.get([entry.conversationKey, entry.messageId]).onsuccess = (event) => {
+          const old = event.target.result;
+          if (!old || entry.updatedAt > old.updatedAt) reads.put(entry);
+        };
+      }
     });
     for (const entry of data.conversations) announce(entry.key);
     return { conversations: data.conversations.length, annotations: data.annotations.filter((entry) => !entry.deletedAt).length };
   }
   globalThis.ChatGPTReaderStore = { keyFor, getConversation, listConversations, saveConversation, deleteConversation,
-    getAnnotations, saveAnnotation, deleteAnnotation, backup, restore, validateBackup, MAX_BACKUP_BYTES,
+    getAnnotations, saveAnnotation, deleteAnnotation, getReads, setReads, pruneReads, backup, restore, validateBackup, MAX_BACKUP_BYTES,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); } };
 })();

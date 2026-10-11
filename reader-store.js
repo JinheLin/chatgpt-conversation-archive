@@ -44,6 +44,17 @@
       ids.add(id);
       const result = { id, role: message.role, text: string(message.text) };
       if (message.createdAt != null) result.createdAt = date(message.createdAt);
+      if (message.layoutImages !== undefined) {
+        if (!Array.isArray(message.layoutImages) || message.layoutImages.length > 10000) invalid();
+        const slots = new Set();
+        result.layoutImages = message.layoutImages.map(image => {
+          if (!Number.isSafeInteger(image.slot) || image.slot < 0 || image.slot > 10000 || slots.has(image.slot)) invalid();
+          slots.add(image.slot);
+          const dataUrl = string(image.dataUrl, MAX_BACKUP_BYTES);
+          if (!/^data:image\/(?:png|jpeg|gif|webp);base64,[a-zA-Z0-9+/=]+$/i.test(dataUrl)) invalid();
+          return { slot: image.slot, query: string(image.query, 10000), dataUrl };
+        });
+      }
       if (message.sources !== undefined) {
         if (!Array.isArray(message.sources) || message.sources.length > 10000) invalid();
         result.sources = message.sources.map((source) => {

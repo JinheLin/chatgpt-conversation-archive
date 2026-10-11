@@ -282,10 +282,10 @@
       const key = store.keyFor(target.url);
       showReadProgress({ stage: "connect" });
       let cached = null;
-      if (!forceRemote) {
-        try { cached = await store.getConversation(key); }
-        catch (error) { storageProblem = error; }
-      }
+      let previous = null;
+      try { previous = await store.getConversation(key); }
+      catch (error) { storageProblem = error; }
+      if (!forceRemote) cached = previous;
       if (mine !== generation) return;
       if (cached) {
         payload = cached.payload;
@@ -307,16 +307,40 @@
         sourceTab = existing ? null : tab.id;
         await tabLoaded(tab.id);
         if (mine !== generation) return;
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["i18n.js", "conversation-source.js", "content.js"] });
+        const scripts = ["i18n.js", "layout-markdown.js", "conversation-images.js", "dom-adapter.js", "conversation-source.js", "content.js"];
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: scripts });
         if (mine !== generation) return;
         activeRead = { id: crypto.randomUUID(), tabId: tab.id, generation: mine };
         showReadProgress({ stage: "session" });
-        const response = await chrome.tabs.sendMessage(tab.id, { type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id });
+        let response = await chrome.tabs.sendMessage(tab.id, {
+          type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id, allowImageScroll: !existing
+        });
+        if (mine !== generation) return;
+        if (response?.ok && response.missingImages && existing) {
+          // Image lazy loading may require scrolling. Use a disposable hidden
+          // tab for that work, preserving the user's current page and position.
+          const imageTab = await chrome.tabs.create({ url: target.url, active: false });
+          if (mine !== generation) { await chrome.tabs.remove(imageTab.id).catch(() => {}); return; }
+          sourceTab = imageTab.id;
+          await tabLoaded(imageTab.id);
+          if (mine !== generation) return;
+          await chrome.scripting.executeScript({ target: { tabId: imageTab.id }, files: scripts });
+          if (mine !== generation) return;
+          activeRead = { id: crypto.randomUUID(), tabId: imageTab.id, generation: mine };
+          const retry = await chrome.tabs.sendMessage(imageTab.id, {
+            type: "READ_FULL_CONVERSATION", source: target.url, readId: activeRead.id, allowImageScroll: true
+          }).catch(() => null);
+          if (retry?.ok) {
+            globalThis.ChatGPTConversationImages?.preserve(retry.payload, response.payload);
+            response = retry;
+          }
+        }
         if (mine !== generation) return;
         activeRead = null;
         if (!response?.ok) throw new Error(response?.error || t("readFullFailed"));
         payload = response.payload;
         if (store.keyFor(payload.sourceUrl) !== key) throw new Error(t("readerInvalidBackup"));
+        globalThis.ChatGPTConversationImages?.preserve(payload, previous?.payload);
       }
       const problems = await globalThis.ChatGPTPdfExporter.render(payload, main, {
         isCancelled: () => mine !== generation,

@@ -105,11 +105,12 @@
     };
   }
 
-  async function inlineAssets(payload, headers, onProgress) {
+  async function inlineAssets(payload, headers, onProgress, { allowImageScroll = false } = {}) {
     const cache = new Map();
     let totalBytes = 0;
     const imagesByMessage = payload.messages.map((message) => [...new Set(
       [...message.text.matchAll(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]))]);
+    const layoutSlots = payload.messages.map(message => globalThis.ChatGPTConversationImages?.slots(message.text) || []);
     // Count the same attachment tasks that the loops below will process, including failures.
     const total = payload.messages.reduce((count, message, index) => {
       const seen = new Set(message.attachments.map(pointer).filter(Boolean));
@@ -118,12 +119,16 @@
         const id = file.id || file.file_id;
         if (!seen.has(id)) { seen.add(id); files++; }
       }
-      return count + message.attachments.length + files + imagesByMessage[index].length;
+      return count + message.attachments.length + files + imagesByMessage[index].length + layoutSlots[index].length;
     }, 0);
     let completed = 0;
     const assetDone = () => onProgress({ stage: "assets", completed: ++completed, total });
     if (total) onProgress({ stage: "assets", completed, total });
-    async function dataUrl(url) {
+    const rendered = layoutSlots.some(slots => slots.length) ?
+      await globalThis.ChatGPTPdfDomAdapter?.collectImages(payload.messages, {
+        allowScroll: allowImageScroll, timeout: allowImageScroll ? 20000 : 2500
+      }) || new Map() : new Map();
+    async function dataUrl(url, imageOnly = false) {
       const parsed = new URL(url, location.origin);
       if (!["https:", "http:"].includes(parsed.protocol)) throw new Error(t("unsupportedAssetUrl"));
       const response = await fetch(parsed.href, {
@@ -133,6 +138,7 @@
       });
       if (!response.ok) throw new Error(t("assetReadFailed", response.status));
       const blob = await response.blob();
+      if (imageOnly && !/^image\/(?:png|jpeg|gif|webp)$/i.test(blob.type)) throw new Error(t("unsupportedComponent"));
       if (blob.size > 20 * 1024 * 1024 || totalBytes + blob.size > 35 * 1024 * 1024) {
         throw new Error(t("assetTooLarge"));
       }
@@ -191,6 +197,17 @@
         catch (_) { /* Renderer marks remote images explicitly instead of silently dropping them. */ }
         assetDone();
       }
+      message.layoutImages = [];
+      for (const [slot, entry] of layoutSlots[index].entries()) {
+        const url = rendered.get(message.id)?.[slot];
+        try {
+          const src = globalThis.ChatGPTConversationImages.valid(entry.src) ? entry.src :
+            url ? await dataUrl(url, true) : null;
+          if (src) message.layoutImages.push({ slot, query: entry.query, dataUrl: src });
+        } catch (_) { /* Keep the explicit unavailable-image marker; never substitute search results. */ }
+        assetDone();
+      }
+      if (!message.layoutImages.length) delete message.layoutImages;
       delete message.attachments;
       delete message.files;
     }
@@ -223,7 +240,7 @@
     } finally { reader.releaseLock(); }
   }
 
-  async function read(value, { onProgress = () => {} } = {}) {
+  async function read(value, { onProgress = () => {}, allowImageScroll = false } = {}) {
     const target = parseUrl(value);
     if (target.url !== parseUrl(location.href).url) throw new Error(t("conversationMismatch"));
     onProgress({ stage: "session" });
@@ -248,7 +265,7 @@
       }
       const data = await readJson(response, onProgress);
       onProgress({ stage: "verify" });
-      return await inlineAssets(normalize(data, target.url), headers, onProgress);
+      return await inlineAssets(normalize(data, target.url), headers, onProgress, { allowImageScroll });
     } finally {
       token = null;
       delete headers.Authorization;

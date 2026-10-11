@@ -68,7 +68,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
         sendMessage: (id, message) => {
           requests.push({ id, message });
           notifyReading();
-          return readResponse;
+          return typeof readResponse === 'function' ? readResponse(id, message) : readResponse;
         }
       },
       scripting: { executeScript: async () => {} }
@@ -94,6 +94,9 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
     ChatGPTPdfOutline: { add: output.add || (async () => ({ bytes: new Uint8Array([1, 2, 3]), questions: 1, pages: 2 })) }
   });
   installI18n(context, output.locale || 'en-US');
+  for (const file of ['layout-markdown.js', 'conversation-images.js']) {
+    vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context);
+  }
   if (output.staleLocale) {
     const original = context.chrome.i18n.getMessage;
     context.chrome.i18n.getMessage = (key, ...args) => ['savePdf', 'directPdfHint', 'pdfFallbackHeading'].includes(key) ? '' : original(key, ...args);
@@ -374,6 +377,44 @@ test('without a matching conversation, the temporary tab stays in the background
   assert.equal(app.created[0].active, false);
   assert.deepEqual(app.removed, [90]);
   assert.equal(app.activated.length, 0);
+});
+
+test('missing lazy images trigger a disposable background read without scrolling or activating the original tab', async () => {
+  const remote = { ...response.payload, messages: [{ id: 'answer', role: 'assistant', text: '<AsyncImage query="original"/>' }] };
+  let stored;
+  const app = fixture([{ id: 20, url: conversationUrl }], async (id, message) => {
+    assert.equal(message.allowImageScroll, id === 90);
+    return { ok: true, missingImages: id === 20, payload: { ...remote, messages: remote.messages.map(item => ({ ...item,
+      ...(id === 90 ? { layoutImages: [{ slot: 0, query: 'original', dataUrl: 'data:image/png;base64,cGljdHVyZQ==' }] } : {})
+    })) } };
+  }, { saveSnapshot: async payload => { stored = payload; } });
+  await app.start();
+  assert.deepEqual(app.requests.map(request => request.id), [20, 90]);
+  assert.equal(app.created[0].active, false);
+  assert.deepEqual(app.removed, [90]);
+  assert.equal(app.activated.length, 0);
+  assert.equal(stored.messages[0].layoutImages.length, 1);
+});
+
+test('an unavailable background page preserves a verified response and previously saved image pixels', async () => {
+  const message = { id: 'answer', role: 'assistant', text: '<AsyncImage query="original"/>' };
+  const remote = { ...response.payload, messages: [{ ...message }] };
+  let stored;
+  const app = fixture([{ id: 20, url: conversationUrl }], async id => {
+    if (id === 90) throw new Error('Page unavailable');
+    return { ok: true, missingImages: true, payload: remote };
+  }, {
+    initialSource: conversationUrl,
+    cached: async () => ({ payload: { ...remote, messages: [{ ...message,
+      layoutImages: [{ slot: 0, query: 'original', dataUrl: 'data:image/png;base64,cGljdHVyZQ==' }]
+    }] } }),
+    saveSnapshot: async payload => { stored = payload; }
+  });
+  await app.initialized;
+  await app.element('reader-update').handlers.click();
+  assert.deepEqual(app.removed, [90]);
+  assert.equal(stored.messages[0].layoutImages.length, 1);
+  assert.equal(app.element('pdf-document').hidden, false);
 });
 
 for (const reuse of [true, false]) {

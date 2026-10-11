@@ -167,7 +167,17 @@
       // html:false and KaTeX trust:false; do not execute HTML from the transcript.
       const sourceId = `sources-${index + 1}`;
       const sources = (message.sources || []).filter((source) => /^https?:\/\//.test(source.url));
-      body.innerHTML = md.render(preserveDiagrams(message.text), { archiveSourcesId: sources.length ? sourceId : null });
+      const imageSlots = globalThis.ChatGPTConversationImages?.slots(message.text) || [];
+      const occurrences = new Map();
+      body.innerHTML = md.render(preserveDiagrams(message.text), {
+        archiveSourcesId: sources.length ? sourceId : null,
+        archiveImageForQuery(query) {
+          const occurrence = occurrences.get(query) || 0;
+          occurrences.set(query, occurrence + 1);
+          const entry = imageSlots.map((slot, index) => ({ ...slot, index })).filter(slot => slot.query === query)[occurrence];
+          return entry && message.layoutImages?.find(image => image.slot === entry.index && image.query === query)?.dataUrl;
+        }
+      });
       for (const warning of body.querySelectorAll(".archive-image-unavailable")) problems.push(warning.textContent);
       section.appendChild(body);
       if (message.role === "assistant") indexAnswerHeadings(body, questionItem, question, index);

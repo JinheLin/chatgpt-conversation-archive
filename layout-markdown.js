@@ -515,7 +515,8 @@
         // A search query is not an image URL. Keep its description when no
         // embedded pixels are available; never search for a replacement image.
         const label = md.utils.unescapeAll(attrs.alt || attrs.query || globalThis.ChatGPTPdfI18n.t("conversationImage"));
-        const src = attrs.src || attrs.url || "";
+        const cached = env.archiveImageForQuery?.(attrs.query || "");
+        const src = attrs.src || attrs.url || cached || "";
         const height = imagePixels(attrs.maxHeight);
         const width = imagePixels(attrs.maxWidth, 40);
         if (/^data:image\/(?:png|jpeg|gif|webp);base64,[a-zA-Z0-9+/=]+$/i.test(src)) {
@@ -687,5 +688,5 @@
     };
   }
 
-  globalThis.ChatGPTArchiveLayout = { install };
+  globalThis.ChatGPTArchiveLayout = { install, readTag };
 })();

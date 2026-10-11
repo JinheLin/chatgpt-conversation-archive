@@ -15,8 +15,10 @@
       // Progress contains only stage/count metadata; never credentials or conversation text.
       chrome.runtime.sendMessage({ type: "READ_PROGRESS", readId: message.readId, progress }).catch(() => {});
     };
-    globalThis.ChatGPTPdfSource.read(message.source || location.href, { onProgress }).then((payload) => {
-      respond({ ok: true, payload });
+    globalThis.ChatGPTPdfSource.read(message.source || location.href, { onProgress, allowImageScroll: message.allowImageScroll === true }).then((payload) => {
+      const missingImages = payload.messages.some(item =>
+        globalThis.ChatGPTConversationImages.slots(item.text).length > (item.layoutImages?.length || 0));
+      respond({ ok: true, payload, missingImages });
     }).catch((error) => respond({ ok: false, error: error.message }));
     return true;
   }

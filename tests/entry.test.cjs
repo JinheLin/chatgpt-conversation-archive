@@ -61,7 +61,11 @@ function contentFixture(read) {
       onMessage: { addListener: listener => listeners.add(listener), removeListener: listener => listeners.delete(listener) }
     } }
   });
-  const inject = () => vm.runInContext(fs.readFileSync(path.join(project, 'content.js'), 'utf8'), context);
+  const inject = () => {
+    for (const file of ['layout-markdown.js', 'conversation-images.js', 'content.js']) {
+      vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context);
+    }
+  };
   inject();
   return { context, nodes, listeners, reads, progress, inject, request: message => new Promise(resolve => {
     assert.equal([...listeners][0](message, { id: 'extension-id' }, resolve), true);

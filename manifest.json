@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Conversation Archive",
-  "version": "3.8.2",
+  "version": "3.8.3",
   "description": "__MSG_extensionDescription__",
   "minimum_chrome_version": "114",
   "permissions": [
@@ -26,6 +26,9 @@
       ],
       "js": [
         "i18n.js",
+        "layout-markdown.js",
+        "conversation-images.js",
+        "dom-adapter.js",
         "conversation-source.js",
         "content.js"
       ],

@@ -63,6 +63,10 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ## Reading interface (v3.1)
 
+### Automatic image capture (v3.8.3)
+
+Reading or updating a conversation also embeds the original images shown in ChatGPT's `AsyncImage` components. Images are matched by message ID and position, stored locally and included in JSON backups, HTML and PDF. The original answer text stays unchanged. If images need lazy loading, a temporary background tab loads them and closes afterward, without scrolling or activating your existing ChatGPT tab. Previously saved images are retained when the same answer is unchanged and a new image request fails. Images that cannot be matched or retrieved keep an explicit unavailable marker; the extension never substitutes a search result.
+
 - Before opening a conversation, the page shows the URL field and your local conversation list.
 - Local version timestamps in the toolbar and conversation list show when the local snapshot was captured, including seconds, using the browser’s local time zone.
 - After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Update conversation**, **Annotations** and **Export**.

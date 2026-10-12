@@ -6,7 +6,7 @@
 2. 测试
 3. 提交
 4. 推送
-5. 更新本地插件
+5. 更新本地插件文件，不自动重新加载
 
 ## 测试
 
@@ -23,9 +23,10 @@
 
 这个仓库在本机以未打包扩展加载，位于 Google Chrome 配置文件 `Profile 3`（名称 Jinhe）。扩展 ID 是 `pekehafmbhgiibjijbdpjdehaapcchkm`。
 
-推送之后重新加载这个扩展，让磁盘上的新文件生效：
+推送之后确保本地插件目录中的文件已更新；如果有分发目录或压缩包，也同步更新。完成文件更新后即可结束本次工作。
 
-- 在 `chrome-extension://pekehafmbhgiibjijbdpjdehaapcchkm/print.html` 执行 `chrome.runtime.reload()`。
-- 或打开 `chrome://extensions/?id=pekehafmbhgiibjijbdpjdehaapcchkm`，点击「重新加载」。
+不要自动重新加载扩展，不执行 `chrome.runtime.reload()`，不点击「重新加载」，也不要刷新或关闭已打开的阅读器页面。不要退出 Chrome。
 
-不要退出 Chrome 来加载新文件。这个配置文件不会在启动时恢复标签页。扩展重新加载后，刷新已经打开的阅读器页面。
+由用户稍后手动打开 `chrome://extensions/?id=pekehafmbhgiibjijbdpjdehaapcchkm`，点击「重新加载」，再刷新或重新打开阅读器，让新版生效。
+
+完成后说明本地插件文件已更新，等待用户稍后手动加载。

@@ -377,6 +377,9 @@
     if (node.name === "icon" && attrs.inline === "true") classes.push("archive-layout-inline");
     const styles = [];
     if (attrs.border === "true") classes.push("archive-layout-border");
+    if (node.name === "button" && attrs.variant === "outline") classes.push("archive-layout-outline");
+    if (node.name === "box" && attrs.clip === "true" && attrs.radius === "full" &&
+        /^\d(?:px)?$/.test(attrs.height) && parseFloat(attrs.height) <= 8) classes.push("archive-layout-progress-track");
     if (attrs.background === "surface-secondary") classes.push("archive-layout-surface-secondary");
     else if (attrs.background === "surface-tertiary") classes.push("archive-layout-surface-tertiary");
     else if (safeColor(attrs.background)) styles.push(`background-color:${safeColor(attrs.background)}`);
@@ -408,8 +411,9 @@
     if (/^\d(?:\.\d{1,2})?$/.test(attrs.flex) && Number(attrs.flex) <= 6) styles.push(`flex:${attrs.flex} 1 0`);
     for (const key of ["width", "height"]) {
       if (/^\d{1,4}(?:px)?$/.test(attrs[key]) && parseFloat(attrs[key]) <= 2000) styles.push(`${key}:${parseFloat(attrs[key])}px`);
+      else if (/^\d{1,3}(?:\.\d{1,2})?%$/.test(attrs[key]) && parseFloat(attrs[key]) <= 100) styles.push(`${key}:${attrs[key]}`);
     }
-    if (attrs.width === "100%") styles.push("width:100%");
+    if (attrs.clip === "true") styles.push("overflow:hidden");
     if (attrs.tabularNums === "true") styles.push("font-variant-numeric:tabular-nums");
     for (const key of ["padding", "gap"]) {
       if (typeof attrs[key] !== "string") continue;
@@ -496,6 +500,15 @@
       for (const key of node.expressions) {
         if (/^on[A-Z]/.test(key)) { delete attrs[key]; continue; }
         if (node.name === "chart" && key === "content") continue;
+        if (["width", "height"].includes(key)) {
+          // Only a numeric percentage template is accepted, never a function
+          // call or arbitrary interpolated CSS from the conversation.
+          const template = /^`\$\{([^{}]+)\}%`$/.exec(attrs[key]);
+          const percent = template && valueOf(template[1], scope)?.value;
+          if (typeof percent === "number" && Number.isFinite(percent) && percent >= 0 && percent <= 100) {
+            attrs[key] = `${Math.round(percent * 100) / 100}%`; continue;
+          }
+        }
         if (["radius", "padding"].includes(key)) {
           const data = literalData(attrs[key], 0);
           if (data && data.end === attrs[key].length && data.value && typeof data.value === "object" && !Array.isArray(data.value)) {
@@ -553,7 +566,8 @@
       if (["checkbox", "radio"].includes(node.name)) {
         const selected = node.name === "checkbox" ? attrs.checked === "true" : env.archiveRadioValue === attrs.value;
         const symbol = node.name === "checkbox" ? selected ? "☑" : "☐" : selected ? "●" : "○";
-        return `<${tag} ${presentation(node, attrs)}><span class="archive-control-mark" aria-hidden="true">${symbol}</span>${children(node, env, true, scope, budget)}</${tag}>`;
+        const label = children(node, env, true, scope, budget);
+        return `<${tag} ${presentation(node, attrs)}><span class="archive-control-mark" data-selected="${selected}" aria-hidden="true">${symbol}</span>${label ? `<span class="archive-control-label">${label}</span>` : ""}</${tag}>`;
       }
       if (node.name === "textarea") {
         return `<${tag} ${presentation(node, attrs)}>${escape(md.utils.unescapeAll(attrs.value || attrs.placeholder || ""))}</${tag}>`;

@@ -19,6 +19,34 @@ function renderer() {
   return { md, render: source => md.render(context.ChatGPTPdfExporter.preserveDiagrams(source)) };
 }
 
+test('nested weekly cards retain aligned checklist children, initial progress and an inert outline control', () => {
+  const { render } = renderer();
+  const source = require('./fixtures/weekly-layout.cjs')('[1]');
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM(render(source));
+  const card = dom.window.document.querySelector('.archive-layout-border');
+  assert.equal(card.querySelectorAll('.archive-layout-row > .archive-layout-checkbox').length, 4);
+  assert.equal(card.querySelectorAll('.archive-control-mark[data-selected="true"]').length, 1);
+  const track = card.querySelector('.archive-layout-progress-track');
+  assert.equal(track.style.height, '5px');
+  assert.equal(track.style.overflow, 'hidden');
+  assert.equal(track.firstElementChild.style.width, '25%');
+  assert.equal(track.firstElementChild.style.height, '100%');
+  assert.match(card.querySelector('.archive-layout-button.archive-layout-outline').textContent, /重置本周计划/);
+  assert.equal(card.querySelectorAll('input, button, script').length, 0);
+  assert.doesNotMatch(card.outerHTML, /onChange|onClick|setDone|#each/);
+  dom.window.close();
+});
+
+test('layout percentage dimensions are bounded literals or numeric templates and cannot execute CSS or calls', () => {
+  const { render } = renderer();
+  assert.match(render('<box width="37.5%" height="100%"/>'), /width:37\.5%;height:100%/);
+  for (const width of ['101%', '-1%', 'calc(100% + 1px)', '100%;position:fixed', '`${evil()}%`', '`${200}%`']) {
+    const attr = width.startsWith('`') ? `{${width}}` : `"${width}"`;
+    assert.doesNotMatch(render(`<box width=${attr}>Text</box>`), /style=/);
+  }
+});
+
 test('unquoted layout choices render nested prose and retain bounded styles', () => {
   const { render } = renderer();
   const html = render('<box gap={3}>\n  <row align=start gap={3}>\n    <box flex=1 radius=lg background=surface-secondary>\n      **First level**\n\n      Text with `1 + 2` and 中文.\n    </box>\n  </row>\n</box>');
@@ -88,8 +116,8 @@ test('questionnaires show inert choices, selected radio and placeholders', () =>
   const html = render('{@body const opts=["Counting","Shapes"]}\n\n{@body const [choice,setChoice]=DIL.useState("shapes")}\n\n<box><form onSubmit={()=>fetch("https://evil.example")}>\n{#each opts as o}<checkbox>{o}</checkbox>{/each}\n<radio-group value={choice} onChange={setChoice}><radio value="counting">Counting</radio><radio value="shapes">Shapes</radio></radio-group>\n<textarea rows={3} value="" placeholder="Describe an example" onChange={setChoice}/>\n<button submit>Analyze <icon name="arrow-right" inline/></button>\n</form></box>');
   assert.match(html, /Interactive component shown as static reading content/);
   assert.equal((html.match(/archive-layout-checkbox/g) || []).length, 2);
-  assert.match(html, /○<\/span>Counting/);
-  assert.match(html, /●<\/span>Shapes/);
+  assert.match(html, /data-selected="false"[^>]*>○<\/span><span class="archive-control-label">Counting/);
+  assert.match(html, /data-selected="true"[^>]*>●<\/span><span class="archive-control-label">Shapes/);
   assert.match(html, /Describe an example/);
   assert.match(html, /Analyze .*→/);
   assert.doesNotMatch(html, /<(?:input|textarea|button|form)\b|onSubmit|onChange|fetch\(|#each|@body/);

@@ -161,7 +161,12 @@
 .pdf-citation { font-size: 9pt; font-weight: 400; white-space: nowrap; }
 .pdf-message-body .katex { font-size: 1.1em; }
 /* Inert ChatGPT layout components, shared by preview, offline HTML and print. */
-.pdf-message-body .archive-layout { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
+.pdf-message-body .archive-layout {
+  /* Spacing belongs to each container. An outer card's padding and gap must
+     not be repeated by every nested row, label and progress-bar child. */
+  --archive-layout-padding: 0; --archive-layout-gap: 8px; --archive-layout-columns: 2;
+  box-sizing: border-box; min-width: 0; overflow-wrap: anywhere;
+}
 .pdf-message-body .archive-layout-box, .pdf-message-body .archive-layout-grid-item {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
@@ -178,12 +183,40 @@
 .pdf-message-body .archive-layout-form, .pdf-message-body .archive-layout-radio-group {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px);
 }
-.pdf-message-body .archive-layout-checkbox, .pdf-message-body .archive-layout-radio { display: block; }
-.pdf-message-body .archive-control-mark { margin-right: .5em; }
+.pdf-message-body .archive-layout-checkbox, .pdf-message-body .archive-layout-radio {
+  display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+}
+.pdf-message-body .archive-control-label { min-width: 0; }
+@media print {
+  .pdf-message-body .archive-layout-row:has(> .archive-layout-checkbox) {
+    break-inside: avoid-page; page-break-inside: avoid;
+  }
+}
+.pdf-message-body .archive-control-mark {
+  position: relative; display: inline-flex; flex: none; width: 19px; height: 19px;
+  box-sizing: border-box; margin-top: 3px; border: 1px solid #c9d1ce; border-radius: 50%; font-size: 0;
+}
+.pdf-message-body .archive-layout-checkbox .archive-control-mark[data-selected="true"] {
+  border-color: #176b58; background: #176b58;
+}
+.pdf-message-body .archive-layout-checkbox .archive-control-mark[data-selected="true"]::after {
+  content: ""; position: absolute; left: 6px; top: 3px; width: 4px; height: 8px;
+  border: solid #fff; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg);
+}
+.pdf-message-body .archive-layout-radio .archive-control-mark[data-selected="true"]::after {
+  content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #176b58;
+}
 .pdf-message-body .archive-layout-textarea {
   padding: .6em; border: 1px solid #d8dcdf; border-radius: 4px; color: #62686e; white-space: pre-wrap;
 }
-.pdf-message-body .archive-layout-button { display: block; padding: .4em .6em; background: #f6f8fa; border-radius: 4px; }
+.pdf-message-body .archive-layout-button {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .35em;
+  min-height: 34px; padding: .4em .8em; border: 1px solid transparent;
+  background: #f6f8fa; border-radius: 4px; text-align: center; line-height: 1.4;
+}
+.pdf-message-body .archive-layout-button.archive-layout-outline {
+  border-color: #d8dcdf; border-radius: 999px; background: transparent;
+}
 .pdf-message-body .archive-static-note { display: block; color: #62686e; font-size: .8em; font-weight: normal; }
 .pdf-message-body .archive-layout-button .archive-static-note { display: inline; }
 .pdf-message-body .archive-static-expanded { display: block; margin: .4em 0; }
@@ -200,6 +233,7 @@
 .pdf-message-body .archive-layout-border { border: 1px solid #d8dcdf; }
 .pdf-message-body .archive-layout-surface-secondary { background: #f6f8fa; }
 .pdf-message-body .archive-layout-surface-tertiary { background: #e9edf1; }
+.pdf-message-body .archive-layout-progress-track > .archive-layout-box { background: #176b58; }
 .pdf-message-body .archive-layout-secondary, .pdf-message-body .archive-layout-caption { color: #62686e; }
 .pdf-message-body .archive-layout-caption { font-size: 9pt; line-height: 1.5; }
 .pdf-message-body .archive-layout > p { margin: 0; }

@@ -80,3 +80,55 @@ test('a lost commit response is bounded, saved as uncertain and is never automat
   assert.equal(commits.length, 1); assert.ok(commits[0][2].expiresAt > 0);
   assert.equal(app.calls.filter(x => x[0] === 'remove').length, 0);
 });
+
+test('a new background tab may have no committed URL until its pending navigation finishes', async t => {
+  for (const url of [undefined, '', 'about:blank']) {
+    const app = setup(t);
+    let committed = false;
+    const loading = [
+      { id: 90, status: 'complete', ...(url === undefined ? {} : { url }), pendingUrl: payload().sourceUrl },
+      { id: 90, status: 'loading', url: payload().sourceUrl, pendingUrl: payload().sourceUrl },
+      { id: 90, status: 'complete', url: payload().sourceUrl }
+    ];
+    app.w.chrome.tabs.get = async () => {
+      const current = loading.shift() || { id: 90, status: 'complete', url: payload().sourceUrl };
+      committed = current.status === 'complete' && !current.pendingUrl && current.url === payload().sourceUrl;
+      return current;
+    };
+    app.w.chrome.scripting.executeScript = async options => {
+      assert.equal(committed, true, 'Only inject after the conversation URL is committed');
+      app.calls.push(['inject', options]);
+    };
+    const result = await app.send({ loadInterval: 0 });
+    assert.equal(result.payload.messages.length, 4);
+    assert.equal(app.calls.filter(call => call[0] === 'CHAT_COMMIT').length, 1);
+  }
+});
+
+test('missing URLs without pendingUrl are waited for, and unavailable metadata times out before input', async t => {
+  const app = setup(t);
+  let first = true;
+  app.w.chrome.tabs.get = async () => {
+    if (first) { first = false; return { id: 90, status: 'loading' }; }
+    return { id: 90, status: 'complete', url: payload().sourceUrl };
+  };
+  await app.send({ loadInterval: 0 });
+  app.calls.length = 0;
+  app.w.chrome.tabs.get = async () => ({ id: 90, status: 'complete' });
+  await assert.rejects(app.send({ loadTimeout: 10, loadInterval: 0 }), /Could not find the ChatGPT input/);
+  assert.equal(app.calls.filter(call => ['inject', 'input', 'CHAT_COMMIT'].includes(call[0])).length, 0);
+  assert.equal(app.calls.filter(call => call[0] === 'remove').length, 1);
+});
+
+test('a redirect or a missing URL after loading remains blocked without a misleading input-link error', async t => {
+  const app = setup(t);
+  app.w.chrome.tabs.get = async () => ({ id: 90, status: 'loading', pendingUrl: 'https://chatgpt.com/c/different' });
+  await assert.rejects(app.send({ loadInterval: 0 }), /no longer matches/);
+  assert.equal(app.calls.filter(call => call[0] === 'inject').length, 0);
+  app.calls.length = 0;
+  let reads = 0;
+  app.w.chrome.tabs.get = async () => ++reads === 1
+    ? { id: 90, status: 'complete', url: payload().sourceUrl } : { id: 90, status: 'complete' };
+  await assert.rejects(app.send(), /no longer matches/);
+  assert.equal(app.calls.filter(call => call[0] === 'CHAT_COMMIT').length, 0);
+});

@@ -79,6 +79,8 @@ When the image server blocks ordinary cross-origin reads, the existing debugger 
 
 ## Continue a conversation while reading (v3.9)
 
+v3.9.1 waits for the background conversation page to finish navigating before checking its address. An initially missing or empty tab URL no longer produces a misleading invalid-link error.
+
 - Click **Continue conversation** to open a question box beside the document. It shares the right sidebar with **Annotations**. **Enter inserts a newline**; use the **Send** button to submit.
 - Select a passage and choose **Ask about selection** to include it in your question. Drafts and selected passages are saved locally for each conversation, restored on reopening, and included in JSON backups and storage totals. They are excluded from HTML and PDF exports.
 - Sending uses your existing ChatGPT login in this Chrome profile. It opens its own background tab, verifies the conversation and current branch, and uses ChatGPT's normal input and send controls. Existing tabs and their drafts are not edited. Chrome may briefly show the existing debugging-permission banner while the question is entered.

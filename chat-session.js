@@ -13,7 +13,7 @@
     return locks.request("chatgpt-reader-send:" + globalThis.ChatGPTPdfSource.parseUrl(payload.sourceUrl).url,
       { ifAvailable: true }, lock => { if (!lock) throw error("chatBusy"); return run(); });
   }
-  async function sendOwned(payload, pending, { checking = false, beforeCommit = async () => {}, onState = () => {}, timeout = 600000, interval = 2000, responseTimeout = 45000 } = {}) {
+  async function sendOwned(payload, pending, { checking = false, beforeCommit = async () => {}, onState = () => {}, timeout = 600000, interval = 2000, responseTimeout = 45000, loadTimeout = 45000, loadInterval = 250 } = {}) {
     if (busy) throw error("chatBusy");
     const source = globalThis.ChatGPTPdfSource.parseUrl(payload.sourceUrl);
     if (source.kind !== "c") throw error("chatSharedReadOnly");
@@ -25,9 +25,30 @@
       return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(error("chatReplyTimeout", committed)), limit); })])
         .finally(() => clearTimeout(timer));
     }
+    function matchesSource(value) {
+      try { return globalThis.ChatGPTPdfSource.parseUrl(value).url === source.url; }
+      catch (_) { return false; }
+    }
+    async function waitForTab() {
+      const deadline = Date.now() + loadTimeout;
+      while (true) {
+        const current = await chrome.tabs.get(tab.id);
+        // url is the last committed address. A newly created tab can still
+        // report an empty/about:blank URL or complete status while pendingUrl
+        // points to the requested conversation. Neither permits injection.
+        if (current.pendingUrl && !matchesSource(current.pendingUrl)) throw error("chatWrongConversation", committed);
+        const blank = !current.url || current.url === "about:blank";
+        if (current.status === "complete" && !current.pendingUrl && !blank) {
+          if (!matchesSource(current.url)) throw error("chatWrongConversation", committed);
+          return;
+        }
+        if (Date.now() >= deadline) throw error("chatComposerUnavailable", committed);
+        await sleep(loadInterval);
+      }
+    }
     async function verifyTab() {
       const current = await chrome.tabs.get(tab.id);
-      if (globalThis.ChatGPTPdfSource.parseUrl(current.url).url !== source.url) throw error("chatWrongConversation", committed);
+      if (current.status !== "complete" || current.pendingUrl || !matchesSource(current.url)) throw error("chatWrongConversation", committed);
       return current;
     }
     async function request(type) {
@@ -47,11 +68,7 @@
     try {
       onState("connecting");
       tab = await chrome.tabs.create({ url: source.url, active: false });
-      const deadline = Date.now() + 45000;
-      while ((await verifyTab()).status !== "complete") {
-        if (Date.now() > deadline) throw error("chatComposerUnavailable", committed);
-        await sleep(250);
-      }
+      await waitForTab();
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: scripts });
       if (!checking) {
         onState("preparing");

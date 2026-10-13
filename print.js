@@ -36,6 +36,7 @@
   const n10Layout = document.getElementById("n10-layout");
   const layoutControls = [pageLayout, mobileLayout, n10Layout];
   let outputBusy = false;
+  let chat;
   const workspace = globalThis.ChatGPTReaderWorkspace.init({ document, isBusy: () => outputBusy });
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
     root: document.getElementById("export-menu"), button: document.getElementById("export-toggle"),
@@ -50,6 +51,7 @@
     outputBusy = value;
     reader.setLocked(value);
     reads.setLocked(value);
+    chat?.setLocked(value);
     if (value) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
     for (const control of document.getElementById("reader-library-list").querySelectorAll("button")) control.disabled = value;
@@ -70,6 +72,39 @@
   let payload = null;
   let activeRead = null;
   let readPercent = 0;
+
+  chat = globalThis.ChatGPTReaderChat?.init({ document, main, layout: document.getElementById("preview-layout"),
+    reader, store, onBusy: setOutputBusy, onResult: async (next) => {
+      if (!payload || store.keyFor(next.sourceUrl) !== store.keyFor(payload.sourceUrl) ||
+          payload.messages.some((message, index) => message.id !== next.messages[index]?.id || message.text !== next.messages[index]?.text)) {
+        throw new Error(t("chatBranchChanged"));
+      }
+      const temporary = document.createElement("main");
+      await globalThis.ChatGPTPdfExporter.render(next, temporary);
+      await store.saveConversation(next);
+      // Anchor to a visible content block; highlights and read markers are restored
+      // before compensating for layout changes above the current viewport.
+      const blocks = [...main.querySelectorAll(".pdf-message-body > *")];
+      const visible = blocks.find(node => node.getBoundingClientRect().bottom > 110);
+      const section = visible?.closest(".pdf-message");
+      const position = visible && { messageId: section.dataset.messageId,
+        index: [...section.querySelector(".pdf-message-body").children].indexOf(visible),
+        top: visible.getBoundingClientRect().top };
+      const scroll = globalThis.scrollY;
+      main.replaceChildren(...temporary.childNodes);
+      payload = next;
+      await document.fonts.ready;
+      await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
+      await reader.load(store.keyFor(next.sourceUrl), true, { open: false });
+      previewNavigation.refresh();
+      workspace.reading(next); updateReaderAddress();
+      await reads.load(store.keyFor(next.sourceUrl), next.messages);
+      const target = [...main.querySelectorAll(".pdf-message")].find(node => node.dataset.messageId === position?.messageId)
+        ?.querySelector(".pdf-message-body")?.children[position?.index];
+      globalThis.scrollTo({ top: scroll + (target ? target.getBoundingClientRect().top - position.top : 0), behavior: "instant" });
+      await refreshLibrary();
+    }
+  });
 
   function report(text, error = false, keepProgress = false, transient = false) {
     if (!keepProgress) progressView.stop();
@@ -170,6 +205,7 @@
     if (!globalThis.confirm(t("readerDeleteConversationConfirm", entry.title))) return;
     setOutputBusy(true);
     try {
+      if (current && chat && !await chat.canLeave()) return;
       await store.deleteConversation(entry.key);
       // A refresh must not silently download a deleted conversation, even when
       // the original entry URL points to a different chat from the one displayed.
@@ -185,6 +221,7 @@
         generation++;
         reader.unload();
         reads.unload();
+        await chat?.unload();
         main.replaceChildren(); main.hidden = true;
         previewNavigation.clear();
         payload = null;
@@ -262,14 +299,16 @@
   async function start(event, forceRemote = false) {
     event?.preventDefault();
     if (outputBusy || !reader.canLeave() || !reads.canLeave()) return;
-    const mine = ++generation;
     setOutputBusy(true);
+    if (chat && !await chat.canLeave()) { setOutputBusy(false); return; }
+    const mine = ++generation;
     cancelButton.hidden = false;
     actions.hidden = true;
     pdfFallback.hidden = true;
     exportMenu.close();
     reader.unload();
     reads.unload();
+    await chat?.unload();
     main.hidden = true;
     previewNavigation.clear();
     payload = null;
@@ -390,6 +429,7 @@
       readProgress.hidden = true;
       if (!storageProblem && !problems.length) workspace.clearNotice();
       await reads.load(key, payload.messages, !storageProblem);
+      await chat?.load(payload, !storageProblem);
       if (mine !== generation) return;
       if (sourceTab) {
         await chrome.tabs.remove(sourceTab).catch(() => {});
@@ -399,6 +439,7 @@
     } catch (error) {
       if (mine === generation) {
         main.hidden = true; previewNavigation.clear(); reader.unload(); reads.unload(); payload = null;
+        await chat?.unload();
         workspace.opening();
         report(error.message || t("readFailed"), true);
       }
@@ -415,6 +456,7 @@
     generation++;
     reader.unload();
     reads.unload();
+    await chat?.unload();
     activeRead = null;
     main.hidden = true;
     previewNavigation.clear();

@@ -115,5 +115,23 @@ test('the bridge ignores unrelated messages and requests from other extensions',
   const unexpectedResponse = () => { throw new Error('Unexpected response'); };
   assert.equal(listener({ type: 'OTHER_MESSAGE' }, { id: 'extension-id' }, unexpectedResponse), false);
   assert.equal(listener({ type: 'READ_FULL_CONVERSATION' }, { id: 'other-extension' }, unexpectedResponse), false);
+  assert.equal(listener({ type: 'CHAT_COMMIT' }, { id: 'other-extension' }, unexpectedResponse), false);
   assert.equal(page.reads.length, 0);
+});
+
+test('trusted chat requests reach the composer without fetching extension files, and ambiguous clicks stay uncertain', async () => {
+  const page = contentFixture(() => ({}));
+  const calls = [];
+  page.context.ChatGPTReaderComposer = {
+    prepare: async message => { calls.push(message); return { ready: true }; },
+    commit: async () => { const error = new Error('Click response lost'); error.uncertain = true; throw error; },
+    inspect: async () => ({ generating: true })
+  };
+  const pending = { type: 'CHAT_PREPARE', requestId: 'one', source: 'https://chatgpt.com/c/target-conversation', expiresAt: Date.now() + 1000 };
+  assert.equal((await page.request(pending)).ready, true);
+  assert.equal(calls[0], pending);
+  const failed = await page.request({ ...pending, type: 'CHAT_COMMIT' });
+  assert.equal(failed.ok, false); assert.equal(failed.uncertain, true);
+  assert.equal((await page.request({ ...pending, type: 'CHAT_INSPECT' })).generating, true);
+  assert.equal(page.nodes.size, 0); assert.equal(page.reads.length, 0);
 });

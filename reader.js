@@ -29,6 +29,7 @@
       panel.hidden = !open;
       layout.dataset.annotations = String(open);
       toggle.setAttribute("aria-expanded", String(open));
+      if (open) document.dispatchEvent(new CustomEvent("reader-panel-open", { detail: "annotations" }));
     }
     function hideSelection() { toolbar.hidden = true; selection = null; selecting++; }
     function dirty() { return !editor.hidden && comment.value !== (editing?.comment || ""); }
@@ -124,7 +125,7 @@
       toggle.disabled = true;
       report("");
     }
-    async function load(conversationKey, writable = true) {
+    async function load(conversationKey, writable = true, { open = true } = {}) {
       unload();
       key = conversationKey; enabled = writable; toggle.disabled = !writable;
       if (!writable) { report(t("readerReadOnly"), true); return; }
@@ -135,7 +136,7 @@
         const unresolved = [...positions.values()].filter((value) => !value).length;
         // The list already shows saved notes; successful restoration needs no separate message.
         report(unresolved ? t("readerRestoredUnresolved", notes.length, unresolved) : "");
-        openPanel();
+        if (open) openPanel();
       } catch (error) {
         if (key !== conversationKey) return;
         enabled = false;
@@ -188,6 +189,13 @@
       const note = selectedNote();
       if (note) { edit(note); hideSelection(); globalThis.getSelection()?.removeAllRanges(); }
     });
+    get("reader-ask-selection")?.addEventListener("click", () => {
+      if (!selection || !canLeave()) return;
+      document.dispatchEvent(new CustomEvent("reader-quote-question", { detail: {
+        messageId: selection.messageId, quote: selection.anchor.exact.slice(0, 5000)
+      } }));
+      hideSelection(); globalThis.getSelection()?.removeAllRanges();
+    });
     save.addEventListener("click", () => {
       if (!editing) return;
       const old = notes.find((note) => note.id === editing.id);
@@ -211,11 +219,11 @@
       if (dirty() || busy) { event.preventDefault(); event.returnValue = ""; }
     });
     store.subscribe((changedKey, topic) => {
-      if (topic === "reads" || changedKey !== key || busy) return;
+      if (["reads", "drafts"].includes(topic) || changedKey !== key || busy) return;
       void refresh().catch((error) => report(t("readerSaveFailed", error.message), true));
     });
     unload();
-    return { load, unload, refresh, canLeave: () => !busy && canLeave(),
+    return { load, unload, refresh, openPanel, canLeave: () => !busy && canLeave(),
       setLocked(value) { locked = value; hideSelection(); save.disabled = value; toggle.disabled = value || !enabled; renderList(); } };
   }
   globalThis.ChatGPTReader = { init };

@@ -197,6 +197,7 @@ test('a current draft blocks deletion and a failed delete keeps the current view
   assert.equal(row(app).querySelector('.reader-library-delete').disabled, true);
   assert.equal(row(app).querySelector('.reader-library-open').disabled, true);
   assert.equal(app.get('reader-update').disabled, true);
+  await waitFor(() => typeof rejectDelete === 'function'); // The question draft is flushed before deletion.
   rejectDelete(new Error('Disk failure'));
   await waitFor(() => !app.get('start-export').disabled);
   assert.match(app.get('export-status').textContent, /Could not delete.*Disk failure/);

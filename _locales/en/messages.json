@@ -745,22 +745,41 @@
   },
   "readerMarkReadNamed": {
     "message": "Mark as read: $arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerMarkUnreadNamed": {
     "message": "Mark as unread: $arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerMarkStaleNamed": {
     "message": "Mark as read: $arg1$. Content has changed.",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerReadStale": {
     "message": "Content updated"
   },
   "readerReadProgress": {
     "message": "$arg1$/$arg2$ read",
-    "placeholders": { "arg1": { "content": "$1" }, "arg2": { "content": "$2" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      }
+    }
   },
   "readerUnreadOnly": {
     "message": "Unread only"
@@ -770,7 +789,11 @@
   },
   "readerAnswerStatus": {
     "message": "Answers: $arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerStatusRead": {
     "message": "Read"
@@ -783,7 +806,11 @@
   },
   "readerReadFailed": {
     "message": "Could not save read status: $arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerNoUnread": {
     "message": "Every answer in this conversation is marked read."
@@ -796,5 +823,127 @@
   },
   "staticControl": {
     "message": "static control"
+  },
+  "chatTitle": {
+    "message": "Continue conversation"
+  },
+  "chatHint": {
+    "message": "Send a question to this ChatGPT conversation and keep your reading position."
+  },
+  "chatQuestion": {
+    "message": "Your question"
+  },
+  "chatSend": {
+    "message": "Send"
+  },
+  "chatCheckReply": {
+    "message": "Check reply"
+  },
+  "chatOpenOriginal": {
+    "message": "Open ChatGPT"
+  },
+  "chatQuote": {
+    "message": "Selected passage"
+  },
+  "chatRemoveQuote": {
+    "message": "Remove"
+  },
+  "chatAskSelection": {
+    "message": "Ask about selection"
+  },
+  "chatInvalidPrompt": {
+    "message": "Enter a question of up to 20,000 characters."
+  },
+  "chatWrongConversation": {
+    "message": "The ChatGPT tab no longer matches this conversation."
+  },
+  "chatComposerUnavailable": {
+    "message": "Could not find the ChatGPT input. Open the original conversation to check your login and try again."
+  },
+  "chatBranchChanged": {
+    "message": "The original conversation or branch changed. Update this conversation before continuing."
+  },
+  "chatAlreadyGenerating": {
+    "message": "ChatGPT is already generating a reply. Wait for it to finish."
+  },
+  "chatComposerNotEmpty": {
+    "message": "The ChatGPT input already contains a draft. Send or clear that draft in ChatGPT first."
+  },
+  "chatSendUncertain": {
+    "message": "The send is not yet confirmed. Check the reply or open ChatGPT before sending again."
+  },
+  "chatBusy": {
+    "message": "Another reader is sending to this conversation. Wait for it to finish."
+  },
+  "chatSharedReadOnly": {
+    "message": "Shared conversations are read-only. Open a private conversation to continue asking questions."
+  },
+  "chatDebuggerRequired": {
+    "message": "Chrome could not connect to the ChatGPT input. Reload the extension, accept the debugging permission if prompted, and keep the debugging connection active while sending."
+  },
+  "chatReplyReadFailed": {
+    "message": "Could not read the new reply."
+  },
+  "chatReplyTimeout": {
+    "message": "The reply has not finished yet. Use Check reply to continue waiting."
+  },
+  "chatConnecting": {
+    "message": "Connecting to this conversation…"
+  },
+  "chatPreparing": {
+    "message": "Checking the conversation and input…"
+  },
+  "chatSending": {
+    "message": "Sending your question…"
+  },
+  "chatGenerating": {
+    "message": "ChatGPT is generating a reply…"
+  },
+  "chatWaiting": {
+    "message": "Waiting for the reply…"
+  },
+  "chatDraftSaving": {
+    "message": "Saving draft…"
+  },
+  "chatDraftSaved": {
+    "message": "Draft saved locally"
+  },
+  "chatDraftFailed": {
+    "message": "Could not save the draft: $error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "chatDraftConflict": {
+    "message": "This draft changed in another reader. Reopen the conversation to load the latest draft."
+  },
+  "chatQuotePrompt": {
+    "message": "I have a question about this passage in our conversation:"
+  },
+  "chatLatestReply": {
+    "message": "Latest reply"
+  },
+  "chatViewReply": {
+    "message": "Read the reply in the conversation"
+  },
+  "chatReplySaved": {
+    "message": "The new question and reply have been saved locally."
+  },
+  "chatStorageRequired": {
+    "message": "Save this conversation locally before continuing to ask questions."
+  },
+  "chatLockUnavailable": {
+    "message": "Chrome could not protect this send from duplication. Reopen the reader and try again."
+  },
+  "chatRestoreDraft": {
+    "message": "Restore draft"
+  },
+  "chatRestoreDraftConfirm": {
+    "message": "Check whether ChatGPT received this question first. Restoring the draft and sending it again may create a duplicate question. Restore it?"
+  },
+  "chatInputHint": {
+    "message": "Enter adds a new line. Use Send to submit."
   }
 }

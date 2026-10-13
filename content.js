@@ -9,7 +9,15 @@
   removeLegacyControls();
 
   function onMessage(message, sender, respond) {
-    if (sender.id !== chrome.runtime.id || message?.type !== "READ_FULL_CONVERSATION") return false;
+    if (sender.id !== chrome.runtime.id) return false;
+    const operation = { CHAT_PREPARE: "prepare", CHAT_COMMIT: "commit", CHAT_INSPECT: "inspect" }[message?.type];
+    if (operation) {
+      Promise.resolve().then(() => globalThis.ChatGPTReaderComposer[operation](message))
+        .then(result => respond({ ok: true, ...result }))
+        .catch(error => respond({ ok: false, error: error.message, code: error.code, uncertain: error.uncertain === true }));
+      return true;
+    }
+    if (message?.type !== "READ_FULL_CONVERSATION") return false;
     const onProgress = (progress) => {
       if (typeof message.readId !== "string") return;
       // Progress contains only stage/count metadata; never credentials or conversation text.

@@ -745,22 +745,41 @@
   },
   "readerMarkReadNamed": {
     "message": "标为已读：$arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerMarkUnreadNamed": {
     "message": "标为未读：$arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerMarkStaleNamed": {
     "message": "标为已读：$arg1$。内容已更新。",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerReadStale": {
     "message": "内容已更新"
   },
   "readerReadProgress": {
     "message": "已读 $arg1$/$arg2$",
-    "placeholders": { "arg1": { "content": "$1" }, "arg2": { "content": "$2" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      },
+      "arg2": {
+        "content": "$2"
+      }
+    }
   },
   "readerUnreadOnly": {
     "message": "只看未读"
@@ -770,7 +789,11 @@
   },
   "readerAnswerStatus": {
     "message": "回答：$arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerStatusRead": {
     "message": "已读"
@@ -783,7 +806,11 @@
   },
   "readerReadFailed": {
     "message": "无法保存已读状态：$arg1$",
-    "placeholders": { "arg1": { "content": "$1" } }
+    "placeholders": {
+      "arg1": {
+        "content": "$1"
+      }
+    }
   },
   "readerNoUnread": {
     "message": "这篇对话中的回答都已标为已读。"
@@ -796,5 +823,127 @@
   },
   "staticControl": {
     "message": "静态控件"
+  },
+  "chatTitle": {
+    "message": "继续提问"
+  },
+  "chatHint": {
+    "message": "向当前 ChatGPT 对话继续提问，保留阅读位置。"
+  },
+  "chatQuestion": {
+    "message": "输入问题"
+  },
+  "chatSend": {
+    "message": "发送"
+  },
+  "chatCheckReply": {
+    "message": "检查回复"
+  },
+  "chatOpenOriginal": {
+    "message": "打开 ChatGPT"
+  },
+  "chatQuote": {
+    "message": "引用原文"
+  },
+  "chatRemoveQuote": {
+    "message": "移除"
+  },
+  "chatAskSelection": {
+    "message": "引用提问"
+  },
+  "chatInvalidPrompt": {
+    "message": "请输入问题，最多 20,000 个字符。"
+  },
+  "chatWrongConversation": {
+    "message": "ChatGPT 页面已不属于当前对话。"
+  },
+  "chatComposerUnavailable": {
+    "message": "未能找到 ChatGPT 输入框。请打开原对话检查登录状态后再试。"
+  },
+  "chatBranchChanged": {
+    "message": "原对话已更新或分支已改变，请先更新对话后再提问。"
+  },
+  "chatAlreadyGenerating": {
+    "message": "ChatGPT 正在生成回答，请等待完成。"
+  },
+  "chatComposerNotEmpty": {
+    "message": "ChatGPT 输入框中已有草稿，请先在 ChatGPT 中发送或清空。"
+  },
+  "chatSendUncertain": {
+    "message": "发送结果尚未确认。请检查回复或打开原对话，勿重复发送。"
+  },
+  "chatBusy": {
+    "message": "另一个阅读器正在向此对话提问，请等待完成。"
+  },
+  "chatSharedReadOnly": {
+    "message": "分享对话仅支持阅读，请打开自己的私有对话继续提问。"
+  },
+  "chatDebuggerRequired": {
+    "message": "Chrome 未能连接 ChatGPT 输入框。请重新加载插件，如有调试权限提示请接受，发送期间请勿取消调试连接。"
+  },
+  "chatReplyReadFailed": {
+    "message": "未能读取新回答。"
+  },
+  "chatReplyTimeout": {
+    "message": "回答尚未完成，请点击「检查回复」继续等待。"
+  },
+  "chatConnecting": {
+    "message": "正在连接当前对话…"
+  },
+  "chatPreparing": {
+    "message": "正在核对对话和输入框…"
+  },
+  "chatSending": {
+    "message": "正在发送问题…"
+  },
+  "chatGenerating": {
+    "message": "ChatGPT 正在生成回答…"
+  },
+  "chatWaiting": {
+    "message": "正在等待回复…"
+  },
+  "chatDraftSaving": {
+    "message": "正在保存草稿…"
+  },
+  "chatDraftSaved": {
+    "message": "草稿已保存在本地"
+  },
+  "chatDraftFailed": {
+    "message": "草稿保存失败：$error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "chatDraftConflict": {
+    "message": "此草稿已在另一个阅读器中修改，请重新打开对话加载最新草稿。"
+  },
+  "chatQuotePrompt": {
+    "message": "我对这段对话内容有疑问："
+  },
+  "chatLatestReply": {
+    "message": "最新回答"
+  },
+  "chatViewReply": {
+    "message": "在正文中阅读回答"
+  },
+  "chatReplySaved": {
+    "message": "新问题和回答已保存在本地。"
+  },
+  "chatStorageRequired": {
+    "message": "请先将对话保存到本地，再继续提问。"
+  },
+  "chatLockUnavailable": {
+    "message": "Chrome 未能锁定本次发送，请重新打开阅读器后再试。"
+  },
+  "chatRestoreDraft": {
+    "message": "恢复草稿"
+  },
+  "chatRestoreDraftConfirm": {
+    "message": "请先到 ChatGPT 原对话确认是否收到此问题。恢复草稿后再次发送可能产生重复问题。要恢复吗？"
+  },
+  "chatInputHint": {
+    "message": "回车换行，点击「发送」提交。"
   }
 }

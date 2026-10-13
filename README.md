@@ -71,11 +71,21 @@ When the image server blocks ordinary cross-origin reads, the existing debugger 
 
 - Before opening a conversation, the page shows the URL field and your local conversation list.
 - Local version timestamps in the toolbar and conversation list show when the local snapshot was captured, including seconds, using the browser’s local time zone.
-- After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Update conversation**, **Annotations** and **Export**.
+- After opening, the panel closes and a compact toolbar shows the conversation title, message/question counts, **Conversation list**, **Update conversation**, **Annotations**, **Continue conversation** and **Export**.
 - **Conversation list** shows the link field and local conversations. **Backup & restore** stays collapsed until needed. Close the panel with **Return to reading**, Escape or a click outside it; the document remains in place.
 - **Annotations** opens the saved annotation list. To create an annotation, select text in the document and use the small selection toolbar.
 - **Export** offers HTML and PDF plus the **A4 landscape**, **Mobile reading** and **Hanwang N10 (3:4)** checkboxes. They are mutually exclusive; leave all unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
+
+## Continue a conversation while reading (v3.9)
+
+- Click **Continue conversation** to open a question box beside the document. It shares the right sidebar with **Annotations**. **Enter inserts a newline**; use the **Send** button to submit.
+- Select a passage and choose **Ask about selection** to include it in your question. Drafts and selected passages are saved locally for each conversation, restored on reopening, and included in JSON backups and storage totals. They are excluded from HTML and PDF exports.
+- Sending uses your existing ChatGPT login in this Chrome profile. It opens its own background tab, verifies the conversation and current branch, and uses ChatGPT's normal input and send controls. Existing tabs and their drafts are not edited. Chrome may briefly show the existing debugging-permission banner while the question is entered.
+- The new question and completed reply are saved to the local conversation and added to the question index. The sidebar shows the latest reply; **Read the reply in the conversation** jumps to its full version. Existing annotations and read marks are restored, new answers start unread, and the current reading position is retained.
+- Shared conversations are read-only. If the original branch has changed, use **Update conversation** first. If sending cannot be confirmed, the pending question remains saved and **Check reply** reads its result without sending again. Reopening never automatically sends a draft. Checking waits up to ten minutes; it can be repeated for a longer generation. If ChatGPT did not receive the question, check the original conversation first, then use **Restore draft** to enable manual sending again.
+
+The send workflow and failure recovery are covered by automated DOM/IndexedDB and simulated Chrome API tests. The interface, multi-line input, draft restoration and simulated reply flow were checked in an independent real Chrome tab. Actual submission to a private ChatGPT conversation has not been exercised in this release's verification.
 
 ## Message timestamps (v3.6)
 
@@ -185,6 +195,8 @@ Rendering and navigation updates through **v3.8.6** also apply to saved local co
 | `reader-reads.js` | Answer read marks, sidebar status, unread filter and export removal |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
+| `reader-chat.js` | Question sidebar, selected passages, local drafts and pending-send recovery |
+| `chat-session.js` / `chat-composer.js` | Owned background tab, branch checks, normal ChatGPT input, single-send deadline and reply retrieval |
 | `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |
 | `style.css` | Export interface, A4 and mobile reading styles |
 | `vendor/` | Bundled Markdown, math and PDF libraries, fonts, and original licenses |
@@ -193,13 +205,13 @@ The DOM adapter prefers semantic attributes such as `data-message-author-role`, 
 
 ## Permissions and data handling
 
-The extension requests `scripting`, `debugger` and host access to `chatgpt.com` and `chat.openai.com`. `debugger` is required for one-step Chrome PDF rendering and cannot be an optional permission ([Chrome permissions documentation](https://developer.chrome.com/docs/extensions/reference/api/permissions)). This is a powerful browser permission; the implementation limits it to this extension's own `print.html` tab, only while exporting a PDF, and always attempts to disconnect afterward. It does not connect to ChatGPT or other browsing tabs.
+The extension requests `scripting`, `debugger` and host access to `chatgpt.com` and `chat.openai.com`. `debugger` cannot be an optional permission ([Chrome permissions documentation](https://developer.chrome.com/docs/extensions/reference/api/permissions)). It is used for PDF rendering in the extension's own `print.html` tab and for image retrieval or entering an explicitly submitted question in its own temporary ChatGPT tab. These operations always attempt to disconnect afterward. Sending and image capture do not attach to existing user tabs. Sending rechecks the current conversation branch before clicking ChatGPT's normal send control and does not call a private message-submission API.
 
 The current ChatGPT login session is used within a ChatGPT content script. Temporary credentials stay in the reading function's memory; they are not written to disk, extension storage, HTML, PDF, or logs, and are not sent to other websites. Third-party image requests do not carry those credentials.
 
 Rendering happens locally, with no upload service. Raw HTML in Markdown is not executed, and math rendering uses `trust: false`. Offline HTML disables scripts and embeds fonts and images as data URLs. Clicking a source link still opens its website.
 
-The reader saves conversation snapshots and annotations in the extension's IndexedDB. This adds no browser permission. Snapshots contain only document fields; credentials and arbitrary response metadata are not persisted. Comment text is inserted as plain text, including after restoring a backup.
+The reader saves conversation snapshots, annotations, read marks and question drafts in the extension's IndexedDB. This adds no browser permission. Snapshots contain only document fields; credentials and arbitrary response metadata are not persisted. Comments and selected passages are inserted as plain text, including after restoring a backup. Drafts leave the reader only when the user clicks Send; local backup files also include them.
 
 ## Development and debugging
 

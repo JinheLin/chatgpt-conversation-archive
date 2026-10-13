@@ -64,7 +64,7 @@
     for (const node of path) {
       const message = node.message;
       if (["in_progress", "message_pending"].includes(message?.status)) {
-        throw new Error(t("generating"));
+        const error = new Error(t("generating")); error.code = "GENERATING"; throw error;
       }
       const role = message?.author?.role;
       if (role !== "user" && role !== "assistant") continue;
@@ -242,7 +242,7 @@
     } finally { reader.releaseLock(); }
   }
 
-  async function read(value, { onProgress = () => {}, allowImageScroll = false } = {}) {
+  async function read(value, { onProgress = () => {}, allowImageScroll = false, includeAssets = true } = {}) {
     const target = parseUrl(value);
     if (target.url !== parseUrl(location.href).url) throw new Error(t("conversationMismatch"));
     onProgress({ stage: "session" });
@@ -267,7 +267,8 @@
       }
       const data = await readJson(response, onProgress);
       onProgress({ stage: "verify" });
-      return await inlineAssets(normalize(data, target.url), headers, onProgress, { allowImageScroll });
+      const payload = normalize(data, target.url);
+      return includeAssets ? await inlineAssets(payload, headers, onProgress, { allowImageScroll }) : payload;
     } finally {
       token = null;
       delete headers.Authorization;

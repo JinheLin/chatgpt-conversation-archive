@@ -29,6 +29,8 @@
   <script src="reader-reads.js" defer></script>
   <script src="reader.js" defer></script>
   <script src="reader-workspace.js" defer></script>
+  <script src="chat-session.js" defer></script>
+  <script src="reader-chat.js" defer></script>
   <script src="print.js" defer></script>
 </head>
 <body class="pdf-print-page">
@@ -43,6 +45,7 @@
         <div id="output-actions" hidden>
           <button id="reader-update" class="button-secondary" type="button" data-i18n="readerUpdate">Update conversation</button>
           <button id="reader-toggle" class="button-secondary" type="button" aria-expanded="false" aria-controls="reader-annotations" data-i18n="readerAnnotations">Annotations</button>
+          <button id="reader-chat-toggle" class="button-secondary" type="button" aria-expanded="false" aria-controls="reader-chat" data-i18n="chatTitle">Continue conversation</button>
           <div id="export-menu" class="export-menu">
             <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
             <div id="export-formats" class="export-formats" hidden>
@@ -137,10 +140,36 @@
       </div>
       <div id="reader-annotation-list"></div>
     </aside>
+    <aside id="reader-chat" class="reader-chat" aria-labelledby="reader-chat-title" hidden>
+      <div class="reader-panel-heading">
+        <h2 id="reader-chat-title" data-i18n="chatTitle">Continue conversation</h2>
+        <button id="reader-chat-close" type="button" data-i18n="readerClose">Close</button>
+      </div>
+      <p id="reader-chat-hint" class="hint" data-i18n="chatHint">Send to the end of this ChatGPT conversation. Your reading position stays in place.</p>
+      <div id="reader-chat-quote" class="reader-chat-quote" hidden>
+        <div class="reader-chat-quote-heading"><span data-i18n="chatQuote">Quoted passage</span><button id="reader-chat-remove-quote" type="button" data-i18n="chatRemoveQuote">Remove</button></div>
+        <blockquote id="reader-chat-quote-text"></blockquote>
+      </div>
+      <form id="reader-chat-form">
+        <label for="reader-chat-input" data-i18n="chatQuestion">Your question</label>
+        <textarea id="reader-chat-input" rows="5" maxlength="20000"></textarea>
+        <p class="hint" data-i18n="chatInputHint">Enter adds a new line. Use Send to submit.</p>
+        <p id="reader-chat-draft-status" class="hint" role="status" aria-live="polite" hidden></p>
+        <div class="reader-chat-controls">
+          <button id="reader-chat-send" type="submit" data-i18n="chatSend">Send</button>
+          <button id="reader-chat-check" type="button" data-i18n="chatCheckReply" hidden>Check reply</button>
+          <button id="reader-chat-restore" type="button" data-i18n="chatRestoreDraft" hidden>Restore draft</button>
+          <a id="reader-chat-original" target="_blank" rel="noopener noreferrer" data-i18n="chatOpenOriginal">Open ChatGPT</a>
+        </div>
+      </form>
+      <p id="reader-chat-status" class="reader-chat-status" role="status" aria-live="polite" hidden></p>
+      <div id="reader-chat-replies" class="reader-chat-replies"></div>
+    </aside>
   </div>
   <div id="reader-selection" class="reader-selection" role="toolbar" aria-label="Text annotations" hidden>
     <button id="reader-highlight" type="button" data-i18n="readerHighlight">Highlight</button>
     <button id="reader-add-comment" type="button" data-i18n="readerAddComment">Comment</button>
+    <button id="reader-ask-selection" type="button" data-i18n="chatAskSelection">Ask about selection</button>
   </div>
   <style id="page-direction">@page { size: A4 portrait; }</style>
 </body>

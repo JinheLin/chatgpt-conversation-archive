@@ -34,6 +34,20 @@
     const { byteSize, ...data } = value;
     return new TextEncoder().encode(JSON.stringify(data)).byteLength;
   }
+  function cleanDraft(value) {
+    if (!value || typeof value.key !== "string" || !/^c:[a-z0-9-]+$/i.test(value.key)) invalid();
+    const result = { key: value.key, text: string(value.text || "", 20000), quote: string(value.quote || "", 5000),
+      quoteMessageId: string(value.quoteMessageId || "", 200), updatedAt: date(value.updatedAt || new Date().toISOString()) };
+    if (value.pending) {
+      const pending = value.pending;
+      result.pending = { requestId: string(pending.requestId, 200), prompt: string(pending.prompt, 26000),
+        headId: string(pending.headId, 200), startedAt: date(pending.startedAt) };
+      if (!result.pending.requestId || !result.pending.prompt.trim() || !result.pending.headId) invalid();
+      if (pending.userId) result.pending.userId = string(pending.userId, 200);
+    }
+    result.byteSize = storageBytes(result);
+    return result;
+  }
   function cleanPayload(value) {
     if (!value || !Array.isArray(value.messages) || !value.messages.length || value.messages.length > 100000) invalid();
     const sourceUrl = globalThis.ChatGPTPdfSource.parseUrl(string(value.sourceUrl, 2000)).url;
@@ -139,13 +153,21 @@
       readKeys.add(identity);
       return read;
     });
-    return { conversations, annotations, reads };
+    const draftsInput = value.drafts === undefined ? [] : value.drafts;
+    if (!Array.isArray(draftsInput) || draftsInput.length > 10000) invalid();
+    const draftKeys = new Set();
+    const drafts = draftsInput.map(entry => {
+      const draft = cleanDraft(entry);
+      if (!keys.has(draft.key) || draftKeys.has(draft.key)) invalid();
+      draftKeys.add(draft.key); return draft;
+    });
+    return { conversations, annotations, reads, drafts };
   }
   function open() {
     if (opening) return opening;
     opening = new Promise((resolve, reject) => {
       if (!globalThis.indexedDB) return reject(new Error(t("readerStorageUnavailable")));
-      const request = indexedDB.open("chatgpt-conversation-reader", 4);
+      const request = indexedDB.open("chatgpt-conversation-reader", 5);
       let failed = false;
       const fail = () => { failed = true; reject(new Error(t("readerStorageUnavailable"))); };
       request.onerror = fail;
@@ -164,6 +186,7 @@
         if (!annotations.indexNames.contains("storageSize")) annotations.createIndex("storageSize", ["conversationKey", "byteSize"]);
         const reads = db.objectStoreNames.contains("reads")
           ? tx.objectStore("reads") : db.createObjectStore("reads", { keyPath: ["conversationKey", "messageId"] });
+        if (!db.objectStoreNames.contains("drafts")) db.createObjectStore("drafts", { keyPath: "key" });
         if (!reads.indexNames.contains("conversationKey")) reads.createIndex("conversationKey", "conversationKey");
         // Existing snapshots are read once during the atomic schema upgrade.
         // Later library refreshes read metadata keys, never bodies or assets.
@@ -204,12 +227,17 @@
     });
   }
   async function listConversations() {
-    const entries = await transaction(["conversations", "annotations", "reads"], "readonly", (tx, set) => {
+    const entries = await transaction(["conversations", "annotations", "reads", "drafts"], "readonly", (tx, set) => {
       // Only small metadata keys are read; the library never loads message bodies or assets.
       const result = [];
-      const annotationSizes = new Map(), readSizes = new Map(), readCounts = new Map();
-      let pending = 3;
-      const finish = () => { if (--pending === 0) set({ result, annotationSizes, readSizes, readCounts }); };
+      const annotationSizes = new Map(), readSizes = new Map(), readCounts = new Map(), draftSizes = new Map();
+      let pending = 4;
+      const finish = () => { if (--pending === 0) set({ result, annotationSizes, readSizes, readCounts, draftSizes }); };
+      tx.objectStore("drafts").openCursor().onsuccess = event => {
+        const cursor = event.target.result;
+        if (!cursor) { finish(); return; }
+        draftSizes.set(cursor.value.key, cursor.value.byteSize || 0); cursor.continue();
+      };
       tx.objectStore("annotations").index("storageSize").openKeyCursor().onsuccess = (event) => {
         const cursor = event.target.result;
         if (!cursor) { finish(); return; }
@@ -234,7 +262,7 @@
       };
     });
     return entries.result.map((entry) => ({ ...entry,
-      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0) + (entries.readSizes.get(entry.key) || 0),
+      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0) + (entries.readSizes.get(entry.key) || 0) + (entries.draftSizes.get(entry.key) || 0),
       readCount: entries.readCounts.get(entry.key) || 0
     })).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
   }
@@ -295,8 +323,9 @@
   }
   async function deleteConversation(key) {
     if (typeof key !== "string" || !key) invalid();
-    await transaction(["conversations", "annotations", "reads"], "readwrite", (tx) => {
+    await transaction(["conversations", "annotations", "reads", "drafts"], "readwrite", (tx) => {
       tx.objectStore("conversations").delete(key);
+      tx.objectStore("drafts").delete(key);
       for (const name of ["annotations", "reads"]) {
         const records = tx.objectStore(name);
         records.index("conversationKey").openKeyCursor(key).onsuccess = (event) => {
@@ -307,6 +336,28 @@
       }
     });
     announce(key);
+  }
+  function getDraft(key) {
+    return transaction(["drafts"], "readonly", (tx, set) => {
+      tx.objectStore("drafts").get(key).onsuccess = event => set(event.target.result || null);
+    });
+  }
+  async function saveDraft(value, { expectedUpdatedAt } = {}) {
+    const entry = cleanDraft(value);
+    await transaction(["conversations", "drafts"], "readwrite", (tx, set, fail) => {
+      tx.objectStore("conversations").get(entry.key).onsuccess = event => {
+        if (!event.target.result) { fail(new Error(t("readerSnapshotRequired"))); return; }
+        const drafts = tx.objectStore("drafts");
+        drafts.get(entry.key).onsuccess = got => {
+          if (expectedUpdatedAt !== undefined && (got.target.result?.updatedAt || null) !== expectedUpdatedAt) {
+            fail(new Error(t("chatDraftConflict"))); return;
+          }
+          entry.updatedAt = new Date(Math.max(Date.now(), (got.target.result ? Date.parse(got.target.result.updatedAt) : 0) + 1)).toISOString();
+          entry.byteSize = storageBytes(entry); drafts.put(entry); set(entry);
+        };
+      };
+    });
+    announce(entry.key, "drafts"); return entry;
   }
   async function getReads(key) {
     if (typeof key !== "string" || !key) invalid();
@@ -367,16 +418,17 @@
     return removed;
   }
   async function backup() {
-    return transaction(["conversations", "annotations", "reads"], "readonly", (tx, set) => {
+    return transaction(["conversations", "annotations", "reads", "drafts"], "readonly", (tx, set) => {
       const result = { format: FORMAT, version: 1, createdAt: new Date().toISOString() };
       tx.objectStore("conversations").getAll().onsuccess = (event) => { result.conversations = event.target.result; set(result); };
       tx.objectStore("annotations").getAll().onsuccess = (event) => { result.annotations = event.target.result; set(result); };
       tx.objectStore("reads").getAll().onsuccess = (event) => { result.reads = event.target.result; set(result); };
+      tx.objectStore("drafts").getAll().onsuccess = event => { result.drafts = event.target.result; set(result); };
     });
   }
   async function restore(value) {
     const data = validateBackup(value);
-    await transaction(["conversations", "annotations", "reads"], "readwrite", (tx, set, fail) => {
+    await transaction(["conversations", "annotations", "reads", "drafts"], "readwrite", (tx, set, fail) => {
       const conversations = tx.objectStore("conversations"), annotations = tx.objectStore("annotations"), reads = tx.objectStore("reads");
       for (const entry of data.conversations) {
         entry.byteSize = storageBytes(entry);
@@ -401,11 +453,18 @@
           if (!old || entry.updatedAt > old.updatedAt) reads.put(entry);
         };
       }
+      for (const entry of data.drafts) {
+        tx.objectStore("drafts").get(entry.key).onsuccess = event => {
+          const old = event.target.result;
+          if (!old || entry.updatedAt > old.updatedAt) tx.objectStore("drafts").put(entry);
+        };
+      }
     });
     for (const entry of data.conversations) announce(entry.key);
     return { conversations: data.conversations.length, annotations: data.annotations.filter((entry) => !entry.deletedAt).length };
   }
   globalThis.ChatGPTReaderStore = { keyFor, getConversation, listConversations, saveConversation, deleteConversation,
     getAnnotations, saveAnnotation, deleteAnnotation, getReads, setReads, pruneReads, backup, restore, validateBackup, MAX_BACKUP_BYTES,
+    getDraft, saveDraft,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); } };
 })();

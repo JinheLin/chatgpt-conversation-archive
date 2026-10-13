@@ -155,7 +155,7 @@
             draft.pending = pending; dirty = true;
             await save(); controls();
           },
-          onState: state => status(t({ connecting: "chatConnecting", preparing: "chatPreparing", sending: "chatSending",
+          onState: state => status(t({ connecting: "chatConnecting", preparing: "chatPreparing", sending: "chatSending", recovering: "chatRecovering",
             generating: "chatGenerating", waiting: "chatWaiting" }[state]))
         });
         // From here onward, a storage/render failure is still a confirmed send.

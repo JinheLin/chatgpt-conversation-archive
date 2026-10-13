@@ -135,6 +135,19 @@ test('restoring an uncertain draft requires confirmation and never sends on its 
   assert.equal(sends, 1);
 });
 
+test('an already submitted question uses recovery feedback and clears the draft only after saving its reply', async t => {
+  const app = await open(t);
+  app.w.ChatGPTReaderChatSession.send = async (_, pending, options) => {
+    await options.beforeCommit(); options.onState('recovering');
+    assert.match(app.get('reader-chat-status').textContent, /already in ChatGPT/);
+    return result(pending.prompt);
+  };
+  type(app, 'Already sent question'); send(app);
+  await waitFor(() => app.get('reader-chat-status').textContent.includes('saved locally'));
+  assert.equal(app.main.querySelectorAll('.pdf-message').length, 4);
+  assert.equal(app.get('reader-chat-input').value, '');
+});
+
 test('draft storage failures prevent sending and retain the question', async t => {
   const app = await open(t); let sends = 0;
   app.w.ChatGPTReaderStore.saveDraft = async () => { throw new Error('Disk full'); };

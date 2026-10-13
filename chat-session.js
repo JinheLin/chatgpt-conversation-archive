@@ -3,7 +3,7 @@
   "use strict";
   const { t } = globalThis.ChatGPTPdfI18n;
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const scripts = ["i18n.js", "layout-markdown.js", "conversation-images.js", "dom-adapter.js", "conversation-source.js", "chat-composer.js", "content.js"];
+  const scripts = ["i18n.js", "layout-markdown.js", "conversation-images.js", "dom-adapter.js", "conversation-source.js", "chat-text.js", "chat-composer.js", "content.js"];
   let busy = false;
   function error(key, uncertain = false) { const result = new Error(t(key)); result.uncertain = uncertain; return result; }
   async function send(payload, pending, options = {}) {
@@ -42,7 +42,7 @@
           if (!matchesSource(current.url)) throw error("chatWrongConversation", committed);
           return;
         }
-        if (Date.now() >= deadline) throw error("chatComposerUnavailable", committed);
+        if (Date.now() >= deadline) throw error("chatConversationLoadTimeout", committed);
         await sleep(loadInterval);
       }
     }
@@ -72,20 +72,23 @@
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: scripts });
       if (!checking) {
         onState("preparing");
-        await request("CHAT_PREPARE");
-        target = { tabId: tab.id };
-        if (!chrome.debugger) throw error("chatDebuggerRequired");
-        try { await chrome.debugger.attach(target, "1.3"); }
-        catch (_) { throw error("chatDebuggerRequired"); }
-        attached = true;
-        globalThis.addEventListener("pagehide", detachOnLeave);
-        await verifyTab();
-        await chrome.debugger.sendCommand(target, "Input.insertText", { text: pending.prompt });
+        const ready = await request("CHAT_PREPARE");
+        if (ready.alreadySubmitted) pending.userId = ready.userId;
+        else if (!ready.alreadyEntered) {
+          target = { tabId: tab.id };
+          if (!chrome.debugger) throw error("chatDebuggerRequired");
+          try { await chrome.debugger.attach(target, "1.3"); }
+          catch (_) { throw error("chatDebuggerRequired"); }
+          attached = true;
+          globalThis.addEventListener("pagehide", detachOnLeave);
+          await verifyTab();
+          await chrome.debugger.sendCommand(target, "Input.insertText", { text: pending.prompt });
+        }
         await beforeCommit();
-        onState("sending");
+        onState(ready.alreadySubmitted ? "recovering" : "sending");
         committed = true;
-        await request("CHAT_COMMIT");
-        await chrome.debugger.detach(target); attached = false;
+        if (!ready.alreadySubmitted) await request("CHAT_COMMIT");
+        if (attached) { await chrome.debugger.detach(target); attached = false; }
       }
       const until = Date.now() + timeout;
       while (Date.now() < until) {
@@ -99,7 +102,7 @@
           const head = next.messages.findIndex(item => item.id === pending.headId);
           const added = next.messages.slice(head + 1);
           if (next.sourceUrl !== source.url || head < 0 || added.find(item => item.role === "user")?.id !== state.userId ||
-              added.find(item => item.role === "user")?.text.trim() !== pending.prompt.trim() ||
+              !globalThis.ChatGPTReaderChatText.same(added.find(item => item.role === "user")?.text, pending.prompt) ||
               added.filter(item => item.role === "user").length !== 1) throw error("chatBranchChanged", true);
           if (response.missingImages) await globalThis.ChatGPTImageResources?.capture(tab.id, source.url, next).catch(() => {});
           globalThis.ChatGPTConversationImages.preserve(next, payload);
@@ -119,7 +122,14 @@
       globalThis.removeEventListener("pagehide", detachOnLeave);
       // A submitted generation may still be running. Keep its tab on failure;
       // the user can inspect the original conversation, without another send.
-      if (tab && (checking || !committed || complete)) await chrome.tabs.remove(tab.id).catch(() => {});
+      if (tab && (checking || !committed || complete)) {
+        // A user may select or repurpose the temporary tab while we work.
+        // Close only a still-background tab at the exact requested conversation.
+        const current = await chrome.tabs.get(tab.id).catch(() => null);
+        if (current && !current.active && matchesSource(current.pendingUrl || current.url)) {
+          await chrome.tabs.remove(tab.id).catch(() => {});
+        }
+      }
       busy = false;
     }
   }

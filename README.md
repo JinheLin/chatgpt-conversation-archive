@@ -79,6 +79,8 @@ When the image server blocks ordinary cross-origin reads, the existing debugger 
 
 ## Continue a conversation while reading (v3.9)
 
+v3.9.2 handles rich-editor paragraph/blank-line conversion, replaced input nodes and delayed send-button readiness. A retry reuses an identical unsent question without inserting it again, while other existing drafts remain protected. An identical question already posted after the saved snapshot is read back instead of resubmitted. Input-write, send-button and page-load failures now have distinct messages. Temporary tabs selected or navigated elsewhere by the user are left open.
+
 v3.9.1 waits for the background conversation page to finish navigating before checking its address. An initially missing or empty tab URL no longer produces a misleading invalid-link error.
 
 - Click **Continue conversation** to open a question box beside the document. It shares the right sidebar with **Annotations**. **Enter inserts a newline**; use the **Send** button to submit.
@@ -198,6 +200,7 @@ Rendering and navigation updates through **v3.8.6** also apply to saved local co
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `reader-chat.js` | Question sidebar, selected passages, local drafts and pending-send recovery |
+| `chat-text.js` | Shared rich-editor text extraction and question/reply comparison |
 | `chat-session.js` / `chat-composer.js` | Owned background tab, branch checks, normal ChatGPT input, single-send deadline and reply retrieval |
 | `print.html` / `print.js` | Reader entry, local conversation library, update/backup controls, progress and HTML/PDF export |
 | `style.css` | Export interface, A4 and mobile reading styles |

@@ -945,5 +945,17 @@
   },
   "chatInputHint": {
     "message": "回车换行，点击「发送」提交。"
+  },
+  "chatInputMismatch": {
+    "message": "问题未完整写入 ChatGPT 输入框，请重试。原问题仍保存在本地。"
+  },
+  "chatSendButtonUnavailable": {
+    "message": "问题已写入 ChatGPT，但发送按钮尚未就绪，请稍后重试。"
+  },
+  "chatConversationLoadTimeout": {
+    "message": "ChatGPT 对话页面加载超时。请打开原对话检查网络和登录状态后再试。"
+  },
+  "chatRecovering": {
+    "message": "同一条问题已在 ChatGPT 中，正在同步回复…"
   }
 }

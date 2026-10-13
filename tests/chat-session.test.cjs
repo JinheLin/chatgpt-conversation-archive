@@ -115,9 +115,9 @@ test('missing URLs without pendingUrl are waited for, and unavailable metadata t
   await app.send({ loadInterval: 0 });
   app.calls.length = 0;
   app.w.chrome.tabs.get = async () => ({ id: 90, status: 'complete' });
-  await assert.rejects(app.send({ loadTimeout: 10, loadInterval: 0 }), /Could not find the ChatGPT input/);
+  await assert.rejects(app.send({ loadTimeout: 10, loadInterval: 0 }), /conversation page did not finish loading/);
   assert.equal(app.calls.filter(call => ['inject', 'input', 'CHAT_COMMIT'].includes(call[0])).length, 0);
-  assert.equal(app.calls.filter(call => call[0] === 'remove').length, 1);
+  assert.equal(app.calls.filter(call => call[0] === 'remove').length, 0); // Its URL cannot be confirmed.
 });
 
 test('a redirect or a missing URL after loading remains blocked without a misleading input-link error', async t => {
@@ -131,4 +131,43 @@ test('a redirect or a missing URL after loading remains blocked without a mislea
     ? { id: 90, status: 'complete', url: payload().sourceUrl } : { id: 90, status: 'complete' };
   await assert.rejects(app.send(), /no longer matches/);
   assert.equal(app.calls.filter(call => call[0] === 'CHAT_COMMIT').length, 0);
+});
+
+test('an already entered question is not inserted a second time and normalized reply text is accepted', async t => {
+  const app = setup(t, (message, next) => {
+    if (message.type === 'CHAT_PREPARE') return { ok: true, alreadyEntered: true };
+    if (message.type === 'READ_FULL_CONVERSATION') {
+      next.messages[2].text = 'A quoted passage\nA follow-up question'; return { ok: true, payload: next };
+    }
+  });
+  app.pending.prompt = 'A quoted passage\n\nA follow-up question';
+  const result = await app.send();
+  assert.equal(result.payload.messages.length, 4);
+  assert.equal(app.calls.filter(call => call[0] === 'input').length, 0);
+  assert.equal(app.calls.filter(call => call[0] === 'attach').length, 0);
+  assert.equal(app.calls.filter(call => call[0] === 'CHAT_COMMIT').length, 1);
+});
+
+test('an already submitted matching question is read and saved with no debugger or submit action', async t => {
+  const app = setup(t, message => message.type === 'CHAT_PREPARE' ? { ok: true, alreadySubmitted: true, userId: 'user-2' } : undefined);
+  const states = []; let persisted = false;
+  const result = await app.send({ onState: state => states.push(state), beforeCommit: async () => { persisted = true; } });
+  assert.equal(result.userId, 'user-2'); assert.equal(persisted, true); assert.ok(states.includes('recovering'));
+  assert.equal(app.calls.filter(call => ['attach', 'input', 'CHAT_COMMIT'].includes(call[0])).length, 0);
+});
+
+test('cleanup leaves selected, navigated and pending-navigation tabs open', async t => {
+  for (const takeover of [
+    { active: true, url: payload().sourceUrl },
+    { active: false, url: 'https://chatgpt.com/c/a-different-conversation' },
+    { active: false, url: payload().sourceUrl, pendingUrl: 'https://chatgpt.com/c/a-different-conversation' }
+  ]) {
+    let current = { id: 90, status: 'complete', active: false, url: payload().sourceUrl };
+    const app = setup(t, (message, next) => {
+      if (message.type === 'READ_FULL_CONVERSATION') { current = { ...current, ...takeover }; return { ok: true, payload: next }; }
+    });
+    app.w.chrome.tabs.get = async () => current;
+    await app.send();
+    assert.equal(app.calls.filter(call => call[0] === 'remove').length, 0);
+  }
 });

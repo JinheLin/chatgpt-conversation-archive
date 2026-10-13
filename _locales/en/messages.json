@@ -945,5 +945,17 @@
   },
   "chatInputHint": {
     "message": "Enter adds a new line. Use Send to submit."
+  },
+  "chatInputMismatch": {
+    "message": "The question was not fully written into the ChatGPT input. Try again; your question is still saved locally."
+  },
+  "chatSendButtonUnavailable": {
+    "message": "The question is in ChatGPT, but its Send button is not ready. Try again shortly."
+  },
+  "chatConversationLoadTimeout": {
+    "message": "The ChatGPT conversation page did not finish loading. Open the original conversation to check your connection and login, then try again."
+  },
+  "chatRecovering": {
+    "message": "This question is already in ChatGPT. Reading its reply…"
   }
 }

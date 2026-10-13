@@ -578,6 +578,74 @@ test('range loops and array membership accept only bounded data operations', () 
   }
 });
 
+test('nested literal array slices render proportional Pack segments with alternating colors', () => {
+  const { render } = renderer();
+  const { JSDOM } = require('jsdom');
+  const html = render(require('./fixtures/pack-layout.cjs'));
+  const dom = new JSDOM(html), doc = dom.window.document;
+  const rows = [...doc.querySelectorAll('.archive-layout-sized-row')];
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows.map(row => [...row.children].map(node => node.textContent)), [
+    ['0–1000', '1000–2000', '2000–3000'], ['0–1000', '1000–2000', '2000–3000'],
+    ['0–600', '600–1400', '1400–2300', '2300–3000']
+  ]);
+  assert.deepEqual([...rows[2].children].map(node => node.style.flexGrow), ['600', '800', '900', '700']);
+  assert.deepEqual([...rows[2].children].map(node => node.style.backgroundColor), [
+    'rgba(75, 130, 190, 0.24)', 'rgba(75, 130, 190, 0.42)', 'rgba(75, 130, 190, 0.24)', 'rgba(75, 130, 190, 0.42)'
+  ]);
+  assert.equal(rows[0].firstElementChild.style.justifyContent, 'center');
+  assert.equal(rows[0].firstElementChild.style.borderRadius, '1px');
+  assert.equal(rows[0].querySelector('.archive-layout-text').style.fontSize, '0.65rem');
+  assert.doesNotMatch(html, /#each|@body|\.slice|\{c\.|&lt;box|<code>/);
+  dom.window.close();
+});
+
+test('slicing supports zero, one or two integer indexes, chained slices and unchanged code examples', () => {
+  const { render } = renderer();
+  for (const [expression, values] of [
+    ['[0,1,2,3].slice()', ['0', '1', '2', '3']], ['[0,1,2,3].slice(1)', ['1', '2', '3']],
+    ['[0,1,2,3].slice(1,3)', ['1', '2']], ['[0,1,2,3].slice(-2)', ['2', '3']],
+    ['[0,1,2,3].slice(1).slice(0,1)', ['1']], ['[0,1,2,3].slice(3,1)', []]
+  ]) {
+    const html = render(`<box>{#each ${expression} as n}<text>{n}</text>{/each}</box>`);
+    const { JSDOM } = require('jsdom'), dom = new JSDOM(html);
+    assert.deepEqual([...dom.window.document.querySelectorAll('.archive-layout-text')].map(node => node.textContent), values);
+    dom.window.close();
+  }
+  assert.match(render('```text\n<box>{#each [0,1].slice(1) as n}<text>{n}</text>{/each}</box>\n```'), /\[0,1\]\.slice\(1\)/);
+});
+
+test('slice and remainder expressions reject arbitrary calls, invalid indexes and non-finite results', () => {
+  const { render } = renderer();
+  for (const expression of ['[0,1].slice(evil())', '[0,1].slice("1")', '[0,1].slice(0.5)',
+    '[0,1].slice(0,1,2)', '[0,1].slice(1000001)', '[0,1].slice(1).constructor',
+    '[0,1].map(evil)', 'globalThis.data.slice(1)', '[0,1].slice(1).push(2)']) {
+    assert.match(render(`<box>{#each ${expression} as n}<text>{n}</text>{/each}</box>`), /#each/);
+  }
+  for (const expression of ['1%0', '1/0', '"1"%2']) {
+    assert.doesNotMatch(render(`<box background={${expression}===0?"#fff":"#000"}>Safe</box>`), /background-color:/);
+  }
+  assert.doesNotMatch(render('<box flex={1000001}>Safe</box>'), /flex:/);
+});
+
+test('saved conversations and offline exports preserve sliced Pack layouts without refetching or changing the transcript', async t => {
+  const value = payload('Compare pack boundaries', '## Pack layout\n\n' + require('./fixtures/pack-layout.cjs') + '\n\nEnd of answer.');
+  const original = JSON.stringify(value), app = fixture({ initial: value.sourceUrl });
+  t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(value); await app.start();
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.main.querySelectorAll('.archive-layout-sized-row > .archive-layout-box').length, 10);
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  const doc = new app.w.DOMParser().parseFromString(html, 'text/html');
+  assert.equal(doc.querySelectorAll('.archive-layout-sized-row > .archive-layout-box').length, 10);
+  assert.match(doc.querySelector('.pdf-message-body').textContent + doc.body.textContent, /2300–3000/);
+  assert.match(doc.body.textContent, /End of answer/);
+  assert.equal(JSON.stringify(value), original);
+});
+
 test('nested attribute objects are data only and unknown fields cannot inject CSS', () => {
   const { render } = renderer();
   const html = render('<box radius={{topLeft:"sm",bottomRight:"url(evil)",bad:"red;position:fixed"}} height="99999px" width="72px">safe</box>');

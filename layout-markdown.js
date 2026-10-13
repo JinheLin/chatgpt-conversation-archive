@@ -170,7 +170,7 @@
 
   // A data-only expression grammar: numbers, strings, loop data, arithmetic,
   // comparisons and ternaries. Only own literal fields and array indexes can be
-  // read, plus membership in literal arrays; no arbitrary calls, prototype access,
+  // read, plus membership and bounded slices of literal arrays; no arbitrary calls, prototype access,
   // assignment or JavaScript evaluation.
   function valueOf(source, scope) {
     if (source.length > 1000) return null;
@@ -178,16 +178,16 @@
     let pos = 0, cursor = 0;
     while (pos < source.length) {
       if (/\s/.test(source[pos])) { pos++; continue; }
-      if (source[pos] === "[" && (!tokens.length || /^(?:\(|\?|:|===|!==|==|!=|<=|>=|[+*/<>!\-])$/.test(tokens.at(-1)))) {
+      if (source[pos] === "[" && (!tokens.length || /^(?:\(|,|\?|:|===|!==|==|!=|<=|>=|[+*/%<>!\-])$/.test(tokens.at(-1)))) {
         const data = literalData(source, pos);
         if (!data || !Array.isArray(data.value)) return null;
         tokens.push({ literal: data.value }); pos = data.end; continue;
       }
-      const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|&&|\|\||[+*/<>()?\[\]:!.\-])/.exec(source.slice(pos));
+      const token = /^(?:\d+(?:\.\d+)?|\.\d+|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[a-zA-Z_]\w*|===|!==|==|!=|<=|>=|&&|\|\||[+*/%<>()?,\[\]:!.\-])/.exec(source.slice(pos));
       if (!token) return null;
       tokens.push(token[0]); pos += token[0].length;
     }
-    const precedence = { "||": 1, "&&": 2, "===": 3, "!==": 3, "==": 3, "!=": 3, "<": 4, ">": 4, "<=": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6 };
+    const precedence = { "||": 1, "&&": 2, "===": 3, "!==": 3, "==": 3, "!=": 3, "<": 4, ">": 4, "<=": 4, ">=": 4, "+": 5, "-": 5, "*": 6, "/": 6, "%": 6 };
     function expression(min = 0, depth = 0) {
       if (depth > MAX_DEPTH) throw new Error("Expression nesting limit");
       const token = tokens[cursor++];
@@ -214,7 +214,22 @@
         if (access === "." && key === "length" && (Array.isArray(value) || typeof value === "string")) {
           value = value.length; continue;
         }
-        // A single data operation on literal arrays, not arbitrary method calls.
+        // Copy a bounded range from already-parsed data. Only integer indexes
+        // are accepted; callbacks and methods supplied by the source never run.
+        if (access === "." && key === "slice" && Array.isArray(value) && tokens[cursor] === "(") {
+          if (value.length > 200) throw new Error("Array slice limit");
+          cursor++;
+          const indexes = [];
+          if (tokens[cursor] !== ")") {
+            indexes.push(expression(0, depth + 1));
+            if (tokens[cursor] === ",") { cursor++; indexes.push(expression(0, depth + 1)); }
+          }
+          if (tokens[cursor++] !== ")" || !indexes.every(index => Number.isSafeInteger(index) && Math.abs(index) <= 1000000)) {
+            throw new Error("Invalid literal slice");
+          }
+          value = value.slice(...indexes); continue;
+        }
+        // Membership in literal arrays, not arbitrary method calls.
         if (access === "." && key === "includes" && Array.isArray(value) && tokens[cursor] === "(") {
           cursor++;
           const needle = expression(0, depth + 1);
@@ -231,9 +246,10 @@
       }
       while ((precedence[tokens[cursor]] || 0) > min) {
         const op = tokens[cursor++], right = expression(precedence[op], depth + 1);
-        if (["+", "-", "*", "/"].includes(op)) {
+        if (["+", "-", "*", "/", "%"].includes(op)) {
           if (typeof value !== "number" || typeof right !== "number") throw new Error("Numeric operands required");
-          value = op === "+" ? value + right : op === "-" ? value - right : op === "*" ? value * right : value / right;
+          value = op === "+" ? value + right : op === "-" ? value - right : op === "*" ? value * right : op === "/" ? value / right : value % right;
+          if (!Number.isFinite(value)) throw new Error("Non-finite arithmetic");
         } else if (op === "&&" || op === "||") value = op === "&&" ? value && right : value || right;
         else value = op === "<" ? value < right : op === ">" ? value > right : op === "<=" ? value <= right : op === ">=" ? value >= right :
           ["===", "=="].includes(op) ? value === right : value !== right;
@@ -273,13 +289,15 @@
       const open = /^\{#each\s+/.exec(source.slice(pos));
       if (!open) return null;
       const data = loopItems(source, pos + open[0].length);
-      const reference = !data && /^([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*|\[[^\]\n]{1,128}\])*)/.exec(source.slice(pos + open[0].length));
-      if (!data && !reference) return null;
-      const end = data?.end || pos + open[0].length + reference[0].length;
-      const binding = /^\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(end));
-      if (!binding) return null;
-      const content = childrenAt(end + binding[0].length, depth, inSvg, "each");
-      return content && { name: "each", svg: inSvg, items: data?.items, reference: reference?.[0], variable: binding[1], index: binding[2], ...content };
+      const binding = data && /^\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(data.end));
+      // The expression is interpreted by valueOf at render time. Capturing it
+      // here does not execute calls or allow access outside the literal scope.
+      const header = !binding && /^([^{}\n]{1,1000}?)\s+as\s+([a-zA-Z_]\w*)(?:\s*,\s*([a-zA-Z_]\w*))?\s*\}/.exec(source.slice(pos + open[0].length));
+      if (!binding && !header) return null;
+      const end = binding ? data.end + binding[0].length : pos + open[0].length + header[0].length;
+      const content = childrenAt(end, depth, inSvg, "each");
+      return content && { name: "each", svg: inSvg, items: binding ? data.items : undefined,
+        reference: header?.[1], variable: binding ? binding[1] : header[2], index: binding ? binding[2] : header[3], ...content };
     }
     function childrenAt(pos, depth, inSvg, closing) {
       let cursor = pos, textStart = cursor;
@@ -378,6 +396,9 @@
     const styles = [];
     if (attrs.border === "true") classes.push("archive-layout-border");
     if (node.name === "button" && attrs.variant === "outline") classes.push("archive-layout-outline");
+    if (node.name === "row" && /^\d{1,4}(?:px)?$/.test(attrs.height) && parseFloat(attrs.height) <= 2000) {
+      classes.push("archive-layout-sized-row");
+    }
     if (node.name === "box" && attrs.clip === "true" && attrs.radius === "full" &&
         /^\d(?:px)?$/.test(attrs.height) && parseFloat(attrs.height) <= 8) classes.push("archive-layout-progress-track");
     if (attrs.background === "surface-secondary") classes.push("archive-layout-surface-secondary");
@@ -386,10 +407,10 @@
     if (["secondary", "tertiary"].includes(attrs.color)) classes.push("archive-layout-secondary");
     else if (safeColor(attrs.color)) styles.push(`color:${safeColor(attrs.color)}`);
     const choices = {
-      radius: { none: "0", xs: "2px", sm: "4px", md: "6px", lg: "8px", xl: "12px", full: "9999px" },
+      radius: { none: "0", "2xs": "1px", xs: "2px", sm: "4px", md: "6px", lg: "8px", xl: "12px", full: "9999px" },
       align: { left: "left", start: "left", center: "center", right: "right", end: "right" },
       weight: { normal: "400", regular: "400", medium: "500", semibold: "600", bold: "700" },
-      size: { "2xs": ".7rem", xs: ".8rem", sm: ".9rem", md: "1rem", lg: "1.125rem", xl: "1.25rem", "2xl": "1.5rem" }
+      size: { "3xs": ".65rem", "2xs": ".7rem", xs: ".8rem", sm: ".9rem", md: "1rem", lg: "1.125rem", xl: "1.25rem", "2xl": "1.5rem" }
     };
     const properties = { radius: "border-radius", align: "text-align", weight: "font-weight", size: "font-size" };
     for (const [key, values] of Object.entries(choices)) {
@@ -402,13 +423,13 @@
       }
     }
     if (Object.hasOwn(choices.align, attrs.textAlign)) styles.push(`text-align:${choices.align[attrs.textAlign]}`);
-    if (node.name === "row") {
+    if (["row", "box", "grid-item"].includes(node.name)) {
       const align = { start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" };
       const justify = { start: "flex-start", center: "center", end: "flex-end", between: "space-between", around: "space-around" };
       if (Object.hasOwn(align, attrs.align)) styles.push(`align-items:${align[attrs.align]}`);
       if (Object.hasOwn(justify, attrs.justify)) styles.push(`justify-content:${justify[attrs.justify]}`);
     }
-    if (/^\d(?:\.\d{1,2})?$/.test(attrs.flex) && Number(attrs.flex) <= 6) styles.push(`flex:${attrs.flex} 1 0`);
+    if (/^\d{1,7}(?:\.\d{1,2})?$/.test(attrs.flex) && Number(attrs.flex) <= 1000000) styles.push(`flex:${attrs.flex} 1 0`);
     for (const key of ["width", "height"]) {
       if (/^\d{1,4}(?:px)?$/.test(attrs[key]) && parseFloat(attrs[key]) <= 2000) styles.push(`${key}:${parseFloat(attrs[key])}px`);
       else if (/^\d{1,3}(?:\.\d{1,2})?%$/.test(attrs[key]) && parseFloat(attrs[key]) <= 100) styles.push(`${key}:${attrs[key]}`);

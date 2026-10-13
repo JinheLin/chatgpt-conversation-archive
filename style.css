@@ -179,6 +179,7 @@
   display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
 .pdf-message-body .archive-layout-row > .archive-layout-box { flex: 0 1 auto; }
+.pdf-message-body .archive-layout-sized-row > .archive-layout-box { align-self: stretch; }
 .pdf-message-body .archive-layout-row > .archive-async-image { margin: 0; align-self: auto; }
 .pdf-message-body .archive-layout-form, .pdf-message-body .archive-layout-radio-group {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px);
@@ -191,6 +192,7 @@
   .pdf-message-body .archive-layout-row:has(> .archive-layout-checkbox) {
     break-inside: avoid-page; page-break-inside: avoid;
   }
+  .pdf-message-body .archive-layout-sized-row { break-inside: avoid-page; page-break-inside: avoid; }
 }
 .pdf-message-body .archive-control-mark {
   position: relative; display: inline-flex; flex: none; width: 19px; height: 19px;

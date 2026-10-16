@@ -175,6 +175,33 @@
   gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
 .pdf-message-body .archive-layout-text, .pdf-message-body .archive-layout-caption { display: block; }
+.pdf-message-body .archive-layout-list {
+  display: flex; flex-direction: column; gap: var(--archive-layout-gap);
+  --archive-list-item-gap: var(--archive-layout-gap);
+  counter-reset: archive-list-step; list-style: none;
+  margin: .45em 0 .8em; padding: var(--archive-layout-padding);
+}
+.pdf-message-body .archive-layout-list > .archive-layout-list-item {
+  position: relative; display: block; counter-increment: archive-list-step;
+  padding: 0 0 0 2.5em; min-height: 1.8em;
+}
+.pdf-message-body .archive-layout-list > .archive-layout-list-item::before {
+  position: absolute; top: 0; left: 0; display: flex; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 1.8em; height: 1.8em; border-radius: 50%;
+  background: #f3f6f5; border: 1px solid #ccd2d5; font-variant-numeric: tabular-nums;
+  font-size: .9em; line-height: 1; color: #202124;
+}
+.pdf-message-body .archive-layout-marker-number > .archive-layout-list-item::before { content: counter(archive-list-step); }
+.pdf-message-body .archive-layout-marker-bullet > .archive-layout-list-item::before { content: "•"; }
+.pdf-message-body .archive-layout-marker-none > .archive-layout-list-item { padding-left: 0; }
+.pdf-message-body .archive-layout-connector-solid { --archive-list-connector: solid; }
+.pdf-message-body .archive-layout-connector-dashed { --archive-list-connector: dashed; }
+.pdf-message-body .archive-layout-connector-dotted { --archive-list-connector: dotted; }
+.pdf-message-body .archive-layout-list:is(.archive-layout-connector-solid, .archive-layout-connector-dashed, .archive-layout-connector-dotted):not(.archive-layout-marker-none) > .archive-layout-list-item:not(:last-child)::after {
+  content: ""; position: absolute; left: .8em; top: 1.8em;
+  bottom: calc(0px - var(--archive-list-item-gap)); border-left: 1px var(--archive-list-connector) #ccd2d5;
+}
+.pdf-message-body .archive-layout-list-item > p + p { margin-top: .45em; }
 .pdf-message-body .archive-layout-row {
   display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
@@ -267,6 +294,7 @@
   .pdf-message-body pre { overflow: visible; break-inside: avoid-page; page-break-inside: avoid; }
   .pdf-message-body .katex-display { break-inside: avoid; }
   .pdf-message-body .archive-layout { break-inside: avoid-page; page-break-inside: avoid; }
+  .pdf-message-body .archive-layout-list { break-inside: auto; page-break-inside: auto; }
   .pdf-message-body .archive-async-image { break-after: avoid-page; page-break-after: avoid; }
   .pdf-message-body .archive-chart { break-inside: avoid-page; page-break-inside: avoid; }
 }

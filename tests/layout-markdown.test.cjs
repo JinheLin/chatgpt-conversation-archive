@@ -19,6 +19,94 @@ function renderer() {
   return { md, render: source => md.render(context.ChatGPTPdfExporter.preserveDiagrams(source)) };
 }
 
+test('numbered transfer steps render as a connected list with prose instead of leaked tags or indented code', () => {
+  const { render } = renderer();
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/transfer-list-layout.md'), 'utf8');
+  const { JSDOM } = require('jsdom');
+  for (const input of [source, source.replace(/<(\/?)(list|list-item)\b/g, (_, slash, name) => `<${slash}${name.toUpperCase()}`)]) {
+    const dom = new JSDOM(render(input)), doc = dom.window.document;
+    const list = doc.querySelector('ol.archive-layout-list');
+    assert.ok(list);
+    assert.ok(list.classList.contains('archive-layout-marker-number'));
+    assert.ok(list.classList.contains('archive-layout-connector-solid'));
+    assert.equal(list.style.getPropertyValue('--archive-layout-gap'), '12px');
+    assert.deepEqual([...list.children].map(node => node.tagName), ['LI', 'LI', 'LI', 'LI', 'LI']);
+    assert.deepEqual([...list.children].map(node => node.querySelector('strong').textContent), [
+      '准备 Transfer', '建立 Source Fence', '记录两侧 Transfer 状态', '补齐目标端 Tablet 数据', '完成 Transfer'
+    ]);
+    assert.match(list.children[2].textContent, /START_TRANSFER_OUT.*START_TRANSFER_IN/s);
+    assert.match(list.children[3].textContent, /复用或复制 Tablet 数据文件/);
+    assert.equal(list.querySelector('pre'), null);
+    assert.doesNotMatch(doc.body.textContent, /<\/?(?:list|list-item)\b/);
+    assert.deepEqual([...list.querySelectorAll('code')].map(node => node.textContent), ['Transfer SCN', 'START_TRANSFER_OUT', 'START_TRANSFER_IN']);
+    dom.window.close();
+  }
+});
+
+test('layout lists retain nested markers, loops and conditional steps without invalid wrappers', () => {
+  const { render } = renderer(), { JSDOM } = require('jsdom');
+  const dom = new JSDOM(render('<list marker="number" connector="dashed">{#each ["First","Second"] as label}<list-item>**{label}**<list marker="bullet" connector="dotted"><list-item>Detail</list-item></list></list-item>{/each}{#if false}<list-item>Archived detail</list-item>{/if}</list>'));
+  const list = dom.window.document.querySelector('ol');
+  assert.equal(list.children.length, 3);
+  assert.ok([...list.children].every(node => node.tagName === 'LI'));
+  assert.deepEqual([...list.querySelectorAll('strong')].map(node => node.textContent), ['First', 'Second']);
+  assert.equal(list.querySelectorAll('ul.archive-layout-marker-bullet.archive-layout-connector-dotted').length, 2);
+  assert.equal(list.lastElementChild.textContent.trim(), 'Archived detail');
+  assert.doesNotMatch(list.outerHTML, /archive-static-expanded|#each|#if/);
+  const inline = new JSDOM(render('Before <list marker="none"><list-item>Detail</list-item></list> after.'));
+  assert.ok(inline.window.document.querySelector('p > span.archive-layout-marker-none[role="list"] > span[role="listitem"]'));
+  assert.equal(inline.window.document.querySelector('p ol, p ul, p li'), null);
+  inline.window.close(); dom.window.close();
+});
+
+test('lists reject malformed structures and discard executable presentation attributes', () => {
+  const { render } = renderer();
+  for (const source of ['<list-item>Orphan</list-item>', '<list>Uncontained text</list>',
+    '<list><box>Missing item</box></list>', '<list><list-item>Unclosed</list>']) {
+    const html = render(source);
+    assert.match(html, /&lt;list/);
+    assert.doesNotMatch(html, /<(?:ol|ul|li)\b|archive-layout-list/);
+  }
+  const html = render('<list marker="number" connector="solid" onclick="evil()" style="position:fixed"><list-item id="question-index" onload="evil()">Safe</list-item></list>');
+  assert.match(html, /<ol class="archive-layout archive-layout-list archive-layout-marker-number archive-layout-connector-solid" role="list">/);
+  assert.doesNotMatch(html, /<[^>]+(?:onclick|onload|style=|id=)/);
+  const choices = render('<list marker={evil()} connector="solid;position:fixed" gap="url(evil)"><list-item>Safe</list-item></list>');
+  assert.match(choices, /archive-layout-marker-bullet/);
+  assert.doesNotMatch(choices, /archive-layout-connector|style=|evil/);
+});
+
+test('list source stays literal in code examples while diagram characters in list prose remain readable', () => {
+  const { render } = renderer();
+  const component = '<list marker="number"><list-item>Example</list-item></list>';
+  for (const input of ['```xml\n' + component + '\n```', '    ' + component, '`' + component + '`', component.replace(/</g, '\\<')]) {
+    const html = render(input);
+    assert.match(html, /&lt;list/);
+    assert.doesNotMatch(html, /class="archive-layout/);
+  }
+  assert.match(render('<list>\n<list-item>Text with │ a separator</list-item>\n</list>'), /<ul class="archive-layout/);
+});
+
+test('saved conversations and offline exports retain transfer lists and shared print styles without altering source', async t => {
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/transfer-list-layout.md'), 'utf8');
+  const data = payload('Transfer steps', source), original = JSON.stringify(data);
+  const app = fixture({ initial: data.sourceUrl }); t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(data); await app.start();
+  assert.equal(app.main.querySelectorAll('ol.archive-layout-list > li').length, 5);
+  assert.equal(app.main.querySelector('.pdf-assistant pre'), null);
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  const doc = new app.w.DOMParser().parseFromString(html, 'text/html');
+  assert.equal(doc.querySelectorAll('ol.archive-layout-list > li').length, 5);
+  assert.equal(doc.querySelector('.pdf-assistant pre'), null);
+  const css = [...doc.querySelectorAll('style')].map(node => node.textContent).join('\n');
+  assert.match(css, /content: counter\(archive-list-step\)/);
+  assert.match(css, /\.archive-layout-list \{ break-inside: auto; page-break-inside: auto; \}/);
+  assert.equal(JSON.stringify(data), original);
+  assert.equal(app.requests.length, 0);
+});
+
 test('nested weekly cards retain aligned checklist children, initial progress and an inert outline control', () => {
   const { render } = renderer();
   const source = require('./fixtures/weekly-layout.cjs')('[1]');

@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
-    "table", "table-row", "table-cell", "link", "chart", "entity", "asyncimage",
+    "table", "table-row", "table-cell", "list", "list-item", "link", "chart", "entity", "asyncimage",
     "form", "checkbox", "radio-group", "radio", "textarea", "button"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
@@ -363,17 +363,19 @@
       return null;
     }
     const node = nodeAt(start, 0);
-    // Rows and cells must remain inside their table, including through loops.
-    // Reject malformed table trees instead of emitting HTML the browser repairs.
-    function validTables(node, parent = null) {
-      if (node.name === "if") node.tableContext = ["table", "table-row"].includes(parent);
+    // Structural children stay inside their table or list, including through
+    // loops. Avoid emitting malformed HTML that the browser silently repairs.
+    function validStructure(node, parent = null) {
+      if (node.name === "if") node.containerContext = ["table", "table-row", "list"].includes(parent);
       if (parent === "table" && !["table-row", "each", "if", "binding"].includes(node.name) ||
           parent === "table-row" && !["table-cell", "each", "if", "binding"].includes(node.name) ||
-          node.name === "table-row" && parent !== "table" || node.name === "table-cell" && parent !== "table-row") return false;
-      const context = ["each", "if"].includes(node.name) ? parent : ["table", "table-row"].includes(node.name) ? node.name : null;
-      return node.children.every(child => typeof child === "string" ? !context || !child.trim() : validTables(child, context));
+          parent === "list" && !["list-item", "each", "if", "binding"].includes(node.name) ||
+          node.name === "table-row" && parent !== "table" || node.name === "table-cell" && parent !== "table-row" ||
+          node.name === "list-item" && parent !== "list") return false;
+      const context = ["each", "if"].includes(node.name) ? parent : ["table", "table-row", "list"].includes(node.name) ? node.name : null;
+      return node.children.every(child => typeof child === "string" ? !context || !child.trim() : validStructure(child, context));
     }
-    if (node && !validTables(node)) return null;
+    if (node && !validStructure(node)) return null;
     if (node) node.source = source.slice(start, node.end);
     return node;
   }
@@ -392,6 +394,10 @@
 
   function presentation(node, attrs) {
     const classes = ["archive-layout", `archive-layout-${node.name}`];
+    if (node.name === "list") {
+      classes.push(`archive-layout-marker-${["number", "none"].includes(attrs.marker) ? attrs.marker : "bullet"}`);
+      if (["solid", "dashed", "dotted"].includes(attrs.connector)) classes.push(`archive-layout-connector-${attrs.connector}`);
+    }
     if (node.name === "icon" && attrs.inline === "true") classes.push("archive-layout-inline");
     const styles = [];
     if (attrs.border === "true") classes.push("archive-layout-border");
@@ -512,7 +518,7 @@
         const content = children(node, env, inline, Object.assign(Object.create(null), scope), budget);
         // A static archive includes hidden hints and answers too. The label
         // explains why content hidden in the initial interactive state is visible.
-        if (result.value || node.svg || node.tableContext) return content;
+        if (result.value || node.svg || node.containerContext) return content;
         const tag = inline ? "span" : "div";
         return `<${tag} class="archive-static-expanded"><span class="archive-static-note">${escape(globalThis.ChatGPTPdfI18n.t("staticExpandedContent"))}</span>${content}</${tag}>`;
       }
@@ -575,6 +581,11 @@
         return chart;
       }
       if (node.svg) return `<${node.name} ${svgPresentation(node, attrs)}>${children(node, env, inline, scope, budget)}</${node.name}>`;
+      if (["list", "list-item"].includes(node.name)) {
+        const list = node.name === "list";
+        const tag = inline ? "span" : list ? attrs.marker === "number" ? "ol" : "ul" : "li";
+        return `<${tag} ${presentation(node, attrs)}${list || inline ? ` role="${list ? "list" : "listitem"}"` : ""}>${children(node, env, inline, scope, budget)}</${tag}>`;
+      }
       if (["table", "table-row", "table-cell"].includes(node.name)) {
         const tags = { table: "table", "table-row": "tr", "table-cell": "td" };
         const roles = { table: "table", "table-row": "row", "table-cell": "cell" };

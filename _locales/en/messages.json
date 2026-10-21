@@ -958,6 +958,7 @@
   "chatRecovering": {
     "message": "This question is already in ChatGPT. Reading its reply…"
   },
+  "readerAllAnswersRead": { "message": "All answers marked as read" },
   "readerCollapse": { "message": "Collapse" },
   "readerExpand": { "message": "Expand" },
   "readerCollapseAll": { "message": "Collapse all" },

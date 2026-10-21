@@ -161,11 +161,14 @@
 .reader-turn-controls button:disabled, .reader-fold-tools button:disabled { opacity: .55; cursor: default; }
 .reader-fold-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
 .reader-turn-summary { margin: .3em 0; color: #174f40; font-weight: 600; overflow-wrap: anywhere; }
+.reader-turn-read-state { display: none; flex: none; align-items: center; gap: 4px; color: #176b58; font-weight: 500; letter-spacing: normal; text-transform: none; white-space: nowrap; }
+.reader-turn-read-state svg { flex: none; }
 @media screen {
+  .pdf-user[data-reader-folded="true"] .reader-turn-read-state { display: inline-flex; }
   .pdf-message[data-reader-folded="true"].pdf-assistant,
   .pdf-user[data-reader-folded="true"] .pdf-message-body { display: none !important; }
 }
-@media print { .reader-turn-controls, .reader-turn-summary, .reader-fold-tools { display: none !important; } }
+@media print { .reader-turn-controls, .reader-turn-summary, .reader-fold-tools, .reader-turn-read-state { display: none !important; } }
 @media screen { .preview-layout > .pdf-document > .pdf-toc { display: none; } }
 @media screen and (max-width: 900px) {
   .preview-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0 10px; }

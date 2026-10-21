@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   function clear(root) {
-    for (const node of root?.querySelectorAll?.(".reader-read-controls") || []) node.remove();
+    for (const node of root?.querySelectorAll?.(".reader-read-controls, .reader-turn-read-state") || []) node.remove();
   }
   async function hash(text) {
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -122,6 +122,21 @@
       }
       return new Map(grouped.map((entry) => [entry.anchor, entry]));
     }
+    function paintTurnReadStates() {
+      if (!enabled) return;
+      for (const turn of turns().values()) {
+        if (!turn.answers.length || !turn.answers.every(id => status(id) === "read")) continue;
+        const question = document.getElementById(turn.anchor);
+        if (!question || !main.contains(question)) continue;
+        const role = question.querySelector(".pdf-role");
+        if (!role) continue;
+        const badge = element("span", "reader-turn-read-state");
+        badge.title = t("readerAllAnswersRead");
+        badge.setAttribute("aria-label", t("readerAllAnswersRead"));
+        badge.append(readIcon("read"), document.createTextNode(t("readerStatusRead")));
+        role.insertBefore(badge, role.querySelector(".reader-turn-controls"));
+      }
+    }
     function paintToc() {
       const nav = sidebar.querySelector(".preview-toc");
       sidebar.querySelector(".reader-read-filter")?.remove();
@@ -171,6 +186,7 @@
     function paint() {
       const token = focused();
       paintMessages();
+      paintTurnReadStates();
       paintToc();
       paintMeta();
       restoreFocus(token);

@@ -99,6 +99,8 @@ After reloading the extension and refreshing the reader, click **Update conversa
 
 ## Read marks (v3.8)
 
+v3.9.7 shows a green check and **Read** beside a folded question when every answer under it is marked read. The badge is absent if any answer is unread or has changed, a new unread answer arrives, or the question has no answer. Read-state changes from another reader tab update the badge too. It stays out of HTML, PDF and print.
+
 Each answer can be marked read or unread. Questions are not tracked. The toolbar and local conversation list show how many answers are read. In the preview sidebar, a question row shows one mark for the answers that follow it until the next question. Clicking a sidebar title still jumps to that part of the conversation.
 
 **Unread only** hides questions whose answers are all read. Scrolling does not mark anything read.
@@ -156,7 +158,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 
 ## Formatting and attachments
 
-Rendering and navigation updates through **v3.9.6** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
+Rendering and navigation updates through **v3.9.7** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
 - Renders `list` / `list-item` steps with numbers, bullets or no marker, nested lists, bounded loops and solid/dashed/dotted connectors. Indented descriptions wrap as prose while inline code remains intact. Long lists can break between items when printed. Preview, offline HTML and PDF share these styles; tags in code examples stay literal.

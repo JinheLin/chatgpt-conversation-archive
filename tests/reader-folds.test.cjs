@@ -18,6 +18,59 @@ async function open(t, locale = 'en') {
   return { ...app, data, turn: number => app.get('question-' + number),
     toggle: number => app.get('question-' + number).querySelector('.reader-turn-controls button') };
 }
+async function markGroupRead(app, number = 1) {
+  const mark = app.get('preview-sidebar').querySelector(`a[href="#question-${number}"]`).parentElement.querySelector('.reader-read-dot');
+  mark.click();
+  await waitFor(() => app.get('preview-sidebar').querySelector(`a[href="#question-${number}"]`).parentElement.querySelector('.reader-read-dot')?.dataset.state === 'read');
+}
+
+for (const locale of ['en', 'zh-CN']) test('a folded question displays read only after every answer is marked and clears when unread (' + locale + ')', async t => {
+  const app = await open(t, locale);
+  const firstAnswer = () => app.get('message-2').querySelector('.reader-read-toggle');
+  assert.equal(app.turn(1).querySelector('.reader-turn-read-state'), null);
+  firstAnswer().click(); await waitFor(() => firstAnswer().dataset.state === 'read' && !firstAnswer().disabled);
+  app.toggle(1).click();
+  assert.equal(app.turn(1).querySelector('.reader-turn-read-state'), null);
+  const secondAnswer = () => app.get('message-3').querySelector('.reader-read-toggle');
+  secondAnswer().click(); await waitFor(() => app.turn(1).querySelector('.reader-turn-read-state'));
+  const badge = app.turn(1).querySelector('.reader-turn-read-state');
+  assert.equal(badge.closest('.pdf-role').closest('.pdf-user'), app.turn(1));
+  assert.equal(badge.textContent, locale === 'zh-CN' ? '已读' : 'Read');
+  assert.equal(badge.getAttribute('aria-label'), locale === 'zh-CN' ? '所有回答已标记为已读' : 'All answers marked as read');
+  assert.ok(badge.querySelector('svg[aria-hidden="true"]'));
+  assert.equal(app.turn(1).dataset.readerFolded, 'true');
+  assert.equal(app.turn(2).querySelector('.reader-turn-read-state'), null);
+  assert.equal(app.turn(3).querySelector('.reader-turn-read-state'), null);
+  await waitFor(() => !app.get('preview-sidebar').querySelector('.reader-read-dot').disabled);
+  app.get('preview-sidebar').querySelector('.reader-read-dot').click();
+  await waitFor(() => firstAnswer().dataset.state === 'unread' && !firstAnswer().disabled);
+  assert.equal(app.turn(1).querySelector('.reader-turn-read-state'), null);
+  assert.equal(app.turn(1).dataset.readerFolded, 'true');
+});
+
+test('restored read marks show on folded questions and changed or newly added answers remove the badge', async t => {
+  const app = await open(t); await markGroupRead(app);
+  const reopen = async data => {
+    if (data) await app.w.ChatGPTReaderStore.saveConversation(data);
+    const next = fixture({ factory: app.factory, initial: app.data.sourceUrl }); t.after(() => next.w.close());
+    await next.start(); next.get('question-1').querySelector('.reader-turn-controls button').click();
+    return next;
+  };
+  const restored = await reopen();
+  assert.ok(restored.get('question-1').querySelector('.reader-turn-read-state'));
+  const changed = JSON.parse(JSON.stringify(app.data));
+  changed.capturedAt = '2026-10-21T12:00:00.000Z'; changed.messages[1].text += '\n\nChanged text.';
+  const updated = await reopen(changed);
+  assert.equal(updated.get('message-2').querySelector('.reader-read-toggle').dataset.state, 'stale');
+  assert.equal(updated.get('question-1').querySelector('.reader-turn-read-state'), null);
+  const extended = JSON.parse(JSON.stringify(app.data));
+  extended.capturedAt = '2026-10-21T13:00:00.000Z';
+  extended.messages.splice(3, 0, { id: 'new-answer', role: 'assistant', text: 'An additional answer.' });
+  extended.completeness.count++;
+  const added = await reopen(extended);
+  assert.equal(added.get('question-1').querySelector('.reader-turn-read-state'), null);
+  assert.equal(added.get('message-4').querySelector('.reader-read-toggle').dataset.state, 'unread');
+});
 
 for (const locale of ['en', 'zh-CN']) test('question folds default to expanded and include every answer up to the next question (' + locale + ')', async t => {
   const app = await open(t, locale), original = JSON.stringify(app.data);
@@ -111,19 +164,20 @@ test('jumping from an annotation unfolds its original question without losing th
 
 test('offline HTML strips fold UI and state while print styles always include full questions and answers', async t => {
   const app = await open(t), original = app.data.messages.map(message => message.text);
+  await markGroupRead(app);
   app.toggle(1).click(); app.toggle(2).click();
   app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
   const html = await new Promise(resolve => {
     const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
   });
   const doc = new app.w.DOMParser().parseFromString(html, 'text/html');
-  assert.equal(doc.querySelector('.reader-turn-controls, .reader-turn-summary, [data-reader-folded], [data-reader-fold-body]'), null);
+  assert.equal(doc.querySelector('.reader-turn-controls, .reader-turn-summary, .reader-turn-read-state, [data-reader-folded], [data-reader-fold-body]'), null);
   assert.equal(doc.querySelectorAll('.pdf-message').length, 6);
   assert.match(doc.getElementById('message-3').textContent, /Second part of first reply/);
   assert.match(doc.getElementById('message-5').textContent, /Another reply/);
   assert.equal(app.toggle(1).getAttribute('aria-expanded'), 'false');
   assert.deepEqual(app.data.messages.map(message => message.text), original);
   const css = fs.readFileSync(path.join(__dirname, '../style.css'), 'utf8');
-  assert.match(css, /@media screen \{\s*\.pdf-message\[data-reader-folded="true"\]\.pdf-assistant,/);
-  assert.match(css, /@media print \{ \.reader-turn-controls, \.reader-turn-summary, \.reader-fold-tools \{ display: none !important;/);
+  assert.match(css, /@media screen \{[\s\S]*?\.pdf-message\[data-reader-folded="true"\]\.pdf-assistant,/);
+  assert.match(css, /@media print \{ \.reader-turn-controls, \.reader-turn-summary, \.reader-fold-tools, \.reader-turn-read-state \{ display: none !important;/);
 });

@@ -205,8 +205,11 @@ test('another reader tab receives read marks without refreshing annotations', as
   await first.start();
   await second.start();
   assert.equal(second.main.querySelectorAll('mark').length, 0);
+  second.get('question-1').querySelector('.reader-turn-controls button').click();
   answerToggle(first).click();
   await waitFor(() => answerToggle(second).dataset.state === 'read');
+  assert.equal(second.get('question-1').dataset.readerFolded, 'true');
+  assert.ok(second.get('question-1').querySelector('.reader-turn-read-state'));
   assert.equal(second.main.querySelectorAll('mark').length, 0);
   assert.match(second.get('reader-meta').textContent, /1\/1 read/);
 });

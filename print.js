@@ -11,6 +11,7 @@
   const previewNavigation = globalThis.ChatGPTPdfPreviewNavigation.init({
     main, sidebar: document.getElementById("preview-sidebar"), layout: document.getElementById("preview-layout")
   });
+  const folds = globalThis.ChatGPTReaderFolds?.init({ main, sidebar: document.getElementById("preview-sidebar") });
   const store = globalThis.ChatGPTReaderStore;
   const reader = globalThis.ChatGPTReader.init({ main, layout: document.getElementById("preview-layout"), store });
   const reads = globalThis.ChatGPTReaderReads.init({
@@ -50,6 +51,7 @@
   function setOutputBusy(value) {
     outputBusy = value;
     reader.setLocked(value);
+    folds?.setLocked(value);
     reads.setLocked(value);
     chat?.setLocked(value);
     if (value) exportMenu.close();
@@ -97,6 +99,7 @@
       await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
       await reader.load(store.keyFor(next.sourceUrl), true, { open: false });
       previewNavigation.refresh();
+      folds?.load(store.keyFor(next.sourceUrl));
       workspace.reading(next); updateReaderAddress();
       await reads.load(store.keyFor(next.sourceUrl), next.messages);
       const target = [...main.querySelectorAll(".pdf-message")].find(node => node.dataset.messageId === position?.messageId)
@@ -220,6 +223,7 @@
       if (current) {
         generation++;
         reader.unload();
+        folds?.unload();
         reads.unload();
         await chat?.unload();
         main.replaceChildren(); main.hidden = true;
@@ -307,6 +311,7 @@
     pdfFallback.hidden = true;
     exportMenu.close();
     reader.unload();
+    folds?.unload();
     reads.unload();
     await chat?.unload();
     main.hidden = true;
@@ -417,6 +422,7 @@
       await reader.load(key, !storageProblem);
       if (mine !== generation) return;
       previewNavigation.refresh();
+      folds?.load(key);
       actions.hidden = false;
       workspace.reading(payload, !storageProblem);
       updateReaderAddress();
@@ -438,7 +444,7 @@
       await refreshLibrary();
     } catch (error) {
       if (mine === generation) {
-        main.hidden = true; previewNavigation.clear(); reader.unload(); reads.unload(); payload = null;
+        main.hidden = true; previewNavigation.clear(); reader.unload(); folds?.unload(); reads.unload(); payload = null;
         await chat?.unload();
         workspace.opening();
         report(error.message || t("readFailed"), true);
@@ -455,6 +461,7 @@
   cancelButton.addEventListener("click", async () => {
     generation++;
     reader.unload();
+    folds?.unload();
     reads.unload();
     await chat?.unload();
     activeRead = null;
@@ -588,6 +595,7 @@
       exported.head.appendChild(style);
       exported.body.className = "pdf-print-page pdf-offline";
       const transcript = main.cloneNode(true);
+      globalThis.ChatGPTReaderFolds?.clear(transcript);
       globalThis.ChatGPTReaderAnchor.clear(transcript);
       globalThis.ChatGPTReaderReads.clear(transcript);
       exported.body.appendChild(transcript);

@@ -107,6 +107,8 @@ Each answer heading has an icon: an open circle is unread and a check is read. I
 
 ## Answer sections in navigation (v3.5)
 
+v3.9.6 adds question folding. Each question has **Collapse / Expand**, and the directory has **Collapse all / Expand all**. A folded turn shows its question summary and hides the full question body and every following answer before the next question. All turns start expanded. Directory, chapter, annotation and new-reply jumps expand the target turn automatically. Choices survive updates and conversation switches within this page; a page refresh starts expanded again. Folding leaves snapshots, annotations and read marks intact. HTML, PDF and print always include the full conversation.
+
 v3.9.5 highlights the current question and answer section as you read, scrolling only the directory to keep the matching entry visible. If a question has more chapters than the sidebar can show, its question title takes priority. Tracking preserves the document position and keyboard focus, updates after resizing, layout changes or image loading, and supports upward scrolling and anchor jumps. After browsing the directory manually, following resumes when the reading section changes. This state stays in the reader and is excluded from HTML/PDF exports.
 
 The preview sidebar, offline HTML index and PDF bookmarks share a **Question → Answer section** hierarchy. Selection prefers a consistent sequence of main chapter titles, such as `一、二、三`, `1. / 2.`, parentheses, chapter labels or Roman numerals. These can be Markdown headings or short standalone numbered paragraphs, including bold titles. Unnumbered peer sections after the chapters, such as a final reading guide, are included. A standalone opening answer title is skipped when sections follow it. When numbering is absent or inconsistent, selection uses the outer heading level after that title. Deeper subsections remain in the body; quotes, lists, code examples and layout diagrams are excluded. Multiple answers below one question share the section list, and repeated titles have separate destinations.
@@ -154,7 +156,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 
 ## Formatting and attachments
 
-Rendering and navigation updates through **v3.9.5** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
+Rendering and navigation updates through **v3.9.6** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
 - Renders `list` / `list-item` steps with numbers, bullets or no marker, nested lists, bounded loops and solid/dashed/dotted connectors. Indented descriptions wrap as prose while inline code remains intact. Long lists can break between items when printed. Preview, offline HTML and PDF share these styles; tags in code examples stay literal.
@@ -202,6 +204,7 @@ Rendering and navigation updates through **v3.9.5** also apply to saved local co
 | `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
 | `reader-reads.js` | Answer read marks, sidebar status, unread filter and export removal |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
+| `reader-folds.js` | Question folding, bulk expand/collapse, automatic unfolding on jumps and export cleanup |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `reader-chat.js` | Question sidebar, selected passages, local drafts and pending-send recovery |
 | `chat-text.js` | Shared rich-editor text extraction and question/reply comparison |

@@ -957,5 +957,17 @@
   },
   "chatRecovering": {
     "message": "同一条问题已在 ChatGPT 中，正在同步回复…"
+  },
+  "readerCollapse": { "message": "收起" },
+  "readerExpand": { "message": "展开" },
+  "readerCollapseAll": { "message": "全部收起" },
+  "readerExpandAll": { "message": "全部展开" },
+  "readerCollapseQuestion": {
+    "message": "收起问题 $number$",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
+  "readerExpandQuestion": {
+    "message": "展开问题 $number$",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
   }
 }

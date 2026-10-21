@@ -41,6 +41,7 @@
       const mark = [...main.querySelectorAll("mark.reader-highlight")].find((node) =>
         JSON.parse(node.dataset.annotationIds).includes(id));
       if (mark) {
+        globalThis.ChatGPTReaderFolds?.reveal(mark);
         mark.scrollIntoView({ block: "center", behavior: "auto" });
         mark.classList.add("reader-highlight-active");
         setTimeout(() => mark.classList.remove("reader-highlight-active"), 1500);

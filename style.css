@@ -151,6 +151,21 @@
   box-shadow: -3px 0 0 #176b58; padding: 3px 6px; margin: -3px -6px;
 }
 .preview-layout > .pdf-document { margin: 0 auto; min-width: 0; }
+.reader-turn-controls { display: inline-flex; margin-left: auto; padding-left: 12px; }
+.reader-turn-controls button, .reader-fold-tools button {
+  padding: 3px 8px; border: 1px solid #d4ded8; border-radius: 5px;
+  background: #fff; color: #47534d; font: 500 12px/1.5 system-ui, sans-serif; cursor: pointer;
+}
+.reader-turn-controls button:hover, .reader-fold-tools button:hover { color: #176b58; background: #edf6f2; }
+.reader-turn-controls button:focus-visible, .reader-fold-tools button:focus-visible { outline: 2px solid #176b58; outline-offset: 3px; }
+.reader-turn-controls button:disabled, .reader-fold-tools button:disabled { opacity: .55; cursor: default; }
+.reader-fold-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.reader-turn-summary { margin: .3em 0; color: #174f40; font-weight: 600; overflow-wrap: anywhere; }
+@media screen {
+  .pdf-message[data-reader-folded="true"].pdf-assistant,
+  .pdf-user[data-reader-folded="true"] .pdf-message-body { display: none !important; }
+}
+@media print { .reader-turn-controls, .reader-turn-summary, .reader-fold-tools { display: none !important; } }
 @media screen { .preview-layout > .pdf-document > .pdf-toc { display: none; } }
 @media screen and (max-width: 900px) {
   .preview-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 0 10px; }

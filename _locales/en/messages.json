@@ -957,5 +957,17 @@
   },
   "chatRecovering": {
     "message": "This question is already in ChatGPT. Reading its reply…"
+  },
+  "readerCollapse": { "message": "Collapse" },
+  "readerExpand": { "message": "Expand" },
+  "readerCollapseAll": { "message": "Collapse all" },
+  "readerExpandAll": { "message": "Expand all" },
+  "readerCollapseQuestion": {
+    "message": "Collapse question $number$",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
+  "readerExpandQuestion": {
+    "message": "Expand question $number$",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
   }
 }

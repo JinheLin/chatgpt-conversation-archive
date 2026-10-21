@@ -131,6 +131,7 @@
       const jump = document.createElement("button"); jump.type = "button"; jump.textContent = t("chatViewReply");
       jump.addEventListener("click", () => {
         const target = [...main.querySelectorAll(".pdf-message")].find(node => node.dataset.messageId === result.answers.at(-1)?.id);
+        if (target) globalThis.ChatGPTReaderFolds?.reveal(target);
         target?.scrollIntoView({ block: "start", behavior: "auto" });
       });
       replies.append(jump);

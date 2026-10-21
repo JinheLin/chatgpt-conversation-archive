@@ -60,7 +60,7 @@ function fixture({ factory = new IDBFactory(), locale = 'en', initial = '', remo
   };
   for (const file of ['i18n.js', 'vendor/markdown-it.min.js', 'vendor/katex.min.js',
     'layout-markdown.js', 'conversation-images.js', 'citation-markdown.js', 'chart-markdown.js', 'conversation-source.js', 'image-resources.js', 'page-layout.js', 'answer-headings.js', 'export.js',
-    'export-menu.js', 'read-progress.js', 'preview-navigation.js', 'reader-store.js', 'reader-anchor.js', 'reader-reads.js', 'reader.js', 'reader-workspace.js', 'chat-text.js', 'chat-session.js', 'reader-chat.js']) {
+    'export-menu.js', 'read-progress.js', 'preview-navigation.js', 'reader-folds.js', 'reader-store.js', 'reader-anchor.js', 'reader-reads.js', 'reader.js', 'reader-workspace.js', 'chat-text.js', 'chat-session.js', 'reader-chat.js']) {
     w.eval(fs.readFileSync(path.join(project, file), 'utf8'));
   }
   // Code fitting has its own tests; JSDOM does not provide a canvas renderer.

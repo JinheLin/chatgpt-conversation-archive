@@ -19,6 +19,93 @@ function renderer() {
   return { md, render: source => md.render(context.ChatGPTPdfExporter.preserveDiagrams(source)) };
 }
 
+test('select configuration cards retain labels, initial values and every option as inert reading content', () => {
+  const { render } = renderer(), { JSDOM } = require('jsdom');
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/select-layout.md'), 'utf8');
+  const dom = new JSDOM(render(source)), doc = dom.window.document;
+  assert.equal(doc.querySelectorAll('.archive-layout-form').length, 1);
+  assert.deepEqual([...doc.querySelectorAll('.archive-layout-label')].map(node => node.textContent), ['Items', 'Groups', 'Mode', 'Workers']);
+  assert.deepEqual([...doc.querySelectorAll('.archive-select-current > span:first-child')].map(node => node.textContent), ['4', '2', 'Enabled', '32']);
+  assert.deepEqual([...doc.querySelectorAll('.archive-select-options')].map(node => node.textContent), ['Options: 1 / 2 / 4 / 8', 'Options: 1 / 2 / 4', 'Options: Enabled / Disabled', 'Options: 8 / 32 / 128']);
+  assert.match(doc.querySelector('.archive-layout-button').textContent, /Create a plan →.*static control/);
+  assert.equal(doc.querySelector('pre, input, select, button, form, script'), null);
+  assert.doesNotMatch(doc.body.textContent, /<box|<label|<select|#if|Number\(|GenUI|setItemCount/);
+  dom.window.close();
+});
+
+test('select labels and values are escaped and only bounded literal option records are accepted', () => {
+  const { render } = renderer(), { JSDOM } = require('jsdom');
+  const html = render('{@body const choices=[{label:"<img src=x onerror=evil()>",value:"x"}]}\n\n<select value="x" options={choices} onChange={evil} style="position:fixed"/>');
+  const dom = new JSDOM(html);
+  assert.equal(dom.window.document.querySelector('img, select, script'), null);
+  assert.equal(dom.window.document.querySelector('.archive-select-current > span').textContent, '<img src=x onerror=evil()>');
+  assert.doesNotMatch(html, /<[^>]+(?:onChange|onerror|position:)/);
+  assert.match(render('<select value={2} options={[1,2,3]}/>'), /<span>2<\/span>/);
+  for (const options of ['evil()', '[{label:evil(),value:"x"}]', '[{label:"No value"}]', '[{label:{nested:1},value:"x"}]']) {
+    const invalid = render(`<select options={${options}}/>`);
+    assert.match(invalid, /archive-layout-fallback/);
+    assert.doesNotMatch(invalid, /archive-select-current/);
+  }
+  dom.window.close();
+});
+
+test('numeric conversion accepts finite decimal data and rejects arbitrary calls and implicit object coercion', () => {
+  const { render } = renderer();
+  for (const [input, expected] of [['"4"', '4'], ['" 2.5 "', '2.5'], ['"-0.25"', '-0.25'], ['"1e2"', '100'], ['3+4', '7']]) {
+    assert.match(render(`<box>{#each [0] as i}<text>{Number(${input})}</text>{/each}</box>`), new RegExp('>' + expected.replace('.', '\\.') + '</div>'));
+  }
+  for (const value of ['evil()', 'globalThis.value', '{}', '[]', 'null', 'true', '""', '"0x10"', '"Infinity"', '"1e999"', '1,2']) {
+    const html = render(`<box>{#if Number(${value})>0}<text>Never evaluate external code</text>{/if}</box>`);
+    assert.match(html, /archive-layout-fallback|&lt;box&gt;/);
+    assert.match(html, /Number\(/);
+  }
+  assert.match(render('<box>{#each [0] as i}<text>`{Number("4")}`</text>{/each}</box>'), /<code>\{Number\(&quot;4&quot;\)\}<\/code>/);
+});
+
+test('leading decimal loop data and numeric SVG templates preserve progress geometry and connectors', () => {
+  const { render } = renderer(), { JSDOM } = require('jsdom');
+  const source = '<box><svg viewBox="0 0 320 100">{#each [{x:7,p:1},{x:108,p:.75},{x:209,p:.25}] as n}<rect x={n.x} y="10" width={80*n.p} height="9"/><path d={`M${n.x+50} 30 V80`} stroke="#000"/><text x={n.x} y="95">{n.p}</text>{/each}</svg></box>';
+  const dom = new JSDOM(render(source)), doc = dom.window.document;
+  assert.deepEqual([...doc.querySelectorAll('rect')].map(node => node.getAttribute('width')), ['80', '60', '20']);
+  assert.deepEqual([...doc.querySelectorAll('path')].map(node => node.getAttribute('d')), ['M57 30 V80', 'M158 30 V80', 'M259 30 V80']);
+  assert.deepEqual([...doc.querySelectorAll('text')].map(node => node.textContent), ['1', '0.75', '0.25']);
+  assert.doesNotMatch(doc.body.textContent, /#each|<box|n\.p/);
+  assert.match(render('<svg><path d={"M0 0 V10"}/></svg>'), /d="M0 0 V10"/);
+  assert.match(render('<box>{#each [-.25,.5] as n}<text>{n}</text>{/each}</box>'), />-0\.25<\/div>/);
+  for (const expression of ['evil()', 'globalThis.x', '"javascript:evil"', '10001', '1/0']) {
+    const input = '<svg>{#each [0] as i}<path d={`M${' + expression + '} 0 V10`} stroke="#000"/>{/each}</svg>';
+    assert.doesNotMatch(render(input), /<path[^>]*\bd=/);
+  }
+  dom.window.close();
+});
+
+test('select components and numeric SVG templates stay literal inside code examples', () => {
+  const { render } = renderer();
+  for (const component of ['<label>Example</label><select value="1" options={[{label:"One",value:"1"}]}/>', '<svg><path d={`M${7+50} 30 V80`}/></svg>']) {
+    for (const input of ['```xml\n' + component + '\n```', '    ' + component, '`' + component + '`', component.replace(/</g, '\\<')]) {
+      const html = render(input);
+      assert.match(html, /&lt;/);
+      assert.doesNotMatch(html, /class="archive-layout|archive-select-current/);
+    }
+  }
+});
+
+test('saved reader and offline HTML preserve select cards without rewriting the source or enabling submission', async t => {
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/select-layout.md'), 'utf8');
+  const data = payload('Example', source), original = JSON.stringify(data), app = fixture({ initial: data.sourceUrl });
+  t.after(() => app.w.close()); await app.w.ChatGPTReaderStore.saveConversation(data); await app.start();
+  assert.equal(app.main.querySelectorAll('.archive-layout-select').length, 4);
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  const doc = new app.w.DOMParser().parseFromString(html, 'text/html');
+  assert.equal(doc.querySelectorAll('.archive-layout-select').length, 4);
+  assert.equal(doc.querySelector('form, input, select, button, script, pre.archive-layout-fallback'), null);
+  assert.equal(JSON.stringify(data), original);
+  assert.equal(app.requests.length, 0);
+});
+
 test('numbered transfer steps render as a connected list with prose instead of leaked tags or indented code', () => {
   const { render } = renderer();
   const source = fs.readFileSync(path.join(__dirname, 'fixtures/transfer-list-layout.md'), 'utf8');
@@ -605,7 +692,7 @@ test('excessive loop expansion falls back to readable source instead of dropping
   const { render } = renderer();
   const values = JSON.stringify(Array.from({ length: 100 }, (_, i) => i));
   const html = render(`<box>{#each ${values} as i}{#each ${values} as j}<text>{i} {j}</text>{/each}{/each}</box>`);
-  assert.match(html, /^<pre><code>&lt;box&gt;/);
+  assert.match(html, /^<pre class="archive-layout-fallback"><code>&lt;box&gt;/);
   assert.match(html, /\{#each/);
 });
 

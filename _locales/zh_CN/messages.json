@@ -821,6 +821,7 @@
   "staticLayoutNotice": {
     "message": "交互组件以静态阅读内容展示。"
   },
+  "staticSelectOptions": { "message": "可选：" },
   "staticControl": {
     "message": "静态控件"
   },

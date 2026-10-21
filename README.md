@@ -158,9 +158,11 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 
 ## Formatting and attachments
 
-Rendering and navigation updates through **v3.9.7** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
+Rendering and navigation updates through **v3.9.8** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
+- `label` / `select` configuration cards preserve labels, initial selections and all option labels as static reading content, without running submit/change callbacks. Supports bounded decimal-string `Number(...)` conversion, leading-decimal literals such as `.68`, and numeric-only templates for basic SVG geometry. Other calls and arbitrary template code are never executed.
+- Unsupported layout source wraps at a readable type size instead of shrinking the entire block to fit a long line. Ordinary code and text diagrams keep their existing formatting rules.
 - Renders `list` / `list-item` steps with numbers, bullets or no marker, nested lists, bounded loops and solid/dashed/dotted connectors. Indented descriptions wrap as prose while inline code remains intact. Long lists can break between items when printed. Preview, offline HTML and PDF share these styles; tags in code examples stay literal.
 - Nested plan cards keep each container's own padding and spacing, with aligned circular choice marks, thin progress tracks and centered outline controls. Bounded percentage dimensions preserve initial progress. Checklist rows stay together when printed if they fit on one page; controls remain static reading content.
 - Nested layout loops support bounded slices of literal arrays, including `bounds.slice(1)`, plus numeric remainder expressions such as `i % 2`. Proportional segments retain their original weights, labels and alternating colors. No callbacks or arbitrary JavaScript methods are executed.

@@ -198,6 +198,13 @@
   gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
 .pdf-message-body .archive-layout-text, .pdf-message-body .archive-layout-caption { display: block; }
+.pdf-message-body .archive-layout-label { display: block; font-weight: 500; }
+.pdf-message-body .archive-layout-select { display: flex; flex-direction: column; gap: 4px; }
+.pdf-message-body .archive-select-current { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 6px 10px; border: 1px solid #ccd2d5; border-radius: 5px; background: #fff; }
+.pdf-message-body .archive-select-options { color: #62686e; font-size: .8em; line-height: 1.5; }
+.pdf-message-body pre.archive-layout-fallback { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
+.pdf-message-body pre.archive-layout-fallback code { overflow-wrap: anywhere; }
+@media print { .pdf-message-body pre.archive-layout-fallback { break-inside: auto; page-break-inside: auto; } }
 .pdf-message-body .archive-layout-list {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap);
   --archive-list-item-gap: var(--archive-layout-gap);

@@ -241,6 +241,7 @@
   }
 
   function isTextDiagram(pre) {
+    if (/(?:^|\s)archive-layout-fallback(?:\s|$)/.test(pre.className || "")) return false;
     const code = pre.querySelector?.("code");
     return /\blanguage-(text|plaintext|plain|ascii|diagram)\b/.test(code?.className || "") ||
       /[┌┐└┘├┤┬┴┼│─]|\+[-=]{3,}\+/.test(pre.textContent) ||
@@ -271,9 +272,9 @@
     let sliceStart = performance.now();
     for (const [index, pre] of blocks.entries()) {
       if (isCancelled()) throw new Error(t("cancelled"));
-      // Ordinary reading-page code wraps without modifying the source text. Diagrams
-      // stay intact and fit both dimensions of one page, including tall blocks.
-      if (readingPage && pre.dataset.diagram !== "true") {
+      // Unsupported layout source always wraps at a readable size. Ordinary
+      // reading-page code wraps too; diagrams retain their original geometry.
+      if (/(?:^|\s)archive-layout-fallback(?:\s|$)/.test(pre.className || "") || readingPage && pre.dataset.diagram !== "true") {
         sizes.push(`${base}pt`);
         onProgress({ completed: index + 1, total: blocks.length });
         continue;

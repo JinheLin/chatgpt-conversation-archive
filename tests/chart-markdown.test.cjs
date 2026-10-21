@@ -74,7 +74,7 @@ test('invalid and excessive chart data falls back to readable source', () => {
     data => { data.series = Array(13).fill(data.series[0]); }]) {
     const data = chart(); modify(data);
     const html = render(data);
-    assert.match(html, /<pre><code>&lt;Chart/);
+    assert.match(html, /<pre class="archive-layout-fallback"><code>&lt;Chart/);
     assert.doesNotMatch(html, /class="archive-chart"/);
   }
 });

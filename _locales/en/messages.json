@@ -821,6 +821,7 @@
   "staticLayoutNotice": {
     "message": "Interactive component shown as static reading content."
   },
+  "staticSelectOptions": { "message": "Options: " },
   "staticControl": {
     "message": "static control"
   },

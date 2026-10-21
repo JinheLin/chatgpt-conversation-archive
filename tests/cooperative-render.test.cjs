@@ -69,6 +69,18 @@ test('code fitting yields and keeps the same width calculation, tab expansion an
   assert.deepEqual(completed, [1, 2]);
 });
 
+test('unsupported layout source wraps at a readable size instead of shrinking to fit long callbacks', async () => {
+  const { fitCode, isTextDiagram, main, pre } = renderer();
+  const fallback = pre('<box onSubmit={' + 'x'.repeat(2000) + '}>\n→ source remains readable\n</box>');
+  fallback.className = 'archive-layout-fallback'; main.appendChild(fallback);
+  const original = fallback.textContent;
+  assert.equal(isTextDiagram(fallback), false);
+  await fitCode(main, 'portrait'); assert.equal(fallback.style.fontSize, '10pt');
+  await fitCode(main, 'mobile'); assert.equal(fallback.style.fontSize, '10.5pt');
+  await fitCode(main, 'hanwang-n10'); assert.equal(fallback.style.fontSize, '10.5pt');
+  assert.equal(fallback.textContent, original);
+});
+
 test('cancelling during a render batch stops further messages and keeps the partial document hidden', async () => {
   const { render, main } = renderer();
   let cancelled = false;

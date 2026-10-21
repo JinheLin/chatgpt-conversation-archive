@@ -3,7 +3,7 @@
   "use strict";
   const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
     "table", "table-row", "table-cell", "list", "list-item", "link", "chart", "entity", "asyncimage",
-    "form", "checkbox", "radio-group", "radio", "textarea", "button"]);
+    "form", "label", "select", "checkbox", "radio-group", "radio", "textarea", "button"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
@@ -72,10 +72,10 @@
         pos++;
         return value;
       }
-      const token = /^(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)/.exec(source.slice(pos, end));
+      const token = /^(?:true|false|null|-?(?:(?:0|[1-9]\d*)(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)/.exec(source.slice(pos, end));
       if (!token) throw new Error("Invalid literal value");
       pos += token[0].length;
-      const value = JSON.parse(token[0]);
+      const value = /^(?:true|false|null)$/.test(token[0]) ? JSON.parse(token[0]) : Number(token[0]);
       if (typeof value === "number" && !Number.isFinite(value)) throw new Error("Invalid literal number");
       return value;
     }
@@ -170,7 +170,7 @@
 
   // A data-only expression grammar: numbers, strings, loop data, arithmetic,
   // comparisons and ternaries. Only own literal fields and array indexes can be
-  // read, plus membership, bounded slices and single character-code conversion;
+  // read, plus membership, bounded slices, decimal and character-code conversion;
   // no arbitrary calls, prototype access, assignment or JavaScript evaluation.
   function valueOf(source, scope) {
     if (source.length > 1000) return null;
@@ -206,6 +206,14 @@
       else if (token === "true" || token === "false") value = token === "true";
       else if (token === "undefined") value = undefined;
       else if (token === "null") value = null;
+      else if (token === "Number" && tokens[cursor] === "(") {
+        cursor++;
+        const input = expression(0, depth + 1);
+        if (tokens[cursor++] !== ")" || !(typeof input === "number" || typeof input === "string" &&
+            /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(input.trim()))) throw new Error("Invalid numeric conversion");
+        value = Number(input);
+        if (!Number.isFinite(value)) throw new Error("Non-finite numeric conversion");
+      }
       else if (token === "String" && tokens[cursor] === "." && tokens[cursor + 1] === "fromCharCode" && tokens[cursor + 2] === "(") {
         cursor += 3;
         const code = expression(0, depth + 1);
@@ -535,6 +543,18 @@
       for (const key of node.expressions) {
         if (/^on[A-Z]/.test(key)) { delete attrs[key]; continue; }
         if (node.name === "chart" && key === "content") continue;
+        if (node.svg && ["d", "points", "transform"].includes(key) && attrs[key].startsWith("`")) {
+          const template = /^`([^`]{0,10000})`$/.exec(attrs[key]);
+          let valid = Boolean(template);
+          const resolved = template?.[1].replace(/\$\{([^{}\n]+)\}/g, (_, expression) => {
+            const value = valueOf(expression, scope)?.value;
+            if (typeof value !== "number" || !Number.isFinite(value) || Math.abs(value) > 10000) { valid = false; return ""; }
+            return String(value);
+          });
+          if (valid) attrs[key] = resolved; else delete attrs[key];
+          // The SVG attribute allowlist validates the resulting geometry too.
+          continue;
+        }
         if (["width", "height"].includes(key)) {
           // Only a numeric percentage template is accepted, never a function
           // call or arbitrary interpolated CSS from the conversation.
@@ -552,6 +572,7 @@
         }
         const result = valueOf(attrs[key], scope);
         if (!result || result.value === undefined || result.value === null) delete attrs[key];
+        else if (node.name === "select" && key === "options") attrs[key] = result.value;
         else attrs[key] = String(result.value);
       }
       if (node.name === "entity") {
@@ -603,6 +624,20 @@
         return `<${tag} ${presentation(node, attrs)}${inline ? ` role="${roles[node.name]}"` : ""}>${content}</${tag}>`;
       }
       const tag = inline ? "span" : "div";
+      if (node.name === "select") {
+        const scalar = value => ["string", "number", "boolean"].includes(typeof value);
+        if (!Array.isArray(attrs.options) || attrs.options.length > 200) throw new Error("Unsupported select options");
+        const options = attrs.options.map(option => {
+          if (scalar(option)) return { label: String(option), value: String(option) };
+          if (!option || !Object.hasOwn(option, "label") || !Object.hasOwn(option, "value") ||
+              !scalar(option.label) || !scalar(option.value)) throw new Error("Invalid select option");
+          return { label: String(option.label), value: String(option.value) };
+        });
+        const selected = options.find(option => option.value === attrs.value)?.label ?? attrs.value ?? attrs.placeholder ?? "";
+        const label = value => escape(md.utils.unescapeAll(value));
+        const choices = options.length ? `<span class="archive-select-options">${escape(globalThis.ChatGPTPdfI18n.t("staticSelectOptions"))}${options.map(option => label(option.label)).join(" / ")}</span>` : "";
+        return `<${tag} ${presentation(node, attrs)}><span class="archive-select-current"><span>${label(selected)}</span><span aria-hidden="true">▾</span></span>${choices}</${tag}>`;
+      }
       if (["checkbox", "radio"].includes(node.name)) {
         const selected = node.name === "checkbox" ? attrs.checked === "true" : env.archiveRadioValue === attrs.value;
         const symbol = node.name === "checkbox" ? selected ? "☑" : "☐" : selected ? "●" : "○";
@@ -644,7 +679,7 @@
     // Fragment HTML comes only from renderNode, never from conversation HTML.
     md.renderer.rules.archive_fragment = (tokens, index) => tokens[index].meta;
     function children(node, env, inline, scope, budget) {
-      const inlineContent = inline || ["text", "caption", "title", "badge", "checkbox", "radio", "button"].includes(node.name);
+      const inlineContent = inline || ["text", "caption", "title", "badge", "label", "checkbox", "radio", "button"].includes(node.name);
       const fragments = { key: String(++fragmentId), html: [] };
       let group = "";
       const output = [];
@@ -738,7 +773,7 @@
     md.renderer.rules.archive_layout = (tokens, index, options, env) => {
       const { node, inline, insideLink, scope } = tokens[index].meta;
       try { return renderNode(node, insideLink ? { ...env, archiveInsideLink: true } : env, inline, Object.assign(Object.create(null), scope)) + (inline ? "" : "\n"); }
-      catch (_) { return inline ? `<code>${escape(node.source)}</code>` : `<pre><code>${escape(node.source)}</code></pre>\n`; }
+      catch (_) { return inline ? `<code>${escape(node.source)}</code>` : `<pre class="archive-layout-fallback"><code>${escape(node.source)}</code></pre>\n`; }
     };
   }
 

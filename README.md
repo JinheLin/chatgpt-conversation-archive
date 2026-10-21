@@ -107,6 +107,8 @@ Each answer heading has an icon: an open circle is unread and a check is read. I
 
 ## Answer sections in navigation (v3.5)
 
+v3.9.5 highlights the current question and answer section as you read, scrolling only the directory to keep the matching entry visible. If a question has more chapters than the sidebar can show, its question title takes priority. Tracking preserves the document position and keyboard focus, updates after resizing, layout changes or image loading, and supports upward scrolling and anchor jumps. After browsing the directory manually, following resumes when the reading section changes. This state stays in the reader and is excluded from HTML/PDF exports.
+
 The preview sidebar, offline HTML index and PDF bookmarks share a **Question → Answer section** hierarchy. Selection prefers a consistent sequence of main chapter titles, such as `一、二、三`, `1. / 2.`, parentheses, chapter labels or Roman numerals. These can be Markdown headings or short standalone numbered paragraphs, including bold titles. Unnumbered peer sections after the chapters, such as a final reading guide, are included. A standalone opening answer title is skipped when sections follow it. When numbering is absent or inconsistent, selection uses the outer heading level after that title. Deeper subsections remain in the body; quotes, lists, code examples and layout diagrams are excluded. Multiple answers below one question share the section list, and repeated titles have separate destinations.
 
 Inline formatting remains intact in the body; navigation labels use plain text without citation controls or duplicated math text. Existing local snapshots build the new index when reopened, without fetching the conversation again. Regenerate an exported PDF or HTML to include the new navigation. Long printed indexes can continue across pages.
@@ -152,7 +154,7 @@ Version 2 reads ChatGPT's conversation data using your ChatGPT login session in 
 
 ## Formatting and attachments
 
-Rendering and navigation updates through **v3.9.4** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
+Rendering and navigation updates through **v3.9.5** also apply to saved local conversations: reload the extension in `chrome://extensions`, then refresh or reopen the reader. There is no need to fetch the conversation again. Existing snapshots and annotations remain in local storage.
 
 - Renders the original Markdown, preserving headings, bold text, lists, blockquotes, tables, links, code blocks, and math.
 - Renders `list` / `list-item` steps with numbers, bullets or no marker, nested lists, bounded loops and solid/dashed/dotted connectors. Indented descriptions wrap as prose while inline code remains intact. Long lists can break between items when printed. Preview, offline HTML and PDF share these styles; tags in code examples stay literal.
@@ -195,7 +197,7 @@ Rendering and navigation updates through **v3.9.4** also apply to saved local co
 | `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
 | `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
-| `preview-navigation.js` | Preview sidebar with question links, separate from the exported document |
+| `preview-navigation.js` | Preview question/section links, current-reading highlight and sidebar following, separate from the exported document |
 | `reader-store.js` | IndexedDB snapshots, annotations, read state, cross-tab notifications and validated backup merging |
 | `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
 | `reader-reads.js` | Answer read marks, sidebar status, unread filter and export removal |

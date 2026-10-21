@@ -145,6 +145,11 @@
 .preview-toc .pdf-toc-headings li { margin-bottom: 6px; }
 .preview-toc .pdf-toc-headings a { color: #62686e; }
 .preview-toc .pdf-toc-headings a:hover, .preview-toc .pdf-toc-headings a:focus-visible { color: #176b58; }
+.preview-toc > ol > li[data-current-question="true"] > a,
+.preview-toc a[aria-current="location"] {
+  color: #125746; background: #e7f3ed; border-radius: 4px;
+  box-shadow: -3px 0 0 #176b58; padding: 3px 6px; margin: -3px -6px;
+}
 .preview-layout > .pdf-document { margin: 0 auto; min-width: 0; }
 @media screen { .preview-layout > .pdf-document > .pdf-toc { display: none; } }
 @media screen and (max-width: 900px) {

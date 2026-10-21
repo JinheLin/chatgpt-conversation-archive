@@ -383,6 +383,77 @@ test('literal-array loops expand SVG geometry, numeric expressions and text', ()
   assert.doesNotMatch(html, /\{#each|\{i\}|&lt;svg|archive-layout-text/);
 });
 
+test('character-code diagram labels render A B C while keeping the original SVG geometry', () => {
+  const { render } = renderer(), { JSDOM } = require('jsdom');
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/raft-group-layout.md'), 'utf8');
+  const dom = new JSDOM(render(source)), doc = dom.window.document;
+  assert.deepEqual([...doc.querySelectorAll('text')].filter(node => node.textContent.startsWith('Raft Group')).map(node => node.textContent),
+    ['Raft Group A', 'Raft Group B', 'Raft Group C']);
+  assert.deepEqual([...doc.querySelectorAll('text[y="48"]')].map(node => node.getAttribute('x')), ['110', '310', '510']);
+  assert.equal(doc.querySelectorAll('rect').length, 9);
+  assert.equal([...doc.querySelectorAll('text')].filter(node => node.textContent === 'Raft Commit').length, 6);
+  assert.equal(doc.querySelector('svg').getAttribute('viewBox'), '0 0 620 280');
+  assert.doesNotMatch(doc.body.textContent, /fromCharCode|\{#each/);
+  dom.window.close();
+});
+
+test('single character conversion reads only bounded numeric data and escapes generated text', () => {
+  const { render } = renderer(), { JSDOM } = require('jsdom');
+  const html = render('<box>{#each [65,90,97,19968,60,38,42] as code}<text>{String . fromCharCode (code)}</text>{/each}</box>');
+  const dom = new JSDOM(html), doc = dom.window.document;
+  assert.deepEqual([...doc.querySelectorAll('.archive-layout-text')].map(node => node.textContent), ['A', 'Z', 'a', '一', '<', '&', '*']);
+  assert.equal(doc.querySelector('script, img, strong, em'), null);
+  assert.match(render('<box>{#each [0] as i}<text>{String.fromCharCode(65+i).length}</text>{/each}</box>'), />1<\/div>/);
+  assert.match(render('<box>{#each [0] as i}<text>{String.fromCharCode(i===0?65:66)}</text>{/each}</box>'), />A<\/div>/);
+  dom.window.close();
+});
+
+test('character conversion rejects other calls, coercion, invalid codes and prototype access', () => {
+  const { render } = renderer();
+  for (const expression of ['String.fromCharCode()', 'String.fromCharCode(65,66)', 'String.fromCharCode("65")',
+    'String.fromCharCode(true)', 'String.fromCharCode(-1)', 'String.fromCharCode(65536)', 'String.fromCharCode(65.5)',
+    'String.fromCharCode(1/0)', 'String.fromCharCode(globalThis.code)', 'String.fromCharCode(evil())',
+    'String.fromCodePoint(65)', 'String["fromCharCode"](65)', 'globalThis.String.fromCharCode(65)',
+    'String.fromCharCode.call(null,65)', 'String.fromCharCode(65).constructor', 'String.constructor("evil()")()']) {
+    const html = render(`<box>{#each [0] as i}<text>{${expression}}</text>{/each}</box>`);
+    assert.match(html, /\{String|\{globalThis/);
+    assert.doesNotMatch(html, />A<\/div>/);
+  }
+  const shadow = render('{@body const String={fromCharCode:"untrusted"}}\n\n<box>{#each [0] as i}<text>{String.fromCharCode(65+i)}</text>{/each}</box>');
+  assert.match(shadow, />A<\/div>/);
+});
+
+test('character conversion remains literal in code examples inside and outside layouts', () => {
+  const { render } = renderer();
+  const source = '<box>{#each [0,1,2] as i}<text>Raft Group {String.fromCharCode(65+i)}</text>{/each}</box>';
+  for (const input of ['```xml\n' + source + '\n```', '    ' + source, '`' + source + '`', source.replace(/</g, '\\<')]) {
+    const html = render(input);
+    assert.match(html, /String\.fromCharCode\(65\+i\)/);
+    assert.doesNotMatch(html, /class="archive-layout/);
+  }
+  assert.match(render('<box>{#each [0] as i}<text>`{String.fromCharCode(65+i)}`</text>{/each}</box>'), /<code>\{String\.fromCharCode\(65\+i\)\}<\/code>/);
+});
+
+test('saved reader and offline export render alphabetic Raft labels without rewriting the transcript', async t => {
+  const source = fs.readFileSync(path.join(__dirname, 'fixtures/raft-group-layout.md'), 'utf8');
+  const data = payload('Compare Raft groups', source), original = JSON.stringify(data);
+  const app = fixture({ initial: data.sourceUrl }); t.after(() => app.w.close());
+  await app.w.ChatGPTReaderStore.saveConversation(data); await app.start();
+  const check = root => {
+    assert.deepEqual([...root.querySelectorAll('svg text[y="48"]')].map(node => node.textContent), ['Raft Group A', 'Raft Group B', 'Raft Group C']);
+    assert.equal(root.querySelectorAll('svg rect').length, 9);
+    assert.doesNotMatch(root.querySelector('.pdf-assistant').textContent, /fromCharCode/);
+  };
+  check(app.main);
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  check(new app.w.DOMParser().parseFromString(html, 'text/html'));
+  assert.equal(JSON.stringify(data), original);
+  assert.equal(app.requests.length, 0);
+});
+
 test('layout loops preserve row order and conditional background without executing JavaScript', () => {
   const { render } = renderer();
   const html = render('<box>\n{#each [["First", "4 B"], ["Second", "8 B"]] as item,i}\n<row background={i<1?"surface-secondary":undefined} justify="between">\n<text>{item[0]}</text><text>{item[1]}</text>\n</row>\n{/each}\n</box>');

@@ -170,8 +170,8 @@
 
   // A data-only expression grammar: numbers, strings, loop data, arithmetic,
   // comparisons and ternaries. Only own literal fields and array indexes can be
-  // read, plus membership and bounded slices of literal arrays; no arbitrary calls, prototype access,
-  // assignment or JavaScript evaluation.
+  // read, plus membership, bounded slices and single character-code conversion;
+  // no arbitrary calls, prototype access, assignment or JavaScript evaluation.
   function valueOf(source, scope) {
     if (source.length > 1000) return null;
     const tokens = [];
@@ -206,6 +206,14 @@
       else if (token === "true" || token === "false") value = token === "true";
       else if (token === "undefined") value = undefined;
       else if (token === "null") value = null;
+      else if (token === "String" && tokens[cursor] === "." && tokens[cursor + 1] === "fromCharCode" && tokens[cursor + 2] === "(") {
+        cursor += 3;
+        const code = expression(0, depth + 1);
+        if (tokens[cursor++] !== ")" || !Number.isInteger(code) || code < 0 || code > 65535) throw new Error("Invalid character code");
+        // Interpret this one data transform ourselves. Never resolve String or
+        // invoke a function supplied by the conversation or its literal scope.
+        value = String.fromCharCode(code);
+      }
       else if (Object.hasOwn(scope, token)) value = scope[token];
       else throw new Error("Unknown value");
       while (["[", "."].includes(tokens[cursor])) {

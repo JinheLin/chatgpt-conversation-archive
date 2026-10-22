@@ -3,12 +3,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
 const { JSDOM } = require('jsdom');
+const { chromeI18n } = require('./helpers/i18n.cjs');
 const project = path.resolve(__dirname, '..');
 
 function fixture(t, count = 150, headings = false) {
   const dom = new JSDOM('<header class="reader-bar"></header><div id="layout"><aside></aside><main></main></div>', { runScripts: 'outside-only', pretendToBeVisual: true });
   t.after(() => dom.window.close());
   const w = dom.window, doc = w.document, main = doc.querySelector('main'), sidebar = doc.querySelector('aside'), layout = doc.getElementById('layout');
+  w.chrome = { i18n: chromeI18n() };
+  w.eval(fs.readFileSync(path.join(project, 'i18n.js'), 'utf8'));
   const frames = new Map(), targets = new Map();
   let scroll = 0, serial = 0, geometryReads = 0;
   Object.defineProperty(w, 'scrollY', { get: () => scroll });
@@ -60,7 +63,7 @@ function fixture(t, count = 150, headings = false) {
   function scrollTo(top) { scroll = top; w.dispatchEvent(new w.Event('scroll')); }
   const current = () => sidebar.querySelector('a[aria-current="location"]')?.getAttribute('href');
   return { api, w, doc, main, toc, sidebar, layout, frames, targets, current, flush, scrollTo, linkGeometry,
-    refresh() { api.refresh(); linkGeometry(); }, reads: () => geometryReads };
+    refresh(options) { api.refresh(options); linkGeometry(); }, reads: () => geometryReads };
 }
 
 test('sidebar preserves every link and title without duplicating document IDs or marking the export index', async t => {
@@ -74,6 +77,7 @@ test('sidebar preserves every link and title without duplicating document IDs or
   assert.equal(preview.className, 'preview-toc');
   assert.deepEqual([...preview.querySelectorAll('a')].map(node => [node.href, node.textContent]), [...toc.querySelectorAll('a')].map(node => [node.href, node.textContent]));
   assert.equal(preview.querySelectorAll('a').length, 150);
+  assert.equal(preview.querySelector('.preview-headings-toggle'), null);
   assert.equal(preview.querySelectorAll('[id]').length, 0);
   assert.equal(toc.id, 'question-index');
   assert.equal(toc.firstElementChild.id, 'index-heading');
@@ -195,4 +199,65 @@ test('directory browsing preserves keyboard focus and does not snap back until t
   app.scrollTo(2000); await app.flush();
   assert.equal(app.current(), '#question-3');
   assert.equal(app.doc.activeElement, browsing);
+});
+
+test('answer-heading toggles hide only their own directory list, preserve links, and respect the output lock', async t => {
+  const app = fixture(t, 3, true); app.refresh(); await app.flush();
+  const items = app.sidebar.querySelectorAll('.preview-toc > ol > li');
+  const toggle = items[0].querySelector('.preview-headings-toggle'), headings = items[0].querySelector('.pdf-toc-headings');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(toggle.getAttribute('aria-label'), 'Collapse answer headings under question 1');
+  assert.equal(app.doc.getElementById(toggle.getAttribute('aria-controls')), headings);
+  const main = app.main.innerHTML, targetPosition = app.targets.get('question-2').top;
+  toggle.focus(); toggle.click(); await app.flush();
+  assert.equal(headings.hidden, true);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(toggle.getAttribute('aria-label'), 'Expand answer headings under question 1');
+  assert.equal(items[1].querySelector('.pdf-toc-headings').hidden, false);
+  assert.equal(app.sidebar.querySelectorAll('a').length, app.toc.querySelectorAll('a').length);
+  assert.equal(app.main.innerHTML, main); assert.equal(app.w.scrollY, 0);
+  assert.equal(app.targets.get('question-2').top, targetPosition);
+  assert.equal(app.doc.activeElement, toggle);
+  app.api.setLocked(true); toggle.click(); assert.equal(headings.hidden, true);
+  app.api.setLocked(false); toggle.click(); await app.flush(); assert.equal(headings.hidden, false);
+});
+
+test('tracking a folded chapter selects its visible question without unfolding, and unread filters still clear hidden questions', async t => {
+  const app = fixture(t, 4, true); app.refresh(); await app.flush();
+  const item = app.sidebar.querySelector('a[href="#question-2"]').parentElement;
+  app.scrollTo(app.targets.get('answer-heading-2-1').top - 80); await app.flush();
+  assert.equal(app.current(), '#answer-heading-2-1');
+  item.querySelector('.preview-headings-toggle').click(); await app.flush();
+  assert.equal(app.current(), '#question-2');
+  assert.equal(item.dataset.currentQuestion, 'true');
+  app.scrollTo(app.targets.get('answer-heading-2-2').top - 80); await app.flush();
+  assert.equal(app.current(), '#question-2');
+  assert.equal(item.querySelector('.pdf-toc-headings').hidden, true);
+  item.hidden = true; await app.flush(); assert.equal(app.current(), undefined);
+  item.hidden = false; await app.flush(); assert.equal(app.current(), '#question-2');
+  item.querySelector('.preview-headings-toggle').click(); await app.flush();
+  assert.equal(app.current(), '#answer-heading-2-2');
+});
+
+test('refresh retains directory fold choices per conversation without duplicating controls or document destination IDs', async t => {
+  const app = fixture(t, 3, true); app.refresh({ conversationKey: 'first' }); await app.flush();
+  const toggle = () => app.sidebar.querySelector('.preview-headings-toggle');
+  toggle().click(); await app.flush();
+  app.refresh({ conversationKey: 'second' }); assert.equal(toggle().getAttribute('aria-expanded'), 'true');
+  app.refresh({ conversationKey: 'first' }); assert.equal(toggle().getAttribute('aria-expanded'), 'false');
+  assert.equal(app.sidebar.querySelectorAll('.preview-headings-toggle').length, 3);
+  const ids = [...app.doc.querySelectorAll('[id]')].map(node => node.id);
+  assert.equal(ids.length, new Set(ids).size);
+  app.refresh({ conversationKey: 'first', tocCollapsed: [] });
+  assert.equal(toggle().getAttribute('aria-expanded'), 'true');
+});
+
+test('folding a different question while browsing the directory does not snap the sidebar back to the current reading section', async t => {
+  const app = fixture(t, 10, true); app.refresh(); await app.flush();
+  app.scrollTo(app.targets.get('answer-heading-8-1').top - 80); await app.flush();
+  const toggle = app.sidebar.querySelector('.preview-headings-toggle');
+  toggle.focus(); app.sidebar.scrollTop = 400; toggle.click(); await app.flush();
+  assert.equal(app.sidebar.scrollTop, 400);
+  assert.equal(app.doc.activeElement, toggle);
+  assert.equal(app.current(), '#answer-heading-8-1');
 });

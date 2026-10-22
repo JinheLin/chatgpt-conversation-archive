@@ -184,17 +184,21 @@ test('positions and folds merge independently, count toward local sizes, round-t
     return get.apply(this, args);
   };
   try {
-    await Promise.all([store.saveReaderState(key, { position: position() }), store.saveReaderState(key, { collapsed: ['user-1'] })]);
+    await Promise.all([store.saveReaderState(key, { position: position() }), store.saveReaderState(key, { collapsed: ['user-1'] }),
+      store.saveReaderState(key, { tocCollapsed: ['user-2'] })]);
   } finally { IDBObjectStore.prototype.get = get; }
   const state = await store.getReaderState(key);
   assert.deepEqual(plain(state.collapsed), ['user-1']); assert.equal(state.position.messageId, 'assistant-1');
+  assert.deepEqual(plain(state.tocCollapsed), ['user-2']);
   assert.equal((await store.listConversations())[0].bytes, baseline + state.byteSize);
   const backup = plain(await store.backup());
   const destination = fixture(); t.after(() => destination.w.close());
   await destination.w.ChatGPTReaderStore.restore(backup);
   assert.deepEqual(plain(await destination.w.ChatGPTReaderStore.getReaderState(key)), plain(state));
   await store.saveReaderState(key, { collapsed: [] });
+  await store.saveReaderState(key, { tocCollapsed: [] });
   await store.restore(backup); assert.deepEqual(plain((await store.getReaderState(key)).collapsed), []);
+  assert.deepEqual(plain((await store.getReaderState(key)).tocCollapsed), []);
   assert.deepEqual(plain((await store.getReaderState(key)).position), plain(state.position));
   await store.deleteConversation(key);
   await store.saveReaderState(key, { position: position(), collapsed: ['user-2'] });
@@ -209,7 +213,8 @@ test('malformed and unrelated imported state is rejected before changing local d
   await store.saveReaderState(key, { position: position(), collapsed: ['user-1'] });
   const original = plain(await store.backup());
   for (const update of [state => { state.position.fraction = Infinity; }, state => { state.key = 'c:unrelated'; },
-    state => { state.position.blockIndex = -9; }, state => { state.collapsed = 'all'; }, state => { state.position.hash = 'x'.repeat(2001); }]) {
+    state => { state.position.blockIndex = -9; }, state => { state.collapsed = 'all'; }, state => { state.position.hash = 'x'.repeat(2001); },
+    state => { state.tocCollapsed = 'all'; }, state => { state.tocCollapsed = ['']; state.tocUpdatedAt = state.foldsUpdatedAt; }]) {
     const invalid = structuredClone(original); update(invalid.readerStates[0]);
     await assert.rejects(store.restore(invalid));
     assert.deepEqual(plain((await store.backup()).readerStates), original.readerStates);
@@ -259,4 +264,48 @@ test('version 5 databases add reader state in place without rewriting existing s
   await app.w.ChatGPTReaderStore.saveReaderState(key, { position: position(), collapsed: ['user-2'] });
   assert.deepEqual(plain((await app.w.ChatGPTReaderStore.getReaderState(key)).collapsed), ['user-2']);
   assert.equal((await app.w.ChatGPTReaderStore.listConversations())[0].bytes > 12345, true);
+});
+
+for (const locale of ['en', 'zh-CN']) test('directory folds survive reopening by stable question ID and stay separate from document folds (' + locale + ')', async t => {
+  const factory = new IDBFactory(), app = await open(t, { factory });
+  const button = app.get('preview-sidebar').querySelector('.preview-headings-toggle');
+  button.click();
+  await waitFor(async () => (await app.store.getReaderState(key))?.tocCollapsed?.includes('user-1'));
+  assert.equal(app.toggle(1).getAttribute('aria-expanded'), 'true');
+  assert.equal(app.get('question-1').dataset.readerFolded, 'false');
+  assert.equal(app.main.querySelector('.pdf-toc-headings').hidden, false);
+  app.toggle(2).click();
+  await waitFor(async () => (await app.store.getReaderState(key))?.collapsed?.includes('user-2'));
+  app.w.close();
+  const updated = conversation();
+  updated.messages.unshift({ id: 'earlier-question', role: 'user', text: 'An earlier question' });
+  updated.completeness.count++; updated.completeness.questions++; updated.completeness.firstMessageId = 'earlier-question';
+  updated.capturedAt = '2026-10-22T00:00:00.000Z';
+  const reopened = fixture({ factory, initial: updated.sourceUrl, locale }); t.after(() => reopened.w.close());
+  viewport(reopened);
+  await reopened.w.ChatGPTReaderStore.saveConversation(updated); await reopened.start();
+  const nav = reopened.get('preview-sidebar'), folded = nav.querySelector('#preview-answer-sections-question-2');
+  assert.equal(reopened.get('question-2').dataset.messageId, 'user-1');
+  assert.equal(folded.hidden, true);
+  assert.equal(reopened.get('question-2').dataset.readerFolded, 'false');
+  assert.equal(reopened.get('question-3').dataset.readerFolded, 'true');
+  assert.equal(nav.querySelector('#preview-answer-sections-question-3').hidden, false);
+  const toggle = nav.querySelector('[aria-controls="' + folded.id + '"]');
+  assert.equal(toggle.getAttribute('aria-label'), locale === 'zh-CN' ? '展开问题 2 下的回答标题' : 'Expand answer headings under question 2');
+  toggle.click();
+  await waitFor(async () => (await reopened.w.ChatGPTReaderStore.getReaderState(key))?.tocCollapsed?.length === 0);
+});
+
+test('folded directory lists are reader-only: HTML exports keep every heading and omit the preview controls', async t => {
+  const app = await open(t);
+  app.get('preview-sidebar').querySelector('.preview-headings-toggle').click();
+  app.get('save-html').click(); await waitFor(() => app.downloads.length === 1 && !app.get('save-html').disabled);
+  const html = await new Promise(resolve => {
+    const reader = new app.w.FileReader(); reader.onload = () => resolve(reader.result); reader.readAsText(app.downloads[0]);
+  });
+  const doc = new app.w.DOMParser().parseFromString(html, 'text/html');
+  assert.equal(doc.querySelector('.preview-headings-toggle, [id^="preview-answer-sections-"]'), null);
+  assert.equal(doc.querySelectorAll('.pdf-toc-headings a').length, 2);
+  assert.equal(doc.querySelector('.pdf-toc-headings[hidden]'), null);
+  assert.equal(app.get('preview-sidebar').querySelector('.pdf-toc-headings').hidden, true);
 });

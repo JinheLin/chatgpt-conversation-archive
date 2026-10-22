@@ -136,13 +136,14 @@
       if (!p.messageId) invalid();
       result.positionUpdatedAt = date(value.positionUpdatedAt);
     }
-    if (value.collapsed !== undefined) {
-      if (!Array.isArray(value.collapsed) || value.collapsed.length > 100000) invalid();
-      result.collapsed = [...new Set(value.collapsed.map(id => string(id, 200)))];
-      if (result.collapsed.some(id => !id)) invalid();
-      result.foldsUpdatedAt = date(value.foldsUpdatedAt);
+    for (const [field, timestamp] of [["collapsed", "foldsUpdatedAt"], ["tocCollapsed", "tocUpdatedAt"]]) {
+      if (value[field] === undefined) continue;
+      if (!Array.isArray(value[field]) || value[field].length > 100000) invalid();
+      result[field] = [...new Set(value[field].map(id => string(id, 200)))];
+      if (result[field].some(id => !id)) invalid();
+      result[timestamp] = date(value[timestamp]);
     }
-    if (!result.position && !result.collapsed) invalid();
+    if (!result.position && !result.collapsed && !result.tocCollapsed) invalid();
     return result;
   }
   function validateBackup(value) {
@@ -463,7 +464,7 @@
   }
   async function saveReaderState(key, changes) {
     const now = new Date().toISOString();
-    const entry = cleanReaderState({ ...changes, key, positionUpdatedAt: now, foldsUpdatedAt: now });
+    const entry = cleanReaderState({ ...changes, key, positionUpdatedAt: now, foldsUpdatedAt: now, tocUpdatedAt: now });
     const saved = await transaction(["conversations", "readerStates"], "readwrite", (tx, set) => {
       // Scroll checkpoints must not clone large transcripts or embedded images.
       tx.objectStore("conversations").getKey(key).onsuccess = event => {
@@ -472,7 +473,7 @@
         const states = tx.objectStore("readerStates");
         states.get(key).onsuccess = got => {
           const old = got.target.result, next = { ...old, key };
-          for (const [field, timestamp] of [["position", "positionUpdatedAt"], ["collapsed", "foldsUpdatedAt"]]) {
+          for (const [field, timestamp] of [["position", "positionUpdatedAt"], ["collapsed", "foldsUpdatedAt"], ["tocCollapsed", "tocUpdatedAt"]]) {
             if (entry[field] === undefined) continue;
             next[field] = entry[field];
             next[timestamp] = new Date(Math.max(Date.now(), Date.parse(old?.[timestamp] || 0) + 1)).toISOString();
@@ -531,7 +532,7 @@
         const states = tx.objectStore("readerStates");
         states.get(entry.key).onsuccess = event => {
           const next = { ...event.target.result, key: entry.key };
-          for (const [field, timestamp] of [["position", "positionUpdatedAt"], ["collapsed", "foldsUpdatedAt"]]) {
+          for (const [field, timestamp] of [["position", "positionUpdatedAt"], ["collapsed", "foldsUpdatedAt"], ["tocCollapsed", "tocUpdatedAt"]]) {
             if (entry[field] !== undefined && (!next[timestamp] || entry[timestamp] > next[timestamp])) {
               next[field] = entry[field]; next[timestamp] = entry[timestamp];
             }

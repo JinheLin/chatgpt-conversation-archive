@@ -960,6 +960,14 @@
     "message": "This question is already in ChatGPT. Reading its reply…"
   },
   "readerAllAnswersRead": { "message": "All answers marked as read" },
+  "readerCollapseTocHeadings": {
+    "message": "Collapse answer headings under question $number$",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
+  "readerExpandTocHeadings": {
+    "message": "Expand answer headings under question $number$",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
   "readerCollapse": { "message": "Collapse" },
   "readerExpand": { "message": "Expand" },
   "readerCollapseAll": { "message": "Collapse all" },

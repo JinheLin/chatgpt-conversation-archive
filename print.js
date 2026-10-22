@@ -9,7 +9,7 @@
   localizeDocument(document);
   const main = document.getElementById("pdf-document");
   const previewNavigation = globalThis.ChatGPTPdfPreviewNavigation.init({
-    main, sidebar: document.getElementById("preview-sidebar"), layout: document.getElementById("preview-layout")
+    main, sidebar: document.getElementById("preview-sidebar"), layout: document.getElementById("preview-layout"), report
   });
   const store = globalThis.ChatGPTReaderStore;
   const folds = globalThis.ChatGPTReaderFolds?.init({ main, sidebar: document.getElementById("preview-sidebar"), store, report });
@@ -53,6 +53,7 @@
     outputBusy = value;
     reader.setLocked(value);
     folds?.setLocked(value);
+    previewNavigation.setLocked?.(value);
     reads.setLocked(value);
     chat?.setLocked(value);
     if (value) exportMenu.close();
@@ -88,6 +89,7 @@
       const scroll = globalThis.scrollY;
       await position?.unload();
       await folds?.flush();
+      await previewNavigation.flush?.();
       const key = store.keyFor(next.sourceUrl);
       const state = await store.getReaderState?.(key).catch(() => null);
       main.replaceChildren(...temporary.childNodes);
@@ -95,7 +97,7 @@
       await document.fonts.ready;
       await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
       await reader.load(store.keyFor(next.sourceUrl), true, { open: false });
-      previewNavigation.refresh();
+      previewNavigation.refresh({ conversationKey: key, tocCollapsed: state?.tocCollapsed });
       folds?.load(key, { collapsed: state?.collapsed, respectHash: false });
       workspace.reading(next); updateReaderAddress();
       await reads.load(store.keyFor(next.sourceUrl), next.messages);
@@ -204,7 +206,7 @@
     setOutputBusy(true);
     try {
       if (current && chat && !await chat.canLeave()) return;
-      if (current) { await position?.flush(); await folds?.flush(); }
+      if (current) { await position?.flush(); await folds?.flush(); await previewNavigation.flush?.(); }
       await store.deleteConversation(entry.key);
       // A refresh must not silently download a deleted conversation, even when
       // the original entry URL points to a different chat from the one displayed.
@@ -304,6 +306,7 @@
     if (chat && !await chat.canLeave()) { setOutputBusy(false); return; }
     await position?.unload();
     await folds?.flush();
+    await previewNavigation.flush?.();
     const mine = ++generation;
     cancelButton.hidden = false;
     actions.hidden = true;
@@ -422,7 +425,7 @@
       if (mine !== generation) return;
       await reader.load(key, !storageProblem);
       if (mine !== generation) return;
-      previewNavigation.refresh();
+      previewNavigation.refresh({ conversationKey: key, tocCollapsed: state?.tocCollapsed, writable: !storageProblem });
       folds?.load(key, { collapsed: state?.collapsed, respectHash: false, writable: !storageProblem });
       actions.hidden = false;
       workspace.reading(payload, !storageProblem);
@@ -617,7 +620,7 @@
     if (outputBusy) return;
     setOutputBusy(true);
     try {
-      await position?.flush(); await folds?.flush();
+      await position?.flush(); await folds?.flush(); await previewNavigation.flush?.();
       const data = await store.backup();
       const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
       if (blob.size > store.MAX_BACKUP_BYTES) throw new Error(t("readerBackupTooLarge"));

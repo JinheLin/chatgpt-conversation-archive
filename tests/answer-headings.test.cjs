@@ -71,7 +71,10 @@ test('preview navigation copies the complete question/heading hierarchy without 
   const sidebar = app.get('preview-sidebar');
   assert.equal(sidebar.querySelectorAll('.preview-toc > ol > li').length, 2);
   assert.equal(sidebar.querySelectorAll('.pdf-toc-headings a').length, 6);
-  assert.equal(sidebar.querySelectorAll('.preview-toc [id]').length, 0);
+  assert.equal(sidebar.querySelectorAll('.preview-toc [id]').length, 2);
+  for (const button of sidebar.querySelectorAll('.preview-headings-toggle')) {
+    assert.ok(sidebar.querySelector('[id="' + button.getAttribute('aria-controls') + '"]'));
+  }
   for (const link of sidebar.querySelectorAll('a')) assert.ok(app.w.document.getElementById(link.hash.slice(1)));
   const ids = [...app.w.document.querySelectorAll('[id]')].map(node => node.id);
   assert.equal(ids.length, new Set(ids).size);

@@ -960,6 +960,14 @@
     "message": "同一条问题已在 ChatGPT 中，正在同步回复…"
   },
   "readerAllAnswersRead": { "message": "所有回答已标记为已读" },
+  "readerCollapseTocHeadings": {
+    "message": "收起问题 $number$ 下的回答标题",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
+  "readerExpandTocHeadings": {
+    "message": "展开问题 $number$ 下的回答标题",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
   "readerCollapse": { "message": "收起" },
   "readerExpand": { "message": "展开" },
   "readerCollapseAll": { "message": "全部收起" },

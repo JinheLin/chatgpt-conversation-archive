@@ -1,4 +1,4 @@
-/* Question folds are temporary reader UI; the saved transcript stays complete. */
+/* Question folds persist per conversation; the saved transcript stays complete. */
 (() => {
   "use strict";
   const controllers = new WeakMap();
@@ -16,12 +16,21 @@
     }
     return false;
   }
-  function init({ main, sidebar }) {
+  function init({ main, sidebar, store = globalThis.ChatGPTReaderStore, report = () => {} }) {
     if (controllers.has(main)) return controllers.get(main);
     const document = main.ownerDocument, view = document.defaultView;
     const { t } = globalThis.ChatGPTPdfI18n;
     const memory = new Map();
-    let groups = [], collapsed = new Set(), locked = false, tools;
+    let groups = [], collapsed = new Set(), locked = false, tools, key = null, writable = true;
+    let pending = Promise.resolve();
+    function changed() {
+      main.dispatchEvent(new view.Event("reader-fold-change"));
+      if (!key || !writable || !store?.saveReaderState) return;
+      const current = key, ids = [...collapsed];
+      pending = pending.then(() => store.saveReaderState(current, { collapsed: ids })).catch(error => {
+        report(t("readerSaveFailed", error.message), true);
+      });
+    }
     function button(text, action) {
       const node = document.createElement("button");
       node.type = "button"; node.textContent = text; node.addEventListener("click", action);
@@ -36,16 +45,18 @@
       group.toggle.setAttribute("aria-expanded", String(!folded));
       group.toggle.disabled = locked;
     }
-    function set(group, folded) {
+    function set(group, folded, persist = true) {
       if (folded) collapsed.add(group.key); else collapsed.delete(group.key);
       paint(group);
+      if (persist) changed();
     }
     function setAll(folded) {
       if (locked) return;
-      for (const group of groups) set(group, folded);
+      for (const group of groups) set(group, folded, false);
+      changed();
     }
     function unload() {
-      clear(main); tools?.remove(); tools = null; groups = [];
+      key = null; clear(main); tools?.remove(); tools = null; groups = [];
     }
     function revealTarget(target) {
       const group = groups.find(item => item.members.some(node => node === target || node.contains(target)));
@@ -59,8 +70,10 @@
       const target = id && document.getElementById(id);
       if (target && main.contains(target) && revealTarget(target)) target.scrollIntoView({ block: "start", behavior: "auto" });
     }
-    function load(key) {
+    function load(conversationKey, { collapsed: saved, respectHash = true, writable: canSave = true } = {}) {
       unload();
+      key = conversationKey; writable = canSave;
+      if (saved) memory.set(key, new Set(saved));
       if (!memory.has(key)) memory.set(key, new Set());
       collapsed = memory.get(key);
       const labels = new Map([...main.querySelectorAll(".pdf-toc > ol > li > a")].map(link => [link.getAttribute("href").slice(1), link.textContent]));
@@ -92,7 +105,9 @@
           for (const control of tools.querySelectorAll("button")) control.disabled = locked;
         }
       }
-      hashTarget();
+      const ids = new Set(groups.map(group => group.key));
+      for (const id of collapsed) if (!ids.has(id)) collapsed.delete(id);
+      if (respectHash) hashTarget();
     }
     // Expand before the browser follows the anchor, including a repeated click
     // on the current hash. Modified clicks keep their normal new-tab behavior.
@@ -107,7 +122,7 @@
     sidebar.addEventListener("click", onLink, true);
     main.addEventListener("click", onLink, true);
     view.addEventListener("hashchange", hashTarget);
-    const api = { load, unload, reveal: revealTarget,
+    const api = { load, unload, reveal: revealTarget, flush: () => pending,
       setLocked(value) {
         locked = value;
         for (const group of groups) group.toggle.disabled = value;

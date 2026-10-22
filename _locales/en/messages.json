@@ -598,7 +598,7 @@
     "message": "Reader backups are limited to 100 MiB."
   },
   "readerBackupSaved": {
-    "message": "Local conversations, annotations and read status backed up. Keep this private file somewhere safe."
+    "message": "Local conversations, annotations, read status and reading state backed up. Keep this private file somewhere safe."
   },
   "readerBackupFailed": {
     "message": "Backup or restore failed: $arg1$",
@@ -629,7 +629,7 @@
     "message": "Backup & restore"
   },
   "readerBackupHint": {
-    "message": "Save or restore all local conversations, highlights, comments and read status."
+    "message": "Save or restore all local conversations, highlights, comments, read status, drafts, reading positions and folded questions."
   },
   "readerLoginHint": {
     "message": "To read a private conversation, sign in to ChatGPT in this browser."
@@ -711,7 +711,7 @@
     }
   },
   "readerDeleteConversationConfirm": {
-    "message": "Delete “$arg1$” from local storage?\n\nIts saved conversation, highlights and comments, and its read status, will be removed. The original ChatGPT conversation and exported files will remain. You can restore it from a previous backup.",
+    "message": "Delete “$arg1$” from local storage?\n\nIts saved conversation, highlights and comments, read status, drafts, reading position and folded questions will be removed. The original ChatGPT conversation and exported files will remain. You can restore it from a previous backup.",
     "placeholders": {
       "arg1": {
         "content": "$1"

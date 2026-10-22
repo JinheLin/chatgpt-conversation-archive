@@ -1,4 +1,4 @@
-/* Local snapshots, annotations and read state. No credentials, servers or sync storage. */
+/* Local snapshots, annotations, read marks and reading state. No credentials or sync servers. */
 (() => {
   "use strict";
   const { t } = globalThis.ChatGPTPdfI18n;
@@ -124,6 +124,27 @@
     if (!result.conversationKey || !result.messageId || !/^[a-f0-9]{64}$/.test(result.textHash)) invalid();
     return result;
   }
+  function cleanReaderState(value) {
+    if (!value || typeof value.key !== "string" || !/^(?:c|share):[a-z0-9-]+$/i.test(value.key)) invalid();
+    const result = { key: value.key };
+    if (value.position !== undefined) {
+      const p = value.position;
+      if (!p || typeof p.atStart !== "boolean" || !Number.isSafeInteger(p.blockIndex) || p.blockIndex < -1 || p.blockIndex > 100000 ||
+          !Number.isFinite(p.fraction) || p.fraction < 0 || p.fraction > 1 || !Number.isFinite(p.gap) || p.gap < 0 || p.gap > 10000) invalid();
+      result.position = { messageId: string(p.messageId, 200), questionId: string(p.questionId, 200), blockIndex: p.blockIndex,
+        excerpt: string(p.excerpt, 160), fraction: p.fraction, gap: p.gap, atStart: p.atStart, hash: string(p.hash, 2000) };
+      if (!p.messageId) invalid();
+      result.positionUpdatedAt = date(value.positionUpdatedAt);
+    }
+    if (value.collapsed !== undefined) {
+      if (!Array.isArray(value.collapsed) || value.collapsed.length > 100000) invalid();
+      result.collapsed = [...new Set(value.collapsed.map(id => string(id, 200)))];
+      if (result.collapsed.some(id => !id)) invalid();
+      result.foldsUpdatedAt = date(value.foldsUpdatedAt);
+    }
+    if (!result.position && !result.collapsed) invalid();
+    return result;
+  }
   function validateBackup(value) {
     if (value?.format !== FORMAT || value.version !== 1 || !Array.isArray(value.conversations) ||
         !Array.isArray(value.annotations) || value.conversations.length > 10000 || value.annotations.length > 100000) invalid();
@@ -161,25 +182,35 @@
       if (!keys.has(draft.key) || draftKeys.has(draft.key)) invalid();
       draftKeys.add(draft.key); return draft;
     });
-    return { conversations, annotations, reads, drafts };
+    const statesInput = value.readerStates === undefined ? [] : value.readerStates;
+    if (!Array.isArray(statesInput) || statesInput.length > 10000) invalid();
+    const stateKeys = new Set();
+    const readerStates = statesInput.map(entry => {
+      const state = cleanReaderState(entry);
+      if (!keys.has(state.key) || stateKeys.has(state.key)) invalid();
+      stateKeys.add(state.key); return state;
+    });
+    return { conversations, annotations, reads, drafts, readerStates };
   }
   function open() {
     if (opening) return opening;
     opening = new Promise((resolve, reject) => {
       if (!globalThis.indexedDB) return reject(new Error(t("readerStorageUnavailable")));
-      const request = indexedDB.open("chatgpt-conversation-reader", 5);
+      const request = indexedDB.open("chatgpt-conversation-reader", 6);
       let failed = false;
       const fail = () => { failed = true; reject(new Error(t("readerStorageUnavailable"))); };
       request.onerror = fail;
       request.onblocked = fail;
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         const db = request.result;
         const tx = request.transaction;
         const conversations = db.objectStoreNames.contains("conversations")
           ? tx.objectStore("conversations") : db.createObjectStore("conversations", { keyPath: "key" });
-        if (conversations.indexNames.contains("summary")) conversations.deleteIndex("summary");
-        conversations.createIndex("summary",
-          ["savedAt", "payload.title", "payload.sourceUrl", "payload.capturedAt", "payload.completeness.count", "payload.completeness.questions", "key", "byteSize"]);
+        if (event.oldVersion < 5) {
+          if (conversations.indexNames.contains("summary")) conversations.deleteIndex("summary");
+          conversations.createIndex("summary",
+            ["savedAt", "payload.title", "payload.sourceUrl", "payload.capturedAt", "payload.completeness.count", "payload.completeness.questions", "key", "byteSize"]);
+        }
         const annotations = db.objectStoreNames.contains("annotations")
           ? tx.objectStore("annotations") : db.createObjectStore("annotations", { keyPath: "id" });
         if (!annotations.indexNames.contains("conversationKey")) annotations.createIndex("conversationKey", "conversationKey");
@@ -187,10 +218,11 @@
         const reads = db.objectStoreNames.contains("reads")
           ? tx.objectStore("reads") : db.createObjectStore("reads", { keyPath: ["conversationKey", "messageId"] });
         if (!db.objectStoreNames.contains("drafts")) db.createObjectStore("drafts", { keyPath: "key" });
+        if (!db.objectStoreNames.contains("readerStates")) db.createObjectStore("readerStates", { keyPath: "key" });
         if (!reads.indexNames.contains("conversationKey")) reads.createIndex("conversationKey", "conversationKey");
         // Existing snapshots are read once during the atomic schema upgrade.
         // Later library refreshes read metadata keys, never bodies or assets.
-        for (const store of [conversations, annotations, reads]) {
+        for (const store of event.oldVersion < 5 ? [conversations, annotations, reads] : []) {
           store.openCursor().onsuccess = (event) => {
             const cursor = event.target.result;
             if (!cursor) return;
@@ -227,12 +259,17 @@
     });
   }
   async function listConversations() {
-    const entries = await transaction(["conversations", "annotations", "reads", "drafts"], "readonly", (tx, set) => {
+    const entries = await transaction(["conversations", "annotations", "reads", "drafts", "readerStates"], "readonly", (tx, set) => {
       // Only small metadata keys are read; the library never loads message bodies or assets.
       const result = [];
-      const annotationSizes = new Map(), readSizes = new Map(), readCounts = new Map(), draftSizes = new Map();
-      let pending = 4;
-      const finish = () => { if (--pending === 0) set({ result, annotationSizes, readSizes, readCounts, draftSizes }); };
+      const annotationSizes = new Map(), readSizes = new Map(), readCounts = new Map(), draftSizes = new Map(), stateSizes = new Map();
+      let pending = 5;
+      const finish = () => { if (--pending === 0) set({ result, annotationSizes, readSizes, readCounts, draftSizes, stateSizes }); };
+      tx.objectStore("readerStates").openCursor().onsuccess = event => {
+        const cursor = event.target.result;
+        if (!cursor) { finish(); return; }
+        stateSizes.set(cursor.value.key, cursor.value.byteSize || 0); cursor.continue();
+      };
       tx.objectStore("drafts").openCursor().onsuccess = event => {
         const cursor = event.target.result;
         if (!cursor) { finish(); return; }
@@ -262,7 +299,8 @@
       };
     });
     return entries.result.map((entry) => ({ ...entry,
-      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0) + (entries.readSizes.get(entry.key) || 0) + (entries.draftSizes.get(entry.key) || 0),
+      bytes: entry.bytes + (entries.annotationSizes.get(entry.key) || 0) + (entries.readSizes.get(entry.key) || 0) +
+        (entries.draftSizes.get(entry.key) || 0) + (entries.stateSizes.get(entry.key) || 0),
       readCount: entries.readCounts.get(entry.key) || 0
     })).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
   }
@@ -323,9 +361,10 @@
   }
   async function deleteConversation(key) {
     if (typeof key !== "string" || !key) invalid();
-    await transaction(["conversations", "annotations", "reads", "drafts"], "readwrite", (tx) => {
+    await transaction(["conversations", "annotations", "reads", "drafts", "readerStates"], "readwrite", (tx) => {
       tx.objectStore("conversations").delete(key);
       tx.objectStore("drafts").delete(key);
+      tx.objectStore("readerStates").delete(key);
       for (const name of ["annotations", "reads"]) {
         const records = tx.objectStore(name);
         records.index("conversationKey").openKeyCursor(key).onsuccess = (event) => {
@@ -417,18 +456,47 @@
     if (removed && announceChange) announce(key, "reads");
     return removed;
   }
+  function getReaderState(key) {
+    return transaction(["readerStates"], "readonly", (tx, set) => {
+      tx.objectStore("readerStates").get(key).onsuccess = event => set(event.target.result || null);
+    });
+  }
+  async function saveReaderState(key, changes) {
+    const now = new Date().toISOString();
+    const entry = cleanReaderState({ ...changes, key, positionUpdatedAt: now, foldsUpdatedAt: now });
+    const saved = await transaction(["conversations", "readerStates"], "readwrite", (tx, set) => {
+      // Scroll checkpoints must not clone large transcripts or embedded images.
+      tx.objectStore("conversations").getKey(key).onsuccess = event => {
+        // A closing or stale reader must never recreate a deleted conversation.
+        if (!event.target.result) return;
+        const states = tx.objectStore("readerStates");
+        states.get(key).onsuccess = got => {
+          const old = got.target.result, next = { ...old, key };
+          for (const [field, timestamp] of [["position", "positionUpdatedAt"], ["collapsed", "foldsUpdatedAt"]]) {
+            if (entry[field] === undefined) continue;
+            next[field] = entry[field];
+            next[timestamp] = new Date(Math.max(Date.now(), Date.parse(old?.[timestamp] || 0) + 1)).toISOString();
+          }
+          next.byteSize = storageBytes(next); states.put(next); set(next);
+        };
+      };
+    });
+    if (saved) announce(key, "reader-state");
+    return saved;
+  }
   async function backup() {
-    return transaction(["conversations", "annotations", "reads", "drafts"], "readonly", (tx, set) => {
+    return transaction(["conversations", "annotations", "reads", "drafts", "readerStates"], "readonly", (tx, set) => {
       const result = { format: FORMAT, version: 1, createdAt: new Date().toISOString() };
       tx.objectStore("conversations").getAll().onsuccess = (event) => { result.conversations = event.target.result; set(result); };
       tx.objectStore("annotations").getAll().onsuccess = (event) => { result.annotations = event.target.result; set(result); };
       tx.objectStore("reads").getAll().onsuccess = (event) => { result.reads = event.target.result; set(result); };
       tx.objectStore("drafts").getAll().onsuccess = event => { result.drafts = event.target.result; set(result); };
+      tx.objectStore("readerStates").getAll().onsuccess = event => { result.readerStates = event.target.result; set(result); };
     });
   }
   async function restore(value) {
     const data = validateBackup(value);
-    await transaction(["conversations", "annotations", "reads", "drafts"], "readwrite", (tx, set, fail) => {
+    await transaction(["conversations", "annotations", "reads", "drafts", "readerStates"], "readwrite", (tx, set, fail) => {
       const conversations = tx.objectStore("conversations"), annotations = tx.objectStore("annotations"), reads = tx.objectStore("reads");
       for (const entry of data.conversations) {
         entry.byteSize = storageBytes(entry);
@@ -459,12 +527,24 @@
           if (!old || entry.updatedAt > old.updatedAt) tx.objectStore("drafts").put(entry);
         };
       }
+      for (const entry of data.readerStates) {
+        const states = tx.objectStore("readerStates");
+        states.get(entry.key).onsuccess = event => {
+          const next = { ...event.target.result, key: entry.key };
+          for (const [field, timestamp] of [["position", "positionUpdatedAt"], ["collapsed", "foldsUpdatedAt"]]) {
+            if (entry[field] !== undefined && (!next[timestamp] || entry[timestamp] > next[timestamp])) {
+              next[field] = entry[field]; next[timestamp] = entry[timestamp];
+            }
+          }
+          next.byteSize = storageBytes(next); states.put(next);
+        };
+      }
     });
     for (const entry of data.conversations) announce(entry.key);
     return { conversations: data.conversations.length, annotations: data.annotations.filter((entry) => !entry.deletedAt).length };
   }
   globalThis.ChatGPTReaderStore = { keyFor, getConversation, listConversations, saveConversation, deleteConversation,
     getAnnotations, saveAnnotation, deleteAnnotation, getReads, setReads, pruneReads, backup, restore, validateBackup, MAX_BACKUP_BYTES,
-    getDraft, saveDraft,
+    getDraft, saveDraft, getReaderState, saveReaderState,
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); } };
 })();

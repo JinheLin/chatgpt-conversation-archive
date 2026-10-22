@@ -77,6 +77,12 @@ When the image server blocks ordinary cross-origin reads, the existing debugger 
 - **Export** offers HTML and PDF plus the **A4 landscape**, **Mobile reading** and **Hanwang N10 (3:4)** checkboxes. They are mutually exclusive; leave all unchecked for A4 portrait. The format setting applies to the preview and both exports.
 - Successful backup/export notices disappear after a few seconds. Errors remain visible. Successful reading or restoration does not leave a completion banner above the document.
 
+## Resume reading and remember folds (v3.9.9)
+
+Each local conversation remembers its last reading position and each question’s expanded/collapsed state. Refreshing, reopening or switching back restores them automatically; new questions start expanded. The position follows a message ID and paragraph excerpt with a relative offset, allowing for inserted content and changed page widths. If the paragraph or answer was removed, the reader falls back to its question where possible.
+
+A different explicit question/chapter fragment takes priority and unfolds its destination. Refreshing an unchanged fragment resumes the more recent reading position. Restoration waits briefly for embedded images and is cancelled if you begin scrolling or interacting. Reading state stays local, is included in backup/restore and storage totals, and is removed when the conversation is deleted. HTML and PDF continue to contain the full conversation.
+
 ## Continue a conversation while reading (v3.9)
 
 v3.9.2 handles rich-editor paragraph/blank-line conversion, replaced input nodes and delayed send-button readiness. A retry reuses an identical unsent question without inserting it again, while other existing drafts remain protected. An identical question already posted after the saved snapshot is read back instead of resubmitted. Input-write, send-button and page-load failures now have distinct messages. Temporary tabs selected or navigated elsewhere by the user are left open.
@@ -109,7 +115,7 @@ Each answer heading has an icon: an open circle is unread and a check is read. I
 
 ## Answer sections in navigation (v3.5)
 
-v3.9.6 adds question folding. Each question has **Collapse / Expand**, and the directory has **Collapse all / Expand all**. A folded turn shows its question summary and hides the full question body and every following answer before the next question. All turns start expanded. Directory, chapter, annotation and new-reply jumps expand the target turn automatically. Choices survive updates and conversation switches within this page; a page refresh starts expanded again. Folding leaves snapshots, annotations and read marks intact. HTML, PDF and print always include the full conversation.
+v3.9.6 adds question folding. Each question has **Collapse / Expand**, and the directory has **Collapse all / Expand all**. A folded turn shows its question summary and hides the full question body and every following answer before the next question. Questions without saved fold choices start expanded. Directory, chapter, annotation and new-reply jumps expand the target turn automatically. Since v3.9.9, choices survive updates, conversation switches, page refreshes and reopening the reader. Folding leaves snapshots, annotations and read marks intact. HTML, PDF and print always include the full conversation.
 
 v3.9.5 highlights the current question and answer section as you read, scrolling only the directory to keep the matching entry visible. If a question has more chapters than the sidebar can show, its question title takes priority. Tracking preserves the document position and keyboard focus, updates after resizing, layout changes or image loading, and supports upward scrolling and anchor jumps. After browsing the directory manually, following resumes when the reading section changes. This state stays in the reader and is excluded from HTML/PDF exports.
 
@@ -204,11 +210,12 @@ Rendering and navigation updates through **v3.9.8** also apply to saved local co
 | `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
 | `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
 | `preview-navigation.js` | Preview question/section links, current-reading highlight and sidebar following, separate from the exported document |
-| `reader-store.js` | IndexedDB snapshots, annotations, read state, cross-tab notifications and validated backup merging |
+| `reader-store.js` | IndexedDB snapshots, annotations, read and reading state, cross-tab notifications and validated backup merging |
 | `reader-anchor.js` | Message-based text quotes, contextual restoration and formatting-preserving highlights |
 | `reader-reads.js` | Answer read marks, sidebar status, unread filter and export removal |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
-| `reader-folds.js` | Question folding, bulk expand/collapse, automatic unfolding on jumps and export cleanup |
+| `reader-folds.js` | Persistent question folding, bulk expand/collapse, automatic unfolding on jumps and export cleanup |
+| `reader-position.js` | Throttled reading checkpoints, message/paragraph restoration, fragment priority and cancellation on interaction |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `reader-chat.js` | Question sidebar, selected passages, local drafts and pending-send recovery |
 | `chat-text.js` | Shared rich-editor text extraction and question/reply comparison |

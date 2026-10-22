@@ -220,7 +220,7 @@
       if (dirty() || busy) { event.preventDefault(); event.returnValue = ""; }
     });
     store.subscribe((changedKey, topic) => {
-      if (["reads", "drafts"].includes(topic) || changedKey !== key || busy) return;
+      if (["reads", "drafts", "reader-state"].includes(topic) || changedKey !== key || busy) return;
       void refresh().catch((error) => report(t("readerSaveFailed", error.message), true));
     });
     unload();

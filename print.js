@@ -11,8 +11,9 @@
   const previewNavigation = globalThis.ChatGPTPdfPreviewNavigation.init({
     main, sidebar: document.getElementById("preview-sidebar"), layout: document.getElementById("preview-layout")
   });
-  const folds = globalThis.ChatGPTReaderFolds?.init({ main, sidebar: document.getElementById("preview-sidebar") });
   const store = globalThis.ChatGPTReaderStore;
+  const folds = globalThis.ChatGPTReaderFolds?.init({ main, sidebar: document.getElementById("preview-sidebar"), store, report });
+  const position = globalThis.ChatGPTReaderPosition?.init({ main, store, report });
   const reader = globalThis.ChatGPTReader.init({ main, layout: document.getElementById("preview-layout"), store });
   const reads = globalThis.ChatGPTReaderReads.init({
     main, sidebar: document.getElementById("preview-sidebar"), store, report
@@ -84,27 +85,21 @@
       const temporary = document.createElement("main");
       await globalThis.ChatGPTPdfExporter.render(next, temporary);
       await store.saveConversation(next);
-      // Anchor to a visible content block; highlights and read markers are restored
-      // before compensating for layout changes above the current viewport.
-      const blocks = [...main.querySelectorAll(".pdf-message-body > *")];
-      const visible = blocks.find(node => node.getBoundingClientRect().bottom > 110);
-      const section = visible?.closest(".pdf-message");
-      const position = visible && { messageId: section.dataset.messageId,
-        index: [...section.querySelector(".pdf-message-body").children].indexOf(visible),
-        top: visible.getBoundingClientRect().top };
       const scroll = globalThis.scrollY;
+      await position?.unload();
+      await folds?.flush();
+      const key = store.keyFor(next.sourceUrl);
+      const state = await store.getReaderState?.(key).catch(() => null);
       main.replaceChildren(...temporary.childNodes);
       payload = next;
       await document.fonts.ready;
       await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
       await reader.load(store.keyFor(next.sourceUrl), true, { open: false });
       previewNavigation.refresh();
-      folds?.load(store.keyFor(next.sourceUrl));
+      folds?.load(key, { collapsed: state?.collapsed, respectHash: false });
       workspace.reading(next); updateReaderAddress();
       await reads.load(store.keyFor(next.sourceUrl), next.messages);
-      const target = [...main.querySelectorAll(".pdf-message")].find(node => node.dataset.messageId === position?.messageId)
-        ?.querySelector(".pdf-message-body")?.children[position?.index];
-      globalThis.scrollTo({ top: scroll + (target ? target.getBoundingClientRect().top - position.top : 0), behavior: "instant" });
+      await position?.load(key, state?.position, true, { fallbackTop: scroll });
       await refreshLibrary();
     }
   });
@@ -209,6 +204,7 @@
     setOutputBusy(true);
     try {
       if (current && chat && !await chat.canLeave()) return;
+      if (current) { await position?.flush(); await folds?.flush(); }
       await store.deleteConversation(entry.key);
       // A refresh must not silently download a deleted conversation, even when
       // the original entry URL points to a different chat from the one displayed.
@@ -222,6 +218,7 @@
       }
       if (current) {
         generation++;
+        await position?.unload();
         reader.unload();
         folds?.unload();
         reads.unload();
@@ -305,6 +302,8 @@
     if (outputBusy || !reader.canLeave() || !reads.canLeave()) return;
     setOutputBusy(true);
     if (chat && !await chat.canLeave()) { setOutputBusy(false); return; }
+    await position?.unload();
+    await folds?.flush();
     const mine = ++generation;
     cancelButton.hidden = false;
     actions.hidden = true;
@@ -327,8 +326,10 @@
       showReadProgress({ stage: "connect" });
       let cached = null;
       let previous = null;
+      let state = null;
       try { previous = await store.getConversation(key); }
       catch (error) { storageProblem = error; }
+      try { state = await store.getReaderState?.(key); } catch (_) { /* Reading can continue without saved UI state. */ }
       if (!forceRemote) cached = previous;
       if (mine !== generation) return;
       if (cached) {
@@ -422,7 +423,7 @@
       await reader.load(key, !storageProblem);
       if (mine !== generation) return;
       previewNavigation.refresh();
-      folds?.load(key);
+      folds?.load(key, { collapsed: state?.collapsed, respectHash: false, writable: !storageProblem });
       actions.hidden = false;
       workspace.reading(payload, !storageProblem);
       updateReaderAddress();
@@ -437,6 +438,8 @@
       await reads.load(key, payload.messages, !storageProblem);
       await chat?.load(payload, !storageProblem);
       if (mine !== generation) return;
+      await position?.load(key, state?.position, !storageProblem);
+      if (mine !== generation) return;
       if (sourceTab) {
         await chrome.tabs.remove(sourceTab).catch(() => {});
         sourceTab = null;
@@ -444,6 +447,7 @@
       await refreshLibrary();
     } catch (error) {
       if (mine === generation) {
+        await position?.unload();
         main.hidden = true; previewNavigation.clear(); reader.unload(); folds?.unload(); reads.unload(); payload = null;
         await chat?.unload();
         workspace.opening();
@@ -460,6 +464,7 @@
   document.getElementById("export-form").addEventListener("submit", start);
   cancelButton.addEventListener("click", async () => {
     generation++;
+    await position?.unload();
     reader.unload();
     folds?.unload();
     reads.unload();
@@ -612,6 +617,7 @@
     if (outputBusy) return;
     setOutputBusy(true);
     try {
+      await position?.flush(); await folds?.flush();
       const data = await store.backup();
       const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
       if (blob.size > store.MAX_BACKUP_BYTES) throw new Error(t("readerBackupTooLarge"));
@@ -639,7 +645,9 @@
     finally { setOutputBusy(false); }
     if (restored && current) { reader.unload(); input.value = current; await start(); }
   });
-  store.subscribe?.(() => {
+  document.getElementById("reader-open").addEventListener("click", () => { if (!outputBusy) void refreshLibrary(); });
+  store.subscribe?.((key, topic) => {
+    if (topic === "reader-state" && document.getElementById("reader-workspace").hidden) return;
     clearTimeout(libraryTimer);
     libraryTimer = setTimeout(() => { void refreshLibrary(); }, 50);
   });

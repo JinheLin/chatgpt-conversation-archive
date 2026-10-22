@@ -11,7 +11,7 @@
     toolbar.setAttribute("aria-label", t("readerSelectionToolbar"));
     const comment = get("reader-comment"), status = get("reader-status");
     const toggle = get("reader-toggle"), save = get("reader-save-comment");
-    let key = null, notes = [], positions = new Map(), selection = null, editing = null;
+    let key = null, notes = [], positions = new Map(), selection = null, editing = null, activeNoteId = null;
     let revision = 0, selecting = 0, busy = false, enabled = false, locked = false;
     function element(tag, className, text) {
       const node = document.createElement(tag);
@@ -90,6 +90,7 @@
       for (const note of notes) {
         const card = element("article", "reader-annotation");
         card.dataset.annotationId = note.id;
+        card.classList.toggle("reader-annotation-active", note.id === activeNoteId);
         const jumpButton = element("button", "reader-quote", note.anchor.exact);
         jumpButton.type = "button";
         jumpButton.addEventListener("click", () => jump(note.id));
@@ -121,7 +122,7 @@
     }
     function unload() {
       revision++; hideSelection(); closeEditor();
-      key = null; enabled = false; notes = []; positions.clear();
+      key = null; enabled = false; notes = []; positions.clear(); activeNoteId = null;
       openPanel(false); list.replaceChildren();
       toggle.disabled = true;
       report("");
@@ -208,13 +209,20 @@
     get("reader-close").addEventListener("click", () => { if (canLeave()) { closeEditor(); openPanel(false); } });
     main.addEventListener("click", (event) => {
       const mark = event.target.closest("mark.reader-highlight");
-      if (!mark || !globalThis.getSelection()?.isCollapsed) return;
+      if (!mark || globalThis.getSelection()?.isCollapsed === false) return;
       event.preventDefault();
-      const id = JSON.parse(mark.dataset.annotationIds)[0];
+      const ids = JSON.parse(mark.dataset.annotationIds);
+      const card = [...list.children].find((node) => ids.includes(node.dataset.annotationId));
+      if (!card) return;
+      activeNoteId = card.dataset.annotationId;
+      for (const node of list.children) node.classList.toggle("reader-annotation-active", node === card);
       openPanel();
-      const card = [...list.children].find((node) => node.dataset.annotationId === id);
-      card?.scrollIntoView({ block: "nearest" });
-      card?.querySelector("button")?.focus({ preventScroll: true });
+      // Measure after opening the panel and scroll only its own viewport.
+      // scrollIntoView also scrolls the document, disturbing the reading position.
+      const rect = card.getBoundingClientRect(), box = panel.getBoundingClientRect();
+      panel.scrollTop = Math.max(0, panel.scrollTop + rect.top - box.top - panel.clientTop -
+        Math.max(0, (panel.clientHeight - rect.height) / 2));
+      card.querySelector("button")?.focus({ preventScroll: true });
     });
     globalThis.addEventListener("beforeunload", (event) => {
       if (dirty() || busy) { event.preventDefault(); event.returnValue = ""; }

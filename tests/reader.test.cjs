@@ -138,6 +138,77 @@ test('annotation cards follow message and text position, use creation time for t
   assert.deepEqual(order(reopened), expected);
 });
 
+test('clicking a highlight opens and centers its annotation without scrolling the document or discarding a draft', async t => {
+  const app = await setup({ payload: payload('Question', 'Alpha passage followed by **Omega passage**.') });
+  t.after(() => app.w.close());
+  await saveQuote(app, 'alpha', 'assistant-1', 'Alpha passage');
+  await saveQuote(app, 'omega', 'assistant-1', 'Omega passage');
+  await app.reader.refresh();
+  const panel = app.get('reader-annotations'), list = app.get('reader-annotation-list');
+  const [first, last] = list.children;
+  first.querySelector('.reader-note-controls button').click();
+  app.get('reader-comment').value = 'Keep my unsaved comment';
+  app.w.confirm = () => assert.fail('Navigating annotations must preserve the draft');
+  app.reader.openPanel(false);
+  app.w.HTMLElement.prototype.scrollIntoView = () => assert.fail('Must scroll only the annotation panel');
+  app.w.scrollTo = () => assert.fail('Must preserve document scroll');
+  Object.defineProperty(panel, 'clientHeight', { value: 400 });
+  Object.defineProperty(panel, 'clientTop', { value: 1 });
+  panel.scrollTop = 75;
+  panel.getBoundingClientRect = () => {
+    assert.equal(panel.hidden, false, 'Measure after opening the panel');
+    return { top: 100 };
+  };
+  last.getBoundingClientRect = () => ({ top: 1000, height: 200 });
+  const lastButton = last.querySelector('.reader-quote'), focus = lastButton.focus.bind(lastButton);
+  lastButton.focus = options => {
+    assert.equal(options.preventScroll, true);
+    focus(options);
+  };
+  app.main.querySelector('strong mark').click();
+  assert.equal(panel.hidden, false);
+  assert.equal(app.get('reader-toggle').getAttribute('aria-expanded'), 'true');
+  assert.equal(panel.scrollTop, 874);
+  assert.equal(list.querySelector('.reader-annotation-active'), last);
+  assert.equal(app.w.document.activeElement, lastButton);
+  assert.equal(app.get('reader-editor').hidden, false);
+  assert.equal(app.get('reader-comment').value, 'Keep my unsaved comment');
+
+  // A card taller than the viewport starts at the top; near the beginning, clamp to zero.
+  first.getBoundingClientRect = () => ({ top: -1000, height: 600 });
+  app.main.querySelector('mark').click();
+  assert.equal(panel.scrollTop, 0);
+  assert.deepEqual([...list.querySelectorAll('.reader-annotation-active')], [first]);
+  await app.reader.refresh();
+  assert.equal(list.querySelector('.reader-annotation-active').dataset.annotationId, 'alpha');
+  app.reader.unload();
+  await app.reader.load('c:test-conversation');
+  assert.equal(list.querySelector('.reader-annotation-active'), null);
+});
+
+test('selecting text within a highlight does not open or navigate the annotation panel', async t => {
+  const app = await setup(); t.after(() => app.w.close());
+  await saveQuote(app, 'note', 'assistant-1', 'important text');
+  await app.reader.refresh();
+  app.reader.openPanel(false);
+  const body = app.main.querySelector('.pdf-assistant .pdf-message-body');
+  const start = app.w.ChatGPTReaderAnchor.index(body).text.indexOf('important');
+  select(app, body, start, start + 5);
+  app.main.querySelector('mark').click();
+  assert.equal(app.get('reader-annotations').hidden, true);
+  assert.equal(app.get('reader-annotation-list').querySelector('.reader-annotation-active'), null);
+});
+
+test('overlapping highlights navigate to the first matching annotation in document order', async t => {
+  const app = await setup(); t.after(() => app.w.close());
+  await saveQuote(app, 'a-inner', 'assistant-1', 'text');
+  await saveQuote(app, 'z-outer', 'assistant-1', 'important text');
+  await app.reader.refresh();
+  const overlap = [...app.main.querySelectorAll('mark')].find(node => JSON.parse(node.dataset.annotationIds).length === 2);
+  overlap.click();
+  assert.equal(app.get('reader-annotation-list').querySelector('.reader-annotation-active').dataset.annotationId, 'z-outer');
+});
+
 test('annotation order follows relocated quotes after a message changes rather than stale saved offsets', async (t) => {
   const app = await setup({ payload: payload('Question', 'Alpha passage. ' + 'Context. '.repeat(20) + 'Omega passage.') });
   t.after(() => app.w.close());

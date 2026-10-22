@@ -33,6 +33,8 @@
   const actions = document.getElementById("output-actions");
   const pdfFallback = document.getElementById("pdf-fallback");
   pdfFallback.hidden = true;
+  let fallbackScope = "", fallbackMetadata = null;
+  const exportScope = document.getElementById("export-scope");
   const pageLayout = document.getElementById("page-layout");
   const mobileLayout = document.getElementById("mobile-layout");
   const n10Layout = document.getElementById("n10-layout");
@@ -44,9 +46,11 @@
     root: document.getElementById("export-menu"), button: document.getElementById("export-toggle"),
     popup: document.getElementById("export-formats"),
     items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
-    isBusy: () => outputBusy
+    isBusy: () => outputBusy,
+    onOpen: anchor => { exportScope.value = anchor.dataset?.questionId || ""; }
   });
-  const outputControls = [input, startButton, ...layoutControls,
+  const questionExport = globalThis.ChatGPTQuestionExport?.init({ main, scope: exportScope, menu: exportMenu, isBusy: () => outputBusy });
+  const outputControls = [input, startButton, exportScope, ...layoutControls,
     ...["reader-open", "reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value) {
@@ -54,6 +58,7 @@
     reader.setLocked(value);
     folds?.setLocked(value);
     previewNavigation.setLocked?.(value);
+    questionExport?.setLocked(value);
     reads.setLocked(value);
     chat?.setLocked(value);
     if (value) exportMenu.close();
@@ -99,6 +104,7 @@
       await reader.load(store.keyFor(next.sourceUrl), true, { open: false });
       previewNavigation.refresh({ conversationKey: key, tocCollapsed: state?.tocCollapsed });
       folds?.load(key, { collapsed: state?.collapsed, respectHash: false });
+      questionExport?.refresh();
       workspace.reading(next); updateReaderAddress();
       await reads.load(store.keyFor(next.sourceUrl), next.messages);
       await position?.load(key, state?.position, true, { fallbackTop: scroll });
@@ -222,6 +228,7 @@
         generation++;
         await position?.unload();
         reader.unload();
+        questionExport?.unload();
         folds?.unload();
         reads.unload();
         await chat?.unload();
@@ -311,8 +318,10 @@
     cancelButton.hidden = false;
     actions.hidden = true;
     pdfFallback.hidden = true;
+    fallbackScope = ""; fallbackMetadata = null;
     exportMenu.close();
     reader.unload();
+    questionExport?.unload();
     folds?.unload();
     reads.unload();
     await chat?.unload();
@@ -427,6 +436,7 @@
       if (mine !== generation) return;
       previewNavigation.refresh({ conversationKey: key, tocCollapsed: state?.tocCollapsed, writable: !storageProblem });
       folds?.load(key, { collapsed: state?.collapsed, respectHash: false, writable: !storageProblem });
+      questionExport?.refresh();
       actions.hidden = false;
       workspace.reading(payload, !storageProblem);
       updateReaderAddress();
@@ -451,6 +461,7 @@
     } catch (error) {
       if (mine === generation) {
         await position?.unload();
+        questionExport?.unload();
         main.hidden = true; previewNavigation.clear(); reader.unload(); folds?.unload(); reads.unload(); payload = null;
         await chat?.unload();
         workspace.opening();
@@ -468,6 +479,7 @@
   cancelButton.addEventListener("click", async () => {
     generation++;
     await position?.unload();
+    questionExport?.unload();
     reader.unload();
     folds?.unload();
     reads.unload();
@@ -496,8 +508,14 @@
   for (const control of layoutControls) control.addEventListener("change", () => changeLayout(control));
   document.getElementById("print-again").addEventListener("click", async () => {
     if (outputBusy) return;
-    await document.fonts.ready;
-    window.print();
+    setOutputBusy(true);
+    let output;
+    try {
+      output = await outputDocument(fallbackScope, updatePageLayout());
+      await document.fonts.ready;
+      output.print(); window.print();
+    } catch (error) { report(t("directPdfFailed", error.message), true); }
+    finally { output?.dispose(); setOutputBusy(false); }
   });
 
   function download(blob, filename) {
@@ -507,45 +525,65 @@
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
-  function pdfMetadata() {
-    if (!payload) throw new Error(t("readFirst"));
-    const links = [...main.querySelectorAll(".pdf-toc li a")];
-    const questions = links.filter((link) => /^#question-\d+$/.test(link.getAttribute("href")))
+  function pdfMetadata(root = main, data = payload, idPrefix = "") {
+    if (!data) throw new Error(t("readFirst"));
+    const links = [...root.querySelectorAll(".pdf-toc li a")];
+    const questions = links.filter((link) => new RegExp(`^#${idPrefix}question-\\d+$`).test(link.getAttribute("href")))
       .map((link) => ({ id: link.getAttribute("href").slice(1), title: link.textContent, headings: [] }));
     const byId = new Map(questions.map((entry) => [entry.id, entry]));
     for (const link of links) {
-      if (!/^#answer-heading-\d+-\d+$/.test(link.getAttribute("href"))) continue;
+      if (!new RegExp(`^#${idPrefix}answer-heading-\\d+-\\d+$`).test(link.getAttribute("href"))) continue;
       byId.get(link.dataset.questionId)?.headings.push({ id: link.getAttribute("href").slice(1), title: link.textContent });
     }
     return {
-      sourceUrl: payload.sourceUrl,
-      questions
+      sourceUrl: data.sourceUrl,
+      questions, ...(idPrefix ? { idPrefix } : {})
     };
+  }
+  async function outputDocument(scope, layout) {
+    if (!payload) throw new Error(t("readFirst"));
+    if (!scope) return { root: main, data: payload, idPrefix: "", print() {}, dispose() {} };
+    const selected = globalThis.ChatGPTQuestionExport.select(payload, scope);
+    const prepared = await globalThis.ChatGPTQuestionExport.prepare(selected.payload, layout);
+    return { ...prepared, data: selected.payload, idPrefix: "excerpt-" };
+  }
+  function outputFilename(title, suffix = "", scope = "") {
+    const question = scope ? "-" + t("questionLabel", globalThis.ChatGPTQuestionExport.select(payload, scope).number) : "";
+    return title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120 - question.length) + question + suffix;
   }
   document.getElementById("save-pdf").addEventListener("click", async () => {
     if (outputBusy) return;
+    const scope = exportScope.value || "";
     exportMenu.close({ restoreFocus: true });
     pdfFallback.hidden = true;
     setOutputBusy(true);
+    let output, metadata;
     try {
-      const metadata = pdfMetadata();
       report(t("directPdfProgress"));
-      await document.fonts.ready;
-      await Promise.all([...main.querySelectorAll("img")].map((image) => image.decode()));
       const layout = updatePageLayout();
-      await globalThis.ChatGPTPdfExporter.fitCode(main, layout);
+      output = await outputDocument(scope, layout);
+      metadata = pdfMetadata(output.root, output.data, output.idPrefix);
+      await document.fonts.ready;
+      if (!scope) {
+        await Promise.all([...main.querySelectorAll("img")].map((image) => image.decode()));
+        await globalThis.ChatGPTPdfExporter.fitCode(main, layout);
+      }
+      output.print();
       const bytes = await globalThis.ChatGPTPdfCapture.capture({ pageLayout: layout });
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(bytes, metadata);
       const suffix = ["mobile", "hanwang-n10"].includes(layout) ? `-${layout}` : "";
-      const filename = `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}${suffix}.pdf`;
+      const filename = outputFilename(payload.title, suffix + ".pdf", scope);
       download(new Blob([result.bytes], { type: "application/pdf" }), filename);
       report(t("directPdfSaved", result.questions, result.pages), false, false, true);
     } catch (error) {
       report(t("directPdfFailed", error.message), true);
-      pdfFallback.hidden = !payload || main.hidden;
+      fallbackScope = scope; fallbackMetadata = metadata;
+      const label = document.getElementById("pdf-fallback-scope");
+      label.textContent = t("exportScope") + " · " + (output?.data.title || t("exportAllConversation")); label.hidden = false;
+      pdfFallback.hidden = !metadata || !payload || main.hidden;
     }
-    finally { setOutputBusy(false); }
+    finally { output?.dispose(); setOutputBusy(false); }
   });
   const outlineButton = document.getElementById("add-pdf-outline");
   const outlineFile = document.getElementById("pdf-outline-file");
@@ -557,7 +595,7 @@
     if (outputBusy) return;
     setOutputBusy(true);
     try {
-      const metadata = pdfMetadata();
+      const metadata = fallbackMetadata || pdfMetadata();
       if (file.size > globalThis.ChatGPTPdfOutline.MAX_BYTES) throw new Error(t("pdfTooLarge"));
       report(t("pdfOutlineProgress"));
       const result = await globalThis.ChatGPTPdfOutline.add(await file.arrayBuffer(), metadata);
@@ -586,12 +624,15 @@
   }
   document.getElementById("save-html").addEventListener("click", async () => {
     if (outputBusy) return;
+    const scope = exportScope.value || "";
     exportMenu.close({ restoreFocus: true });
     setOutputBusy(true);
+    let output;
     try {
       if (!payload) throw new Error(t("readFirst"));
+      output = await outputDocument(scope, updatePageLayout());
       const css = await offlineCss();
-      const exported = document.implementation.createHTMLDocument(payload.title);
+      const exported = document.implementation.createHTMLDocument(output.data.title);
       exported.documentElement.lang = language;
       const charset = exported.createElement("meta"); charset.setAttribute("charset", "utf-8"); exported.head.prepend(charset);
       const viewport = exported.createElement("meta"); viewport.name = "viewport"; viewport.content = "width=device-width, initial-scale=1";
@@ -602,15 +643,17 @@
       const style = exported.createElement("style"); style.textContent = css + "\n" + document.getElementById("page-direction").textContent;
       exported.head.appendChild(style);
       exported.body.className = "pdf-print-page pdf-offline";
-      const transcript = main.cloneNode(true);
+      const transcript = output.root.cloneNode(true);
+      transcript.id = "pdf-document"; transcript.removeAttribute("aria-hidden"); transcript.removeAttribute("inert");
+      globalThis.ChatGPTQuestionExport?.clear(transcript);
       globalThis.ChatGPTReaderFolds?.clear(transcript);
       globalThis.ChatGPTReaderAnchor.clear(transcript);
       globalThis.ChatGPTReaderReads.clear(transcript);
       exported.body.appendChild(transcript);
-      download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), `${payload.title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 120)}.html`);
+      download(new Blob(["<!doctype html>\n" + exported.documentElement.outerHTML], { type: "text/html;charset=utf-8" }), outputFilename(payload.title, ".html", scope));
       report(t("htmlSaved"), false, false, true);
     } catch (error) { report(t("saveHtmlFailed", error.message), true); }
-    finally { setOutputBusy(false); }
+    finally { output?.dispose(); setOutputBusy(false); }
   });
 
   document.getElementById("reader-update").addEventListener("click", () => {

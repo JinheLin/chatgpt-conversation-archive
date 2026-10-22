@@ -160,9 +160,23 @@
 }
 .preview-layout > .pdf-document { margin: 0 auto; min-width: 0; }
 .reader-turn-controls { display: inline-flex; margin-left: auto; padding-left: 12px; }
-.reader-turn-controls button, .reader-fold-tools button {
+.reader-turn-controls button, .reader-fold-tools button, .reader-question-export {
   padding: 3px 8px; border: 1px solid #d4ded8; border-radius: 5px;
   background: #fff; color: #47534d; font: 500 12px/1.5 system-ui, sans-serif; cursor: pointer;
+}
+.reader-question-export { margin-left: 8px; white-space: nowrap; }
+.reader-question-export:hover { color: #176b58; background: #edf6f2; }
+.reader-question-export:focus-visible { outline: 2px solid #176b58; outline-offset: 3px; }
+.reader-question-export:disabled { opacity: .55; cursor: default; }
+.export-scope-field { padding: 12px 14px; border-bottom: 1px solid #e5eae7; }
+.export-scope-field label { display: block; margin: 0 0 6px; color: #62686e; font-size: 12px; }
+.export-scope-field select { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 6px; font: 13px/1.5 system-ui, sans-serif; }
+#pdf-excerpt { position: fixed; left: -100000px; top: 0; pointer-events: none; }
+@media print {
+  .reader-question-export { display: none !important; }
+  #pdf-excerpt { display: none; }
+  body[data-export-excerpt="true"] > :not(#pdf-excerpt) { display: none !important; }
+  body[data-export-excerpt="true"] > #pdf-excerpt { display: block; position: static; margin: 0; }
 }
 .reader-turn-controls button:hover, .reader-fold-tools button:hover { color: #176b58; background: #edf6f2; }
 .reader-turn-controls button:focus-visible, .reader-fold-tools button:focus-visible { outline: 2px solid #176b58; outline-offset: 3px; }
@@ -490,7 +504,7 @@
   .reader-feedback #export-status, .reader-feedback #read-progress { margin: 0; font-size: 13px; }
   .reader-feedback .pdf-fallback { box-sizing: border-box; padding: 16px; background: #fff; border: 1px solid #d8e4de; border-radius: 6px; box-shadow: 0 3px 12px #20212412; }
   .reader-feedback #cancel-export { margin-top: 8px; padding: 6px 10px; background: #fff; color: #62686e; border: 1px solid #d4ded8; font-weight: 500; }
-  .reader-bar .export-formats { left: auto; right: 0; min-width: 260px; max-width: calc(100vw - 24px); }
+.reader-bar .export-formats { left: auto; right: 0; min-width: 260px; max-width: calc(100vw - 24px); max-height: calc(100vh - 16px); overflow-y: auto; }
   .export-format-card { border: 1px solid #d8e4de; border-radius: 8px; background: #fff; box-shadow: 0 4px 18px #20212420; }
   .reader-bar .export-format-list { border: 0; box-shadow: none; padding: 6px; }
   .reader-bar .export-format-list button { padding: 9px 12px; }

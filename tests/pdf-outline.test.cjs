@@ -177,3 +177,24 @@ test('rejects PDF encryption with a translated message', async () => {
   input.pdf.context.trailerInfo.Encrypt = input.pdf.context.register(input.pdf.context.obj({ Filter: name('Standard') }));
   await assert.rejects(exporter().add(await input.pdf.save(), metadata), /不支持加密 PDF/);
 });
+
+test('isolated excerpt destinations create accurate question and chapter bookmarks without accepting arbitrary prefixes', async () => {
+  const input = await fixture({ headings: true });
+  const old = input.pdf.catalog.lookup(name('Dests'), PDFDict), renamed = input.pdf.context.obj({});
+  for (const [key, value] of old.entries()) renamed.set(name('excerpt-' + key.decodeText()), value);
+  input.pdf.catalog.set(name('Dests'), renamed);
+  const scoped = { ...nestedMetadata, idPrefix: 'excerpt-', questions: nestedMetadata.questions.map(entry => ({ ...entry,
+    id: 'excerpt-' + entry.id, headings: entry.headings.map(heading => ({ ...heading, id: 'excerpt-' + heading.id }))
+  })) };
+  const bytes = await input.pdf.save({ useObjectStreams: false });
+  const result = await exporter().add(bytes, scoped), pdf = await PDFDocument.load(result.bytes);
+  assert.equal(result.questions, 2); assert.equal(result.headings, 3);
+  const index = pdf.catalog.lookup(name('Outlines'), PDFDict).lookup(name('First'), PDFDict);
+  assert.equal(index.lookup(name('Dest'), PDFArray).lookup(3, PDFNumber).asNumber(), 780);
+  const question = index.lookup(name('Next'), PDFDict), chapter = question.lookup(name('First'), PDFDict);
+  assert.equal(chapter.lookup(name('Dest'), PDFArray).lookup(3, PDFNumber).asNumber(), 500);
+  await assert.rejects(exporter().add(bytes, { ...scoped, idPrefix: 'other-' }), /问题跳转目标/);
+  await assert.rejects(exporter().add(bytes, nestedMetadata), /问题跳转目标/);
+  renamed.set(name('question-1'), old.get(name('question-1')));
+  await assert.rejects(exporter().add(await input.pdf.save(), scoped), /问题跳转目标/);
+});

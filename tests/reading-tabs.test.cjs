@@ -20,7 +20,7 @@ function fixture(tabs, readResponse = Promise.resolve(response), output = {}) {
   const reading = new Promise(resolve => { notifyReading = resolve; });
   function element(id) {
     if (!elements.has(id)) elements.set(id, {
-      value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : 'portrait',
+      value: id === 'conversation-url' ? (output.inputValue ?? (output.initialSource ? '' : conversationUrl)) : id === 'export-scope' ? '' : 'portrait',
       checked: false,
       dataset: {}, style: {}, handlers: {}, hidden: false,
       ownerDocument: context.document,

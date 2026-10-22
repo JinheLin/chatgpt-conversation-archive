@@ -71,12 +71,17 @@
     catch (error) { throw new Error(t(error.message === new globalThis.PDFLib.EncryptedPDFError().message ? "pdfEncrypted" : "pdfInvalid")); }
     if (!pdf.getPageCount()) throw new Error(t("pdfInvalid"));
     verifySource(pdf, metadata.sourceUrl);
+    const prefix = metadata.idPrefix || "";
+    if (!["", "excerpt-"].includes(prefix)) throw new Error(t("pdfQuestionMismatch"));
     const entries = metadata.questions;
-    if (!entries?.length || entries.some((entry, index) => entry.id !== `question-${index + 1}` || !entry.title)) {
+    if (!entries?.length || entries.some((entry, index) => entry.id !== `${prefix}question-${index + 1}` || !entry.title)) {
       throw new Error(t("pdfQuestionMismatch"));
     }
     const named = destinations(pdf);
-    const questionNames = [...named.keys()].filter((key) => /^question-\d+$/.test(key));
+    if (prefix && [...named.keys()].some(key => /^(?:question-\d+|answer-heading-\d+-\d+)$/.test(key))) {
+      throw new Error(t("pdfQuestionMismatch"));
+    }
+    const questionNames = [...named.keys()].filter((key) => new RegExp(`^${prefix}question-\\d+$`).test(key));
     if (questionNames.length !== entries.length || entries.some((entry) => !named.has(entry.id))) {
       throw new Error(t("pdfQuestionMismatch"));
     }
@@ -84,14 +89,14 @@
     for (const entry of entries) {
       if (entry.headings !== undefined && !Array.isArray(entry.headings)) throw new Error(t("pdfHeadingMismatch"));
       for (const heading of entry.headings || []) {
-        if (!/^answer-heading-[1-9]\d*-[1-9]\d*$/.test(heading?.id) ||
+        if (!new RegExp(`^${prefix}answer-heading-[1-9]\\d*-[1-9]\\d*$`).test(heading?.id) ||
             typeof heading.title !== "string" || !heading.title.trim() || headingIds.has(heading.id)) {
           throw new Error(t("pdfHeadingMismatch"));
         }
         headingIds.add(heading.id);
       }
     }
-    const headingNames = [...named.keys()].filter((key) => /^answer-heading-\d+-\d+$/.test(key));
+    const headingNames = [...named.keys()].filter((key) => new RegExp(`^${prefix}answer-heading-\\d+-\\d+$`).test(key));
     if (headingNames.length !== headingIds.size || [...headingIds].some((id) => !named.has(id))) {
       throw new Error(t("pdfHeadingMismatch"));
     }
@@ -104,8 +109,8 @@
       }))
     }));
     // Chrome may omit the unreferenced index anchor; its bookmark then uses page 1.
-    const indexDest = named.has("question-index")
-      ? destinationArray(pdf, named.get("question-index"), pageRefs)
+    const indexDest = named.has(prefix + "question-index")
+      ? destinationArray(pdf, named.get(prefix + "question-index"), pageRefs)
       : pdf.context.obj([pdf.getPage(0).ref, name("Fit")]);
     targets.unshift({ title: t("questionIndex"), dest: indexDest });
 

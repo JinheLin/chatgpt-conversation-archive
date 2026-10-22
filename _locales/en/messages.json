@@ -960,6 +960,22 @@
     "message": "This question is already in ChatGPT. Reading its reply…"
   },
   "readerAllAnswersRead": { "message": "All answers marked as read" },
+  "exportScope": { "message": "Export range" },
+  "exportAllConversation": { "message": "Entire conversation" },
+  "exportThisQuestion": { "message": "Export this question" },
+  "exportQuestionLabel": {
+    "message": "Export question $number$ and its answers",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
+  "questionExportMissing": { "message": "This question is no longer available. Reopen the conversation and try again." },
+  "questionExportMeta": {
+    "message": "Selected question · $count$ messages · $time$",
+    "placeholders": { "count": { "content": "$1" }, "time": { "content": "$2" } }
+  },
+  "questionExportTitle": {
+    "message": "$title$ — Question $number$",
+    "placeholders": { "title": { "content": "$1" }, "number": { "content": "$2" } }
+  },
   "readerCollapseTocHeadings": {
     "message": "Collapse answer headings under question $number$",
     "placeholders": { "number": { "content": "$1", "example": "3" } }

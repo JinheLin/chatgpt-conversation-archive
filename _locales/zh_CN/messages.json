@@ -960,6 +960,22 @@
     "message": "同一条问题已在 ChatGPT 中，正在同步回复…"
   },
   "readerAllAnswersRead": { "message": "所有回答已标记为已读" },
+  "exportScope": { "message": "导出范围" },
+  "exportAllConversation": { "message": "全部对话" },
+  "exportThisQuestion": { "message": "导出本题" },
+  "exportQuestionLabel": {
+    "message": "导出问题 $number$ 及其回答",
+    "placeholders": { "number": { "content": "$1", "example": "3" } }
+  },
+  "questionExportMissing": { "message": "这个问题已不存在，请重新打开对话后再试。" },
+  "questionExportMeta": {
+    "message": "单题导出 · $count$ 条消息 · $time$",
+    "placeholders": { "count": { "content": "$1" }, "time": { "content": "$2" } }
+  },
+  "questionExportTitle": {
+    "message": "$title$ — 问题 $number$",
+    "placeholders": { "title": { "content": "$1" }, "number": { "content": "$2" } }
+  },
   "readerCollapseTocHeadings": {
     "message": "收起问题 $number$ 下的回答标题",
     "placeholders": { "number": { "content": "$1", "example": "3" } }

@@ -22,6 +22,7 @@
   <script src="pdf-outline.js" defer></script>
   <script src="pdf-capture.js" defer></script>
   <script src="export-menu.js" defer></script>
+  <script src="question-export.js" defer></script>
   <script src="read-progress.js" defer></script>
   <script src="preview-navigation.js" defer></script>
   <script src="reader-folds.js" defer></script>
@@ -53,6 +54,7 @@
             <button id="export-toggle" class="export-toggle" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="export-formats"><span data-i18n="exportMenu">Export</span><span aria-hidden="true">▾</span></button>
             <div id="export-formats" class="export-formats" hidden>
               <div class="export-format-card">
+                <div class="export-scope-field"><label for="export-scope" data-i18n="exportScope">Export range</label><select id="export-scope"><option value="" data-i18n="exportAllConversation">Entire conversation</option></select></div>
                 <div class="export-format-list" role="menu" aria-labelledby="export-toggle">
                   <button id="save-html" type="button" role="menuitem" tabindex="-1" data-i18n="saveHtml">HTML</button>
                   <button id="save-pdf" type="button" role="menuitem" tabindex="-1" data-i18n="savePdf">PDF</button>
@@ -116,6 +118,7 @@
     <button id="cancel-export" type="button" hidden data-i18n="cancelRead">Cancel reading</button>
     <div id="pdf-fallback" class="pdf-fallback" role="group" aria-labelledby="pdf-fallback-heading" hidden>
         <h2 id="pdf-fallback-heading" data-i18n="pdfFallbackHeading">Alternative PDF export</h2>
+        <p id="pdf-fallback-scope" class="hint" hidden></p>
         <button id="print-again" type="button" data-i18n="printPdf">Print / Save PDF</button>
         <button id="add-pdf-outline" type="button" data-i18n="addPdfOutline">Add PDF sidebar index</button>
         <input id="pdf-outline-file" type="file" accept=".pdf,application/pdf" hidden>

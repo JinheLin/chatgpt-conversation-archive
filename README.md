@@ -63,6 +63,12 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ## Reading interface (v3.1)
 
+### Export one question and its answers (v3.9.12)
+
+Click **Export this question** beside a question, then choose HTML or PDF. **Export range** confirms the selected question and can be changed from the menu. Opening the top toolbar's **Export** starts with **Entire conversation**. A question export includes that question and every following answer before the next question, retaining message times, successfully embedded images, math, sources, attachments and section links. Unanswered questions can also be exported. Filenames include the original question number; page settings, including mobile and Hanwang N10, still apply.
+
+Single-question files are rendered separately from the reader and keep the full question/answer content even when it is collapsed. Snapshots, annotations, read marks, directory choices and reading position remain in place; annotations and read marks are excluded from both export formats. If direct PDF export fails, the alternative print and bookmark repair retain the attempted range shown in the fallback panel. No new ChatGPT read or network request is needed for saved content.
+
 ### Automatic image capture (v3.8.4)
 
 Reading or updating a conversation also embeds the original images shown in ChatGPT's `AsyncImage` components. Images are matched by message ID and position, stored locally and included in JSON backups, HTML and PDF. The original answer text stays unchanged. If images need lazy loading, a temporary background tab loads them and closes afterward, without scrolling or activating your existing ChatGPT tab. Previously saved images are retained when the same answer is unchanged and a new image request fails. Images that cannot be matched or retrieved keep an explicit unavailable marker; the extension never substitutes a search result.
@@ -217,6 +223,7 @@ Rendering and navigation updates through **v3.9.8** also apply to saved local co
 | `reader-reads.js` | Answer read marks, sidebar status, unread filter and export removal |
 | `reader.js` | Selection toolbar, comment editing, annotations panel and saved-state feedback |
 | `reader-folds.js` | Persistent question folding, bulk expand/collapse, automatic unfolding on jumps and export cleanup |
+| `question-export.js` | Per-question export controls, in-memory question/answer selection and isolated print documents |
 | `reader-position.js` | Throttled reading checkpoints, message/paragraph restoration, fragment priority and cancellation on interaction |
 | `reader-workspace.js` | Opening/reading interface states, conversation panel, keyboard focus and temporary notices |
 | `reader-chat.js` | Question sidebar, selected passages, local drafts and pending-send recovery |

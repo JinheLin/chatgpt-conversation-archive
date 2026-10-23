@@ -45,14 +45,14 @@
   const exportMenu = globalThis.ChatGPTPdfExportMenu.init({
     root: document.getElementById("export-menu"), button: document.getElementById("export-toggle"),
     popup: document.getElementById("export-formats"),
-    items: [document.getElementById("save-html"), document.getElementById("save-pdf")],
+    items: ["save-html", "save-pdf", "save-markdown"].map(id => document.getElementById(id)),
     isBusy: () => outputBusy,
     onOpen: anchor => { exportScope.value = anchor.dataset?.questionId || ""; }
   });
   const questionExport = globalThis.ChatGPTQuestionExport?.init({ main, scope: exportScope, menu: exportMenu, isBusy: () => outputBusy });
   const outputControls = [input, startButton, exportScope, ...layoutControls,
     ...["reader-open", "reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
-    ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
+    ...["export-toggle", "save-html", "save-pdf", "save-markdown", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
   function setOutputBusy(value, { keepExportMenu = false } = {}) {
     outputBusy = value;
     reader.setLocked(value);
@@ -603,6 +603,21 @@
       download(new Blob([result.bytes], { type: "application/pdf" }), `${file.name.replace(/\.pdf$/i, "")}${t("pdfOutlineSuffix")}.pdf`);
       report(t("pdfOutlineSaved", result.questions, result.pages), false, false, true);
     } catch (error) { report(t("pdfOutlineFailed", error.message), true); }
+    finally { setOutputBusy(false); }
+  });
+
+  document.getElementById("save-markdown").addEventListener("click", async () => {
+    if (outputBusy) return;
+    const scope = exportScope.value || "";
+    exportMenu.close({ restoreFocus: true });
+    setOutputBusy(true);
+    try {
+      if (!payload) throw new Error(t("readFirst"));
+      const selected = scope ? globalThis.ChatGPTQuestionExport.select(payload, scope) : { payload, number: 1 };
+      const markdown = await globalThis.ChatGPTMarkdownExport.create(selected.payload, { firstQuestion: selected.number });
+      download(new Blob([markdown], { type: "text/markdown;charset=utf-8" }), outputFilename(payload.title, ".md", scope));
+      report(t("markdownSaved"), false, false, true);
+    } catch (error) { report(t("saveMarkdownFailed", error.message), true); }
     finally { setOutputBusy(false); }
   });
 

@@ -33,7 +33,8 @@ Alternatively, choose **Code → Download ZIP** on GitHub and extract the archiv
 1. When opened with a conversation URL, the reader fills in the URL and opens a saved local snapshot automatically. If none exists, it reads and saves the complete conversation.
 2. When opened without a URL, or from the ChatGPT homepage or another website, enter a conversation URL such as `https://chatgpt.com/c/…` and click **Read full conversation**.
 3. Follow the percentage bar through connection, reading, validation, attachments and formatting. Progress moves smoothly between reported values. When the server supplies a reliable response size, reading advances with downloaded bytes; otherwise it shows received data and an activity indicator. Attachments advance from 60% to 80%, message rendering from 80% to 95%, and fonts/code fitting up to 99%. Rendering and code fitting run in small batches so the page can refresh and accept cancellation. This is overall workflow progress, not remaining time; 100% is confirmed only after validation and formatting finish; the completed progress indicator then disappears.
-4. Hover over or click **Export** and choose **HTML** or **PDF**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
+4. Hover over or click **Export** and choose **HTML**, **PDF** or **Markdown**. Keyboard users can focus **Export**, press Enter or Arrow Down to open the menu, use arrow keys to choose an option, and press Escape to close it.
+   - **Export → Markdown** (v3.9.14): download a UTF-8 `.md` file for the entire conversation or the selected question and all its answers. Keeps message times, headings, lists, code blocks, tables, LaTeX math and source links. Cached images and attachments use data URL references at the end of the file; support depends on your Markdown viewer. ChatGPT layout cards become readable Markdown; static SVG diagrams remain inline SVG. Page layout settings apply to HTML/PDF only. Annotations and read marks are excluded.
    - **Export → HTML**: download a single file containing styles, math fonts, and successfully retrieved images and attachments. The question index at the beginning works locally.
    - **Export → PDF**: creates and downloads a PDF using the selected page layout with native sidebar bookmarks for the index and every question in one step. It keeps the rendered text, tables, math and diagrams. There is no print dialog or file re-selection. Open the file and select **Bookmarks** in Chrome's PDF sidebar.
    - **A4 landscape** in the **Export** menu is unchecked by default (A4 portrait). Check it to widen the preview and saved HTML and export PDFs in landscape. This also gives wide text diagrams more space.
@@ -67,9 +68,9 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 v3.9.13 keeps export settings open while choosing a range or changing the page layout. Native dropdown focus changes and sidebar scrolling no longer dismiss the panel; long question titles stay inside a compact, viewport-bounded menu.
 
-Click **Export this question** beside a question, then choose HTML or PDF. **Export range** confirms the selected question and can be changed from the menu. Opening the top toolbar's **Export** starts with **Entire conversation**. A question export includes that question and every following answer before the next question, retaining message times, successfully embedded images, math, sources, attachments and section links. Unanswered questions can also be exported. Filenames include the original question number; page settings, including mobile and Hanwang N10, still apply.
+Click **Export this question** beside a question, then choose HTML, PDF or Markdown. **Export range** confirms the selected question and can be changed from the menu. Opening the top toolbar's **Export** starts with **Entire conversation**. A question export includes that question and every following answer before the next question, retaining message times, successfully embedded images, math, sources, attachments and section links. Unanswered questions can also be exported. Filenames include the original question number; page settings, including mobile and Hanwang N10, apply to HTML/PDF.
 
-Single-question files are rendered separately from the reader and keep the full question/answer content even when it is collapsed. Snapshots, annotations, read marks, directory choices and reading position remain in place; annotations and read marks are excluded from both export formats. If direct PDF export fails, the alternative print and bookmark repair retain the attempted range shown in the fallback panel. No new ChatGPT read or network request is needed for saved content.
+Single-question files are rendered separately from the reader and keep the full question/answer content even when it is collapsed. Snapshots, annotations, read marks, directory choices and reading position remain in place; annotations and read marks are excluded from exported files. If direct PDF export fails, the alternative print and bookmark repair retain the attempted range shown in the fallback panel. No new ChatGPT read or network request is needed for saved content.
 
 ### Automatic image capture (v3.8.4)
 
@@ -210,6 +211,7 @@ Rendering and navigation updates through **v3.9.8** also apply to saved local co
 | `dom-adapter.js` | Independent DOM adapter and semantic selectors; retains extraction and cleanup helpers for diagnostics, while full export does not depend on the DOM |
 | `conversation-source.js` | URL validation, website data endpoints, branch reconstruction, completeness checks, and attachment embedding |
 | `page-layout.js` | Shared page dimensions and margins for preview, code fitting and PDF capture |
+| `markdown-export.js` | Markdown serialization of isolated transcripts, math, assets and layout content |
 | `export.js` | Markdown and math rendering, question index, diagram preservation, and code width fitting |
 | `answer-headings.js` | Chapter numbering, answer-title exclusion and section selection shared by all navigation outputs |
 | `layout-markdown.js` | Restricted ChatGPT layout parsing and static rendering without enabling raw HTML |
@@ -217,7 +219,7 @@ Rendering and navigation updates through **v3.9.8** also apply to saved local co
 | `chart-markdown.js` | Bounded JSON chart validation, static bars, and data-table fallback |
 | `pdf-outline.js` | Local PDF validation and native sidebar bookmarks using the existing question destinations |
 | `pdf-capture.js` | Transient debugger connection to the current export tab, Chrome PDF rendering and bounded binary streaming |
-| `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF export menu |
+| `export-menu.js` | Hover, click and keyboard interactions for the HTML/PDF/Markdown export menu |
 | `read-progress.js` | Smooth, cancellable interpolation of reported progress with reduced-motion support |
 | `preview-navigation.js` | Preview question/section links, current-reading highlight and sidebar following, separate from the exported document |
 | `reader-store.js` | IndexedDB snapshots, annotations, read and reading state, cross-tab notifications and validated backup merging |

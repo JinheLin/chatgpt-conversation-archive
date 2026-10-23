@@ -15,7 +15,7 @@
     "message": "ChatGPT 对话阅读器"
   },
   "exportDescription": {
-    "message": "阅读完整对话，在本地保存划线、评论和已读标记，并导出 HTML 或 PDF。"
+    "message": "阅读完整对话，在本地保存划线、评论和已读标记，并导出 HTML、PDF 或 Markdown。"
   },
   "urlLabel": {
     "message": "ChatGPT 对话链接"
@@ -37,6 +37,9 @@
   },
   "saveHtml": {
     "message": "HTML"
+  },
+  "saveMarkdown": {
+    "message": "Markdown"
   },
   "printPdf": {
     "message": "打印 / 保存 PDF"
@@ -141,7 +144,7 @@
     }
   },
   "readyOutput": {
-    "message": "可保存 HTML 或 PDF。"
+    "message": "可保存 HTML、PDF 或 Markdown。"
   },
   "readFailed": {
     "message": "读取失败。"
@@ -154,6 +157,17 @@
   },
   "htmlSaved": {
     "message": "本地 HTML 已生成，包含问题目录、样式及公式字体。请查看 Chrome 下载记录。"
+  },
+  "markdownSaved": {
+    "message": "Markdown 已导出，请查看 Chrome 下载记录。"
+  },
+  "saveMarkdownFailed": {
+    "message": "保存 Markdown 失败：$error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
   },
   "saveHtmlFailed": {
     "message": "保存 HTML 失败：$error$",

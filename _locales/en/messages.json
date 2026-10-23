@@ -15,7 +15,7 @@
     "message": "ChatGPT conversation reader"
   },
   "exportDescription": {
-    "message": "Read complete conversations, save highlights, comments and read marks locally, and export HTML or PDF."
+    "message": "Read complete conversations, save highlights, comments and read marks locally, and export HTML, PDF or Markdown."
   },
   "urlLabel": {
     "message": "ChatGPT conversation link"
@@ -37,6 +37,9 @@
   },
   "saveHtml": {
     "message": "HTML"
+  },
+  "saveMarkdown": {
+    "message": "Markdown"
   },
   "printPdf": {
     "message": "Print / Save PDF"
@@ -141,7 +144,7 @@
     }
   },
   "readyOutput": {
-    "message": "Ready to save as HTML or PDF."
+    "message": "Ready to save as HTML, PDF or Markdown."
   },
   "readFailed": {
     "message": "Reading failed."
@@ -154,6 +157,17 @@
   },
   "htmlSaved": {
     "message": "Offline HTML created with a question index, styles and math fonts. Check Chrome downloads."
+  },
+  "markdownSaved": {
+    "message": "Markdown exported. Check Chrome downloads."
+  },
+  "saveMarkdownFailed": {
+    "message": "Could not save Markdown: $error$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
   },
   "saveHtmlFailed": {
     "message": "Could not save HTML: $error$",

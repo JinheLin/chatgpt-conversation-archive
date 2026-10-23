@@ -1,4 +1,4 @@
-/* Hover disclosure with click and keyboard access to the two export formats. */
+/* Hover disclosure with click and keyboard access to export formats. */
 (() => {
   "use strict";
   function init({ root, button, popup, items, isBusy, onOpen = () => {} }) {

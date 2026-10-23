@@ -15,6 +15,16 @@
       if (restoreFocus) anchor.focus({ preventScroll: true });
       popup.removeAttribute("style");
     }
+    function position() {
+      if (popup.hidden || anchor === button) return;
+      const rect = anchor.getBoundingClientRect(), width = popup.offsetWidth, height = popup.offsetHeight;
+      const view = doc.defaultView;
+      if (!anchor.isConnected || rect.height > 0 && (rect.bottom <= 0 || rect.top >= view.innerHeight)) { close(); return; }
+      popup.style.position = "fixed";
+      popup.style.left = Math.max(8, Math.min(rect.right - width, view.innerWidth - width - 8)) + "px";
+      popup.style.right = "auto";
+      popup.style.top = Math.max(8, Math.min(rect.bottom + 6, view.innerHeight - height - 8)) + "px";
+    }
     function open(target = button) {
       if (isBusy() || button.disabled) return false;
       if (popup.hidden || anchor !== target) onOpen(target);
@@ -22,22 +32,20 @@
       anchor = target;
       popup.removeAttribute("style");
       show(true);
-      if (anchor !== button) {
-        const rect = anchor.getBoundingClientRect(), width = popup.offsetWidth, height = popup.offsetHeight;
-        const view = doc.defaultView;
-        popup.style.position = "fixed";
-        popup.style.left = Math.max(8, Math.min(rect.right - width, view.innerWidth - width - 8)) + "px";
-        popup.style.right = "auto";
-        popup.style.top = Math.max(8, Math.min(rect.bottom + 6, view.innerHeight - height - 8)) + "px";
-      }
+      position();
       return true;
     }
+    function pin() { if (!popup.hidden) pinned = true; }
+    // Native select menus can temporarily report no focused DOM node and move
+    // the pointer outside the page. Once settings are used, keep this panel open.
+    popup.addEventListener("pointerdown", pin);
+    popup.addEventListener("focusin", pin);
     root.addEventListener("mouseenter", () => { if (!pinned) open(); });
     root.addEventListener("mouseleave", () => {
       if (!pinned && !popup.contains(doc.activeElement)) close();
     });
     root.addEventListener("focusout", (event) => {
-      if (!root.contains(event.relatedTarget)) close();
+      if (event.relatedTarget && !root.contains(event.relatedTarget) && event.relatedTarget !== anchor) close();
     });
     button.addEventListener("click", () => {
       if (pinned) { close(); return; }
@@ -64,10 +72,14 @@
     doc.addEventListener("pointerdown", (event) => {
       if (!root.contains(event.target)) close();
     });
-    doc.defaultView?.addEventListener("scroll", event => { if (!event.target?.nodeType || !popup.contains(event.target)) close(); }, true);
-    doc.defaultView?.addEventListener("resize", () => close());
+    // Internal sidebar scrolling and layout reflow must not dismiss settings.
+    // The fixed per-question panel follows its trigger while it remains visible.
+    doc.defaultView?.addEventListener("scroll", position, true);
+    doc.defaultView?.addEventListener("resize", position);
     close();
-    return { close, openFor(target) { if (open(target)) { pinned = true; items[0].focus({ preventScroll: true }); } } };
+    return { close, pin, reposition: position,
+      openFor(target) { if (open(target)) { pinned = true; items[0].focus({ preventScroll: true }); } }
+    };
   }
   globalThis.ChatGPTPdfExportMenu = { init };
 })();

@@ -166,3 +166,60 @@ test('render preparation errors leave no partial output or print state and unans
   assert.equal(doc.querySelectorAll('.pdf-message').length, 1); assert.equal(doc.querySelector('.pdf-assistant'), null);
   assert.match(doc.querySelector('.pdf-user').textContent, /Final unanswered/);
 });
+
+test('native scope selection and sidebar scrolling keep settings open until an actual outside click or Escape', async t => {
+  const app = await open(t), popup = app.get('export-formats'), scope = app.get('export-scope');
+  const root = app.get('export-menu');
+  root.dispatchEvent(new app.w.MouseEvent('mouseenter'));
+  assert.equal(popup.hidden, false);
+  scope.dispatchEvent(new app.w.Event('pointerdown', { bubbles: true })); scope.focus();
+  // Chrome's native option picker can emit a transient blur without a target.
+  scope.dispatchEvent(new app.w.FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+  root.dispatchEvent(new app.w.MouseEvent('mouseleave'));
+  scope.value = 'user-2'; scope.dispatchEvent(new app.w.Event('change', { bubbles: true }));
+  app.get('preview-sidebar').dispatchEvent(new app.w.Event('scroll'));
+  app.w.dispatchEvent(new app.w.Event('scroll')); app.w.dispatchEvent(new app.w.Event('resize'));
+  assert.equal(popup.hidden, false); assert.equal(scope.value, 'user-2');
+  scope.dispatchEvent(new app.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  assert.equal(popup.hidden, true);
+  app.exportQuestion(2);
+  app.main.dispatchEvent(new app.w.Event('pointerdown', { bubbles: true }));
+  assert.equal(popup.hidden, true);
+});
+
+test('all layout choices keep the question range and panel open through asynchronous reflow, then export normally', async t => {
+  const app = await open(t), popup = app.get('export-formats');
+  app.exportQuestion(2);
+  for (const id of ['page-layout', 'mobile-layout', 'n10-layout']) {
+    let finish;
+    app.w.ChatGPTPdfExporter.fitCode = () => new Promise(resolve => { finish = resolve; });
+    const checkbox = app.get(id); checkbox.focus(); checkbox.checked = true;
+    checkbox.dispatchEvent(new app.w.Event('change', { bubbles: true }));
+    assert.equal(popup.hidden, false); assert.equal(app.get('save-html').disabled, true);
+    assert.equal(app.get('export-scope').value, 'user-2');
+    app.w.dispatchEvent(new app.w.Event('scroll')); assert.equal(popup.hidden, false);
+    finish(); await waitFor(() => !app.get('save-html').disabled);
+    assert.equal(popup.hidden, false);
+    assert.equal(app.get('export-scope').value, 'user-2');
+    assert.equal(checkbox.checked, true);
+  }
+  app.w.ChatGPTPdfExporter.fitCode = async () => {};
+  const doc = await htmlDownload(app);
+  assert.equal(popup.hidden, true);
+  assert.equal(doc.querySelectorAll('.pdf-user').length, 1);
+  assert.equal(doc.getElementById('pdf-document').dataset.pageLayout, 'hanwang-n10');
+  assert.equal(app.get('export-scope').value, 'user-2');
+});
+
+test('per-question menu follows its visible trigger after reflow and closes when the trigger leaves the viewport', async t => {
+  const app = await open(t), popup = app.get('export-formats'), button = app.question(2).querySelector('.reader-question-export');
+  let top = 200;
+  button.getBoundingClientRect = () => ({ top, bottom: top + 24, height: 24, width: 90, right: 700 });
+  app.exportQuestion(2); assert.equal(popup.hidden, false);
+  const before = popup.style.top;
+  top = 260; app.w.dispatchEvent(new app.w.Event('scroll'));
+  assert.equal(popup.hidden, false); assert.notEqual(popup.style.top, before);
+  assert.equal(app.get('export-scope').value, 'user-2');
+  top = -50; app.w.dispatchEvent(new app.w.Event('scroll'));
+  assert.equal(popup.hidden, true); assert.equal(button.getAttribute('aria-expanded'), 'false');
+});

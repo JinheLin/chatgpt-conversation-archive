@@ -65,6 +65,8 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ### Export one question and its answers (v3.9.12)
 
+v3.9.13 keeps export settings open while choosing a range or changing the page layout. Native dropdown focus changes and sidebar scrolling no longer dismiss the panel; long question titles stay inside a compact, viewport-bounded menu.
+
 Click **Export this question** beside a question, then choose HTML or PDF. **Export range** confirms the selected question and can be changed from the menu. Opening the top toolbar's **Export** starts with **Entire conversation**. A question export includes that question and every following answer before the next question, retaining message times, successfully embedded images, math, sources, attachments and section links. Unanswered questions can also be exported. Filenames include the original question number; page settings, including mobile and Hanwang N10, still apply.
 
 Single-question files are rendered separately from the reader and keep the full question/answer content even when it is collapsed. Snapshots, annotations, read marks, directory choices and reading position remain in place; annotations and read marks are excluded from both export formats. If direct PDF export fails, the alternative print and bookmark repair retain the attempted range shown in the fallback panel. No new ChatGPT read or network request is needed for saved content.

@@ -99,7 +99,7 @@ test('export includes orientation settings without changing the menu keyboard in
   await waitFor(() => !toggle.disabled);
   assert.equal(app.main.dataset.landscape, 'true');
   assert.match(app.get('page-direction').textContent, /landscape/);
-  toggle.click();
+  assert.equal(popup.hidden, false, 'Changing the page layout must keep export settings open');
   app.get('save-html').dispatchEvent(new app.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   assert.equal(popup.hidden, true);
   assert.equal(app.w.document.activeElement, toggle);

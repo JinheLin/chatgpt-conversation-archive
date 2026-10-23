@@ -53,7 +53,7 @@
   const outputControls = [input, startButton, exportScope, ...layoutControls,
     ...["reader-open", "reader-update", "reader-backup", "reader-restore"].map((id) => document.getElementById(id)),
     ...["export-toggle", "save-html", "save-pdf", "print-again", "add-pdf-outline"].map((id) => document.getElementById(id))];
-  function setOutputBusy(value) {
+  function setOutputBusy(value, { keepExportMenu = false } = {}) {
     outputBusy = value;
     reader.setLocked(value);
     folds?.setLocked(value);
@@ -61,7 +61,7 @@
     questionExport?.setLocked(value);
     reads.setLocked(value);
     chat?.setLocked(value);
-    if (value) exportMenu.close();
+    if (value && !keepExportMenu) exportMenu.close();
     for (const control of outputControls) control.disabled = value;
     for (const control of document.getElementById("reader-library-list").querySelectorAll("button")) control.disabled = value;
   }
@@ -499,11 +499,12 @@
   async function changeLayout(control) {
     if (outputBusy) return;
     if (control.checked) for (const other of layoutControls) if (other !== control) other.checked = false;
-    setOutputBusy(true);
+    exportMenu.pin?.();
+    setOutputBusy(true, { keepExportMenu: true });
     try {
       await globalThis.ChatGPTPdfExporter.fitCode(main, updatePageLayout());
     } catch (error) { report(error.message, true); }
-    finally { setOutputBusy(false); }
+    finally { setOutputBusy(false); exportMenu.reposition?.(); }
   }
   for (const control of layoutControls) control.addEventListener("change", () => changeLayout(control));
   document.getElementById("print-again").addEventListener("click", async () => {

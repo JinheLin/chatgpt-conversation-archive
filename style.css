@@ -104,7 +104,7 @@
 #output-actions > .hint { width: 100%; margin: 0; }
 .export-menu { position: relative; }
 .export-panel .export-toggle { display: inline-flex; align-items: center; gap: 10px; }
-.export-formats { position: absolute; top: 100%; left: 0; z-index: 10; min-width: 120px; padding-top: 6px; }
+.export-formats { position: absolute; top: 100%; left: 0; z-index: 10; box-sizing: border-box; width: 320px; min-width: 0; max-width: calc(100vw - 24px); padding-top: 6px; }
 .export-formats[hidden] { display: none; }
 .export-format-list { padding: 6px; border: 1px solid #d8e4de; border-radius: 6px; background: #fff; box-shadow: 0 4px 12px #20212420; }
 .export-panel .export-format-list button { display: block; width: 100%; padding: 8px 12px; border-radius: 4px; background: transparent; color: #202124; font-weight: 500; text-align: left; }
@@ -170,7 +170,7 @@
 .reader-question-export:disabled { opacity: .55; cursor: default; }
 .export-scope-field { padding: 12px 14px; border-bottom: 1px solid #e5eae7; }
 .export-scope-field label { display: block; margin: 0 0 6px; color: #62686e; font-size: 12px; }
-.export-scope-field select { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 6px; font: 13px/1.5 system-ui, sans-serif; }
+.export-scope-field select { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 6px; font: 13px/1.5 system-ui, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #pdf-excerpt { position: fixed; left: -100000px; top: 0; pointer-events: none; }
 @media print {
   .reader-question-export { display: none !important; }
@@ -504,7 +504,7 @@
   .reader-feedback #export-status, .reader-feedback #read-progress { margin: 0; font-size: 13px; }
   .reader-feedback .pdf-fallback { box-sizing: border-box; padding: 16px; background: #fff; border: 1px solid #d8e4de; border-radius: 6px; box-shadow: 0 3px 12px #20212412; }
   .reader-feedback #cancel-export { margin-top: 8px; padding: 6px 10px; background: #fff; color: #62686e; border: 1px solid #d4ded8; font-weight: 500; }
-.reader-bar .export-formats { left: auto; right: 0; min-width: 260px; max-width: calc(100vw - 24px); max-height: calc(100vh - 16px); overflow-y: auto; }
+  .reader-bar .export-formats { left: auto; right: 0; min-width: 0; max-height: calc(100vh - 16px); overflow-y: auto; }
   .export-format-card { border: 1px solid #d8e4de; border-radius: 8px; background: #fff; box-shadow: 0 4px 18px #20212420; }
   .reader-bar .export-format-list { border: 0; box-shadow: none; padding: 6px; }
   .reader-bar .export-format-list button { padding: 9px 12px; }

@@ -3,7 +3,7 @@
   "use strict";
   const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
     "table", "table-row", "table-cell", "list", "list-item", "link", "chart", "entity", "asyncimage",
-    "form", "label", "select", "checkbox", "radio-group", "radio", "textarea", "button"]);
+    "form", "label", "select", "checkbox", "radio-group", "radio", "textarea", "button", "writingblock"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
   const names = new Set([...layoutNames, ...svgNames]);
   const MAX_DEPTH = 32;
@@ -518,6 +518,9 @@
     md.renderer.rules.archive_escape = (tokens, index) => md.utils.escapeHtml(tokens[index].content);
     function renderNode(node, env = {}, inline, scope = Object.create(null), budget = { left: MAX_NODES }) {
       if (--budget.left < 0) throw new Error("Layout expansion limit");
+      // Writing blocks contain ordinary Markdown. Metadata is not presentation,
+      // and a wrapper would hide their headings from the body-level index.
+      if (node.name === "writingblock") return children(node, env, inline, scope, budget);
       if (node.name === "binding") { scope[node.binding] = node.value; return ""; }
       if (node.name === "each") {
         const items = node.items || valueOf(node.reference, scope)?.value;

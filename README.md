@@ -62,6 +62,10 @@ After updating local files, click **Reload** on the extension card in `chrome://
 4. The PDF retains vector text, math and the question/answer-section bookmarks. It is not rasterized to the screen's pixel resolution. Ordinary code uses 10.5 pt and wraps without changing the source; long code may continue across pages. Text diagrams keep their spacing and fit the available page width and height.
 5. Tables that fit on one page stay together; oversized tables or rows can still span pages. Very large diagrams may need zooming. Use direct **PDF** export to retain the custom dimensions; manual printing can override them.
 
+## Writing block rendering (v3.9.15)
+
+ChatGPT's `<WritingBlock>` containers render their contents as ordinary Markdown, including a heading immediately after the opening tag. Wrapper metadata stays out of the document; headings remain available in the question index and PDF bookmarks. Preview, offline HTML, PDF and Markdown exports share the fix, including existing local snapshots. Inline, fenced and indented code examples retain literal writing-block tags.
+
 ## Reading interface (v3.1)
 
 ### Export one question and its answers (v3.9.12)

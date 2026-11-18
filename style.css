@@ -212,7 +212,7 @@
   --archive-layout-padding: 0; --archive-layout-gap: 8px; --archive-layout-columns: 2;
   box-sizing: border-box; min-width: 0; overflow-wrap: anywhere;
 }
-.pdf-message-body .archive-layout-box, .pdf-message-body .archive-layout-grid-item {
+.pdf-message-body .archive-layout-box, .pdf-message-body .archive-layout-col, .pdf-message-body .archive-layout-grid-item {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
 .pdf-message-body .archive-layout-grid {
@@ -257,8 +257,8 @@
 .pdf-message-body .archive-layout-row {
   display: flex; align-items: center; gap: var(--archive-layout-gap, 8px); padding: var(--archive-layout-padding, 0);
 }
-.pdf-message-body .archive-layout-row > .archive-layout-box { flex: 0 1 auto; }
-.pdf-message-body .archive-layout-sized-row > .archive-layout-box { align-self: stretch; }
+.pdf-message-body .archive-layout-row > :is(.archive-layout-box, .archive-layout-col) { flex: 0 1 auto; }
+.pdf-message-body .archive-layout-sized-row > :is(.archive-layout-box, .archive-layout-col) { align-self: stretch; }
 .pdf-message-body .archive-layout-row > .archive-async-image { margin: 0; align-self: auto; }
 .pdf-message-body .archive-layout-form, .pdf-message-body .archive-layout-radio-group {
   display: flex; flex-direction: column; gap: var(--archive-layout-gap, 8px);

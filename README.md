@@ -66,6 +66,8 @@ After updating local files, click **Reload** on the extension card in `chrome://
 
 ChatGPT's `<WritingBlock>` containers render their contents as ordinary Markdown, including a heading immediately after the opening tag. Wrapper metadata stays out of the document; headings remain available in the question index and PDF bookmarks. Preview, offline HTML, PDF and Markdown exports share the fix, including existing local snapshots. Inline, fenced and indented code examples retain literal writing-block tags.
 
+v3.9.16 also supports `<col>` layout containers: children stack vertically with the declared alignment, gap and padding. Nested grid/row diagrams retain their column branches in the preview, offline HTML and PDF; Markdown preserves their content in reading order. Code examples retain literal tags, and existing saved snapshots use the fix without fetching the conversation again.
+
 ## Reading interface (v3.1)
 
 ### Export one question and its answers (v3.9.12)

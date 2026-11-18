@@ -1,7 +1,7 @@
 /* Render a small, inert subset of ChatGPT layout markup without enabling raw HTML. */
 (() => {
   "use strict";
-  const layoutNames = new Set(["box", "grid", "grid-item", "row", "text", "caption", "title", "badge", "icon", "divider",
+  const layoutNames = new Set(["box", "grid", "grid-item", "row", "col", "text", "caption", "title", "badge", "icon", "divider",
     "table", "table-row", "table-cell", "list", "list-item", "link", "chart", "entity", "asyncimage",
     "form", "label", "select", "checkbox", "radio-group", "radio", "textarea", "button", "writingblock"]);
   const svgNames = new Set(["svg", "g", "rect", "circle", "ellipse", "line", "path", "polygon", "polyline", "text", "tspan"]);
@@ -445,7 +445,7 @@
       }
     }
     if (Object.hasOwn(choices.align, attrs.textAlign)) styles.push(`text-align:${choices.align[attrs.textAlign]}`);
-    if (["row", "box", "grid-item"].includes(node.name)) {
+    if (["row", "col", "box", "grid-item"].includes(node.name)) {
       const align = { start: "flex-start", center: "center", end: "flex-end", stretch: "stretch" };
       const justify = { start: "flex-start", center: "center", end: "flex-end", between: "space-between", around: "space-around" };
       if (Object.hasOwn(align, attrs.align)) styles.push(`align-items:${align[attrs.align]}`);
